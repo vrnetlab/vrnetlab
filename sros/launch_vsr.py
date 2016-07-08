@@ -103,6 +103,7 @@ class InitAlu:
         self.num_id = None
         self.ipv4_prefix = None
         self.ipv6_prefix = None
+        self.mgmt_bridge = None
 
         self.ram = 4096
         self.num_nics = 20
@@ -158,6 +159,11 @@ class InitAlu:
             returns True you are done!
         """
         self.start_vm()
+        if self.mgmt_bridge:
+            print("Configuring mgmt-bridge")
+            run_command(["brctl", "addbr", self.mgmt_bridge])
+            run_command(["brctl", "addif", self.mgmt_bridge, "vr%02d_00" % self.num_id])
+            run_command(["ip", "link", "set", self.mgmt_bridge, "up"])
         self.bootstrap_init()
         if blocking:
             while True:
@@ -178,13 +184,16 @@ class InitAlu:
 
         for i in range(0, self.num_nics):
             cmd.append("-device")
-            cmd.append("e1000,netdev=vr%(num_id)s_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
+            cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
                        % { 'num_id': self.num_id, 'i': i })
             cmd.append("-netdev")
-            cmd.append("tap,ifname=vr%(num_id)s_%(i)02d,id=vr%(num_id)s_%(i)02d,script=no,downscript=no"
+            cmd.append("tap,ifname=vr%(num_id)02d_%(i)02d,id=vr%(num_id)s_%(i)02d,script=no,downscript=no"
                        % { 'num_id': self.num_id, 'i': i })
 
         run_command(cmd)
+        # bring up all the NICs
+        for i in range(0, self.num_nics):
+            run_command(["ip", "link", "set", "vr%02d_%02d" % (self.num_id, i), "up"])
 
 
     def bootstrap_init(self):
@@ -292,9 +301,11 @@ if __name__ == '__main__':
     parser.add_argument('--ipv6-prefix', help='Management IPv6 prefix')
     parser.add_argument('--username', help='Username')
     parser.add_argument('--password', help='Password')
+    parser.add_argument('--mgmt-bridge', help='Linux bridge to attach mgmt interface too. Will be created if it does not already exist.')
     args = parser.parse_args()
 
     ia = InitAlu(args.username, args.password, args.numeric_id, args.ipv4_prefix, args.ipv6_prefix)
+    ia.mgmt_bridge = args.mgmt_bridge
     ia.start()
     print("Going into sleep mode")
     while True:

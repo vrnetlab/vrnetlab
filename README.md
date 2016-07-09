@@ -59,6 +59,11 @@ The intention is to keep the arguments to each virtual router type as similar
 as possible so that a test orchestrator or similar need minimal knowledge about
 the different router types.
 
+Docker healtcheck
+-----------------
+Docker v1.12 includes a healtcheck feature that would be really sweet to use to
+tell if the router has been bootstrapped or not.
+
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
 ##### Q: Why don't you ship pre-built docker images?

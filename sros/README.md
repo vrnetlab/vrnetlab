@@ -48,4 +48,6 @@ brctl addif vr96__vr97 vr96_01
 brctl addif vr96__vr97 vr97_01
 ```
 
-If you want to look at the startup
+If you want to look at the startup process you can specify `-i -t` to docker
+run and you'll get an interactive terminal, do note that docker will terminate
+as soon as you close it though. Use `-d` for long running routers.

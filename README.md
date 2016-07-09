@@ -59,13 +59,19 @@ The intention is to keep the arguments to each virtual router type as similar
 as possible so that a test orchestrator or similar need minimal knowledge about
 the different router types.
 
-FAQ
----
+FUAQ - Frequently or Unfrequently Asked Questions
+-------------------------------------------------
 ##### Q: Why don't you ship pre-built docker images?
-A: I don't think Cisco, Juniper or Nokia would allow me to ship their virtual
-   router images so you just have to build the docker images yourself.
+A: I don't think Cisco, Juniper or Nokia would allow me to distribute their virtual
+   router images and since one of the main points of vrnetlab is to have a self
+   contained docker image I don't see any other way than for you to build your
+   own image based on vrnetlab but where you get to download the router image
+   yourself.
 
 ##### Q: Why don't you ship docker images where I can provide the image through a volume?
 A: I don't like the concept as it means you have to ship around an extra file.
    If it's a self-contained image then all you have to do is push it to your
    docker registry and then ask a box in your swarm cluster to spin it up!
+
+##### Q: Do you plan to support classic IOS?
+A: Hell to the no! ;)

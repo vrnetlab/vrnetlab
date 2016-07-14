@@ -167,7 +167,7 @@ class InitAlu:
         self.bootstrap_init()
         if blocking:
             while True:
-                done, res = ia.bootstrap_spin()
+                done, res = self.bootstrap_spin()
                 if done:
                     break
             self.bootstrap_end()

@@ -1,5 +1,6 @@
-NUM_IMAGES=$(shell ls *.vmdk 2>/dev/null| wc -l)
-IMAGE=$(shell ls *.vmdk 2>/dev/null)
+NUM_IMAGES=$(shell ls *.vmdk* 2>/dev/null| wc -l)
+IMAGE=$(shell ls *.vmdk* 2>/dev/null)
+VERSION=$(shell echo $(IMAGE) | sed -e 's/.*\([0-9]\.[0-9]\.[0-9]\).*/\1/')
 
 all: usage
 
@@ -22,5 +23,5 @@ docker-image: more-than-one-image usage
 endif
 
 docker-build:
-	@echo "Building docker image using $(IMAGE)"
-	docker build -t vr-xrv .
+	@echo "Building docker image using $(IMAGE) as vr-xrv:$(VERSION)"
+	docker build -t vr-xrv:$(VERSION) .

@@ -9,7 +9,7 @@ RUN apt-get update -qy \
 
 RUN apt-get install -y python3-ipy
 
-ADD *.vmdk /xrv.vmdk
+ADD *.vmdk* /xrv.vmdk
 ADD launch_xrv.py /
 
 ENTRYPOINT ["/launch_xrv.py"]

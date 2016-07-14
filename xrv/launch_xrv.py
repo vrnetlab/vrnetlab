@@ -229,20 +229,26 @@ class XRV:
 
         print(".")
 
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started", b"SYSTEM CONFIGURATION COMPLETE", b"Username:", b"^[^ ]+#"], 1)
+        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started",
+            b"SYSTEM CONFIGURATION COMPLETE",
+            b"Enter root-system username",
+            b"Username:", b"^[^ ]+#"], 1)
         if match: # got a match!
             print("match", match, res)
-            if ridx == 0:
-                print("NOW AVAILABLE - pressing Enter!")
+            if ridx == 0: # press return to get started, so we press return!
                 self.wait_write("", wait=None)
-            if ridx == 1:
+            if ridx == 1: # system configuration complete
                 self.wait_write("", wait=None)
                 self.state = 1
-            if ridx == 2: # matched login prompt, so should login
+            if ridx == 2: # initial user config
+                self.wait_write(self.username, wait=None)
+                self.wait_write(self.password, wait="Enter secret:")
+                self.wait_write(self.password, wait="Enter secret again:")
+            if ridx == 3: # matched login prompt, so should login
                 print("match login prompt")
                 self.wait_write("admin", wait=None)
                 self.wait_write("admin", wait="Password:")
-            if self.state > 0 and ridx == 3:
+            if self.state > 0 and ridx == 4:
                 # run main config!
                 self.bootstrap_config()
                 return True, True

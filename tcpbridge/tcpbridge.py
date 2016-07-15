@@ -5,32 +5,28 @@ import socket
 
 
 class TcpBridge:
-    def __init__(self, config):
+    def __init__(self):
         self.sockets = []
         self.socket2remote = {}
 
-        for pair in config:
-            source = self.ep2addr(pair['source'])
-            destination = self.ep2addr(pair['destination'])
-            self.add_bridge(source, destination)
-        print(self.sockets)
+
+    def routerintf2addr(self, hostintf):
+        host, interface = hostintf.split("/")
+
+        res = socket.getaddrinfo("vr%02d" % int(host), "100%02d" % int(interface))
+        sockaddr = res[0][4]
+        return sockaddr
 
 
-    def ep2addr(self, ep):
-        """ Convert endpoint specification into TCP addr/port
-        """
-        port = "100%02d" % ep['interface']
+    def add_p2p(self, p2p):
+        source, destination = p2p.split("-")
+        src_router, src_interface = source.split("/")
+        dst_router, dst_interface = destination.split("/")
 
-        if 'address' in ep:
-            return (ep['address'], port)
+        src = self.routerintf2addr(source)
+        dst = self.routerintf2addr(destination)
 
-        elif 'router' in ep:
-            print("Looking up", ep['router'])
-            res = socket.getaddrinfo("vr%d" % ep['router'], port)
-            print("res:", res)
-            sockaddr = res[0][4]
-            print("sockaddr:", sockaddr)
-            return sockaddr
+        self.add_bridge(src, dst)
 
 
     def add_bridge(self, left_addr, right_addr):
@@ -66,12 +62,12 @@ class TcpBridge:
             
 
 if __name__ == '__main__':
-    config = [
-        {
-            'source': { 'router': 10, 'interface': 1 },
-            'destination': { 'router': 11, 'interface': 1 }
-        }
-    ]
+    import argparse
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--p2p', nargs='+', help='point-to-point link')
+    args = parser.parse_args()
 
-    tt = TcpBridge(config)
+    tt = TcpBridge()
+    for p2p in args.p2p:
+        tt.add_p2p(p2p)
     tt.work()

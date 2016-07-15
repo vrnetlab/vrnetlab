@@ -53,11 +53,9 @@ class TcpBridge:
 
             for i in ir:
                 remote = self.socket2remote[i]
-                print("Received from:", i)
                 buf = i.recv(2048)
                 if len(buf) == 0:
                     return
-                print("Sending %d bytes to %s" % (len(buf), remote))
                 remote.send(buf)
             
 

@@ -180,7 +180,7 @@ class XRV:
         """
 
         cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
-               "-serial", "telnet:127.0.0.1:10%02d,server,nowait" % self.num_id,
+               "-serial", "telnet:0.0.0.0:5000,server,nowait",
                "-hda", "/xrv.vmdk"
                ]
 
@@ -201,7 +201,7 @@ class XRV:
     def bootstrap_init(self):
         """ Do the initial part of the bootstrap process
         """
-        self.tn = telnetlib.Telnet("127.0.0.1", int("10%d" % self.num_id))
+        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
         
 
     def bootstrap_spin(self):

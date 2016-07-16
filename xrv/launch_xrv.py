@@ -106,7 +106,6 @@ class XRV:
         self.num_id = None
         self.ipv4_prefix = None
         self.ipv6_prefix = None
-        self.mgmt_bridge = None
 
         self.ram = 4096
         self.num_nics = 20
@@ -164,11 +163,8 @@ class XRV:
             returns True you are done!
         """
         self.start_vm()
-        if self.mgmt_bridge:
-            print("Configuring mgmt-bridge")
-            run_command(["brctl", "addbr", self.mgmt_bridge])
-            run_command(["brctl", "addif", self.mgmt_bridge, "vr%02d_00" % self.num_id])
-            run_command(["ip", "link", "set", self.mgmt_bridge, "up"])
+        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
+        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         self.bootstrap_init()
         if blocking:
             while True:
@@ -192,7 +188,7 @@ class XRV:
         cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
                    % { 'num_id': self.num_id, 'i': 0 })
         cmd.append("-netdev")
-        cmd.append("tap,ifname=vr%(num_id)02d_%(i)02d,id=vr%(num_id)s_%(i)02d,script=no,downscript=no"
+        cmd.append("user,id=vr%(num_id)02d_%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.%(num_id)d:22,hostfwd=tcp::2830-10.0.0.%(num_id)d:830"
                    % { 'num_id': self.num_id, 'i': 0 })
 
         for i in range(1, self.num_nics):
@@ -335,11 +331,9 @@ if __name__ == '__main__':
     parser.add_argument('--ipv6-prefix', help='Management IPv6 prefix')
     parser.add_argument('--username', help='Username')
     parser.add_argument('--password', help='Password')
-    parser.add_argument('--mgmt-bridge', help='Linux bridge to attach mgmt interface too. Will be created if it does not already exist.')
     args = parser.parse_args()
 
     vr = XRV(args.username, args.password, args.numeric_id, args.ipv4_prefix, args.ipv6_prefix)
-    vr.mgmt_bridge = args.mgmt_bridge
     vr.start()
     print("Going into sleep mode")
     while True:

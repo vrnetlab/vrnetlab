@@ -9,12 +9,13 @@ RUN apt-get update -qy \
     bridge-utils \
     iproute2 \
     python3-ipy \
+    socat \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
 ADD *.vmdk* /xrv.vmdk
 ADD launch_xrv.py /
 
-EXPOSE 5000
+EXPOSE 22 830 5000
 EXPOSE 10000-10099
 ENTRYPOINT ["/launch_xrv.py"]

@@ -1,7 +1,7 @@
 NUM_IMAGES=$(shell ls *.qcow2 2>/dev/null| wc -l)
 IMAGE=$(shell ls *.qcow2 2>/dev/null)
 
-all: usage
+all: docker-image
 
 usage:
 	@echo "Usage: put the Nokia VSR qcow2 image in this directory and run:"

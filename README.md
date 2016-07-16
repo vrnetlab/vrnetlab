@@ -6,6 +6,15 @@ typically for the purpose of automated CI testing or development environments.
 It's been developed at Deutsche Telekom as part of the automated CI test system
 for the TeraStream project.
 
+Usage
+-----------
+Place images in each virtual router sub-directory, see README files in the
+specific subdirs for more details.
+
+Build all using `make` (default target will build docker images for all virtual
+router types).
+
+
 Virtual routers
 ---------------
 There are a number of virtual routers available on the market:

@@ -32,10 +32,9 @@ it may be used both by humans and automated systems to spin up virtual routers.
 In addition, there are scripts to help you generate topologies.
 
 The virtual machines are packaged up in docker container. Since we need to
-start KVM and manage network interfaces the docker containers has to be run
-with `--privileged` and `--net=host` which effectively defeats the security
-features of docker. Our use of docker is essentially reduced to being a
-packaging format but a rather good one at that.
+start KVM the docker containers have to be run with `--privileged` which
+effectively defeats the security features of docker. Our use of docker is
+essentially reduced to being a packaging format but a rather good one at that.
 
 It's possible to remotely control a docker engine and tell it to start/stop
 containers. It's not entirely uncommon to run the CI system in a VM and letting

@@ -329,8 +329,8 @@ if __name__ == '__main__':
     parser.add_argument('--numeric-id', type=int, help='Numeric ID')
     parser.add_argument('--ipv4-prefix', help='Management IPv4 prefix')
     parser.add_argument('--ipv6-prefix', help='Management IPv6 prefix')
-    parser.add_argument('--username', help='Username')
-    parser.add_argument('--password', help='Password')
+    parser.add_argument('--username', default='vrnetlab', help='Username')
+    parser.add_argument('--password', default='vrnetlab', help='Password')
     args = parser.parse_args()
 
     vr = XRV(args.username, args.password, args.numeric_id, args.ipv4_prefix, args.ipv6_prefix)

@@ -299,8 +299,8 @@ if __name__ == '__main__':
     parser.add_argument('--numeric-id', type=int, help='Numeric ID')
     parser.add_argument('--ipv4-prefix', help='Management IPv4 prefix')
     parser.add_argument('--ipv6-prefix', help='Management IPv6 prefix')
-    parser.add_argument('--username', help='Username')
-    parser.add_argument('--password', help='Password')
+    parser.add_argument('--username', default='vrnetlab', help='Username')
+    parser.add_argument('--password', default='vrnetlab', help='Password')
     parser.add_argument('--mgmt-bridge', help='Linux bridge to attach mgmt interface too. Will be created if it does not already exist.')
     args = parser.parse_args()
 

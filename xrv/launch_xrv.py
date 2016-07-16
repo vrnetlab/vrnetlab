@@ -17,12 +17,15 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def run_command(cmd, cwd=None):
+def run_command(cmd, cwd=None, background=False):
     import subprocess
     res = None
     try:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
-        res = p.communicate()
+        if background:
+            p = subprocess.Popen(cmd, cwd=cwd)
+        else:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
+            res = p.communicate()
     except:
         pass
     return res

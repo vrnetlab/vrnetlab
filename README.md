@@ -17,8 +17,8 @@ Let's assume you've built the `xrv` router.
 
 Start two virtual routers:
 ```
-docker run -d --name vr1 --privileged vr-xrv:5.3.3.51U --numeric-id 1
-docker run -d --name vr2 --privileged vr-xrv:5.3.3.51U --numeric-id 2
+docker run -d --name vr1 --privileged vr-xrv:5.3.3.51U
+docker run -d --name vr2 --privileged vr-xrv:5.3.3.51U
 ```
 I'm calling them vr1 and vr2. Note that I'm using XRv 5.3.3.51U - you should
 fill in your XRv version in the image tag.

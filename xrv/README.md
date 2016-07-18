@@ -13,14 +13,9 @@ push it to your repo.
 
 Usage
 -----
-The container must be `--privileged` to start KVM. It needs `--net=host` for
-configuring network devices in the main system namespace. In this example we
-set the numeric-id to 96 which means the router will get 10.0.0.96/24 and
-2001:db8::96/24 configured on its management interface. The management
-interface is attached to the Linux bridge called "vr-mgmt", which if it doesn't
-exist will be created.
+The container must be `--privileged` to start KVM.
 ```
-docker run -d --privileged --net=host vr-xrv --numeric-id 96 --mgmt-bridge vr-mgmt --username Marco --password Polo
+docker run -d --privileged --name my-xrv-router vr-xrv
 ```
 It takes about 150 seconds for the virtual router to start and after this we can
 login over SSH / NETCONF with the specified credentials.

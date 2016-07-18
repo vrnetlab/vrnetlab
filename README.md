@@ -7,13 +7,132 @@ It's been developed at Deutsche Telekom as part of the automated CI test system
 for the TeraStream project.
 
 Usage
------------
-Place images in each virtual router sub-directory, see README files in the
-specific subdirs for more details.
+-----
+You have to build the virtual router docker images yourself since the license
+agreements of commercial virtual routers do not allow me to distribute the
+images. See the README files of the respective virtual router types for more
+details.
 
-Build all using `make` (default target will build docker images for all virtual
-router types).
+Let's assume you've built the xrv router.
 
+Start two virtual routers:
+```
+docker run -d --name vr1 --privileged vr-xrv:5.3.3.51U --numeric-id 1
+docker run -d --name vr2 --privileged vr-xrv:5.3.3.51U --numeric-id 2
+```
+I'm calling them vr1 and vr2. Note that I'm using XRv 5.3.3.51U - you should
+fill in your XRv version in the image tag.
+
+It takes a few minutes for XRv to start but once up you should be able to SSH
+into each virtual router. You can get the IP address using docker inspect:
+```
+root@host# docker inspect vr1 | grep IPAddress
+        "IPAddress": "172.17.0.98",
+        "SecondaryIPAddresses": null,
+```
+Now SSH to that address and login with the default credentials of
+vrnetlab/vrnetlab:
+```
+root@host# ssh -l vrnetlab 172.17.0.98
+The authenticity of host '172.17.0.98 (172.17.0.98)' can't be established.
+RSA key fingerprint is e0:61:28:ba:12:77:59:5e:96:cc:58:e2:36:55:00:fa.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '172.17.0.98' (RSA) to the list of known hosts.
+
+IMPORTANT:  READ CAREFULLY
+Welcome to the Demo Version of Cisco IOS XRv (the "Software").
+The Software is subject to and governed by the terms and conditions
+of the End User License Agreement and the Supplemental End User
+License Agreement accompanying the product, made available at the
+time of your order, or posted on the Cisco website at
+www.cisco.com/go/terms (collectively, the "Agreement").
+As set forth more fully in the Agreement, use of the Software is
+strictly limited to internal use in a non-production environment
+solely for demonstration and evaluation purposes.  Downloading,
+installing, or using the Software constitutes acceptance of the
+Agreement, and you are binding yourself and the business entity
+that you represent to the Agreement.  If you do not agree to all
+of the terms of the Agreement, then Cisco is unwilling to license
+the Software to you and (a) you may not download, install or use the
+Software, and (b) you may return the Software as more fully set forth
+in the Agreement.
+
+
+Please login with any configured user/password, or cisco/cisco
+
+
+vrnetlab@172.17.0.98's password:
+
+
+RP/0/0/CPU0:ios#show version
+Mon Jul 18 09:04:45.261 UTC
+
+Cisco IOS XR Software, Version 5.3.3.51U[Default]
+...
+```
+
+You can also login via NETCONF:
+```
+root@kvm-infra:/home/kll/vrnetlab# ssh -l vrnetlab 172.17.0.98 -p 830 -s netconf
+vrnetlab@172.17.0.99's password:
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+ <capabilities>
+  <capability>urn:ietf:params:netconf:base:1.1</capability>
+  <capability>urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring</capability>
+  <capability>urn:ietf:params:netconf:capability:candidate:1.0</capability>
+  <capability>urn:ietf:params:netconf:capability:rollback-on-error:1.0</capability>
+  <capability>urn:ietf:params:netconf:capability:validate:1.1</capability>
+  <capability>urn:ietf:params:netconf:capability:confirmed-commit:1.1</capability>
+  <capability>http://cisco.com/ns/yang/Cisco-IOS-XR-aaa-lib-cfg?module=Cisco-IOS-XR-aaa-lib-cfg&amp;revision=2015-08-27</capability>
+  <capability>http://cisco.com/ns/yang/Cisco-IOS-XR-aaa-locald-admin-cfg?module=Cisco-IOS-XR-aaa-locald-admin-cfg&amp;revision=2015-08-27</capability>
+  <capability>http://cisco.com/ns/yang/Cisco-IOS-XR-aaa-locald-cfg?module=Cisco-IOS-XR-aaa-locald-cfg&amp;revision=2015-08-27</capability>
+  <capability>http://cisco.com/ns/yang/Cisco-IOS-XR-aaa-locald-oper?module=Cisco-IOS-XR-aaa-locald-oper&amp;revision=2015-08-27</capability>
+  <capability>http://cisco.com/ns/yang/Cisco-IOS-XR-bundlemgr-cfg?module=Cisco-IOS-XR-bundlemgr-cfg&amp;revision=2015-08-27</capability>
+...
+```
+
+To connect two virtual routers with each other we can use the `tcpbridge`
+container. Let's say we want to connect Gi0/0/0/0 of vr1 and vr2 with each
+other, we would do:
+```
+docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 tcpbridge --p2p 1/1-2/1
+```
+
+Configure a link network on vr1 and vr2 and you should be able to ping!
+```
+P/0/0/CPU0:ios(config)#inte GigabitEthernet 0/0/0/0
+RP/0/0/CPU0:ios(config-if)#no shutdown
+RP/0/0/CPU0:ios(config-if)#ipv4 address 192.168.1.2/24
+RP/0/0/CPU0:ios(config-if)#commit
+Mon Jul 18 09:13:24.196 UTC
+RP/0/0/CPU0:Jul 18 09:13:24.216 : ifmgr[227]: %PKT_INFRA-LINK-3-UPDOWN : Interface GigabitEthernet0/0/0/0, changed state to Down
+RP/0/0/CPU0:ios(config-if)#dRP/0/0/CPU0:Jul 18 09:13:24.256 : ifmgr[227]: %PKT_INFRA-LINK-3-UPDOWN : Interface GigabitEthernet0/0/0/0, changed state to Up
+o ping 192.168.1.1
+Mon Jul 18 09:13:26.896 UTC
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 192.168.1.1, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/1/1 ms
+```
+(obviously I configured the other end too!)
+
+All of the NICs of the virtual routers are exposed via TCP ports by KVM. TCP
+port 10001 maps to the first NIC of the virtual router, which in the case of an
+XR router is GigabitEthernet 0/0/0/0. By simply connecting two of these TCP
+sockets together we can bridge the traffic between those two NICs and this is
+exactly what tcpbridge is for. Use the `--p2p` argument to specify the links.
+The format is X/Y-Z/N where X is the first router and Y is the port on that
+router. Z is the second router and N is the port on the second router.
+
+To set up more than one p2p link, simply add more mapping separated by space
+and don't forget to link the virtual routers:
+```
+docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 --link vr3:vr3 tcpbridge --p2p 1/1-2/1 1/2-3/1
+```
+
+The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
+mapped to the virtual serial device. All the NICs of the virtual routers are
+exposed via TCP ports in the range 10001-10099.
 
 Virtual routers
 ---------------

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import random
 import re
 import signal
 import sys
@@ -17,15 +18,29 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def run_command(cmd, cwd=None):
+def run_command(cmd, cwd=None, background=False):
     import subprocess
     res = None
     try:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
-        res = p.communicate()
+        if background:
+            p = subprocess.Popen(cmd, cwd=cwd)
+        else:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
+            res = p.communicate()
     except:
         pass
     return res
+
+
+def gen_mac(last_octet=None):
+    """ Generate a random MAC address that is in the qemu OUI space and that
+        has the given last octet.
+    """
+    return "52:54:00:%02x:%02x:%02x" % (
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff),
+            last_octet
+        )
 
 
 class InitAlu:
@@ -37,7 +52,6 @@ class InitAlu:
         self.password = password
 
         self.num_id = None
-        self.mgmt_bridge = None
 
         self.ram = 4096
         self.num_nics = 20
@@ -67,11 +81,8 @@ class InitAlu:
             returns True you are done!
         """
         self.start_vm()
-        if self.mgmt_bridge:
-            print("Configuring mgmt-bridge")
-            run_command(["brctl", "addbr", self.mgmt_bridge])
-            run_command(["brctl", "addif", self.mgmt_bridge, "vr%02d_00" % self.num_id])
-            run_command(["ip", "link", "set", self.mgmt_bridge, "up"])
+        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
+        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         self.bootstrap_init()
         if blocking:
             while True:
@@ -85,29 +96,34 @@ class InitAlu:
         """ Start the VM
         """
         cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
-               "-serial", "telnet:127.0.0.1:10%02d,server,nowait" % self.num_id, "-smbios",
+               "-serial", "telnet:0.0.0.0:5000,server,nowait", "-smbios",
                "type=1,product=TIMOS:slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp",
                "-hda", "/sros.qcow2"
                ]
 
-        for i in range(0, self.num_nics):
+        # mgmt interface is special - we use qemu user mode network
+        cmd.append("-device")
+        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
+                   % { 'i': 0, 'mac': gen_mac(0) })
+        cmd.append("-netdev")
+        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
+                   % { 'i': 0 })
+
+        for i in range(1, self.num_nics):
             cmd.append("-device")
-            cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
-                       % { 'num_id': self.num_id, 'i': i })
+            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
+                       % { 'i': i, 'mac': gen_mac(i) })
             cmd.append("-netdev")
-            cmd.append("tap,ifname=vr%(num_id)02d_%(i)02d,id=vr%(num_id)s_%(i)02d,script=no,downscript=no"
-                       % { 'num_id': self.num_id, 'i': i })
+            cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
+                       % { 'i': i })
 
         run_command(cmd)
-        # bring up all the NICs
-        for i in range(0, self.num_nics):
-            run_command(["ip", "link", "set", "vr%02d_%02d" % (self.num_id, i), "up"])
 
 
     def bootstrap_init(self):
         """ Do the initial part of the bootstrap process
         """
-        self.tn = telnetlib.Telnet("127.0.0.1", int("10%d" % self.num_id))
+        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
         
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -204,11 +220,9 @@ if __name__ == '__main__':
     parser.add_argument('--numeric-id', type=int, help='Numeric ID')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='vrnetlab', help='Password')
-    parser.add_argument('--mgmt-bridge', help='Linux bridge to attach mgmt interface too. Will be created if it does not already exist.')
     args = parser.parse_args()
 
     ia = InitAlu(args.username, args.password, args.numeric_id)
-    ia.mgmt_bridge = args.mgmt_bridge
     ia.start()
     print("Going into sleep mode")
     while True:

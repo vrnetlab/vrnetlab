@@ -88,7 +88,7 @@ class XRV:
                "-hda", "/xrv.vmdk"
                ]
 
-        # mgmt interface is always on a linux bridge!
+        # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")
         cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
                    % { 'i': 0, 'mac': gen_mac(0) })

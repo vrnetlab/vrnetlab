@@ -26,9 +26,8 @@ fill in your XRv version in the image tag.
 It takes a few minutes for XRv to start but once up you should be able to SSH
 into each virtual router. You can get the IP address using docker inspect:
 ```
-root@host# docker inspect vr1 | grep IPAddress
-        "IPAddress": "172.17.0.98",
-        "SecondaryIPAddresses": null,
+root@host# docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1
+172.17.0.98
 ```
 Now SSH to that address and login with the default credentials of
 vrnetlab/vrnetlab:
@@ -95,7 +94,7 @@ To connect two virtual routers with each other we can use the `tcpbridge`
 container. Let's say we want to connect Gi0/0/0/0 of vr1 and vr2 with each
 other, we would do:
 ```
-docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 tcpbridge --p2p 1/1-2/1
+docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 tcpbridge --p2p vr1/1-vr2/1
 ```
 
 Configure a link network on vr1 and vr2 and you should be able to ping!
@@ -121,18 +120,19 @@ port 10001 maps to the first NIC of the virtual router, which in the case of an
 XR router is GigabitEthernet 0/0/0/0. By simply connecting two of these TCP
 sockets together we can bridge the traffic between those two NICs and this is
 exactly what tcpbridge is for. Use the `--p2p` argument to specify the links.
-The format is X/Y-Z/N where X is the first router and Y is the port on that
-router. Z is the second router and N is the port on the second router.
+The format is X/Y-Z/N where X is the name of the first router and Y is the port
+on that router. Z is the second router and N is the port on the second router.
 
 To set up more than one p2p link, simply add more mapping separated by space
 and don't forget to link the virtual routers:
 ```
-docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 --link vr3:vr3 tcpbridge --p2p 1/1-2/1 1/2-3/1
+docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 --link vr3:vr3 tcpbridge --p2p vr1/1-vr2/1 vr1/2-vr3/1
 ```
 
 The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
 mapped to the virtual serial device. All the NICs of the virtual routers are
 exposed via TCP ports in the range 10001-10099.
+
 
 Virtual routers
 ---------------

@@ -130,8 +130,8 @@ docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 --link vr3:vr3 tcpb
 ```
 
 The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
-mapped to the virtual serial device. All the NICs of the virtual routers are
-exposed via TCP ports in the range 10001-10099.
+mapped to the virtual serial device (use telnet). All the NICs of the virtual
+routers are exposed via TCP ports in the range 10001-10099.
 
 
 Virtual routers
@@ -163,6 +163,12 @@ The virtual machines are packaged up in docker container. Since we need to
 start KVM the docker containers have to be run with `--privileged` which
 effectively defeats the security features of docker. Our use of docker is
 essentially reduced to being a packaging format but a rather good one at that.
+
+The assignment of a management IP address is handed over to docker, so you can
+use whatever docker IPAM plugin you want. Overall the network setup of the
+virtual routers are kind of shoe-horned into the world of docker networking.
+I'm not sure this is a good idea but it seems to work for now and it was fun
+putting it together ;)
 
 It's possible to remotely control a docker engine and tell it to start/stop
 containers. It's not entirely uncommon to run the CI system in a VM and letting
@@ -207,3 +213,16 @@ A: I don't like the concept as it means you have to ship around an extra file.
 
 ##### Q: Do you plan to support classic IOS?
 A: Hell to the no! ;)
+
+##### Q: How do I connect a vrnetlab router with a normal docker container?
+A: I'm not entirely sure. For now you have to live with only communicating
+between vrnetlab routers. There's https://github.com/TOGoS/TUN2UDP and I
+suppose the same idea could be used to bridge the TCP-socket NICs used by
+vrnetlab to a tun device, but if all this should happen inside a docker
+container or if we should rely on setting this up on the docker host (using
+something similar to pipework) is not entirely clear to me. I'll probably work
+on it.
+
+##### Q: Where's the JUNOS router / vMX image?
+A: Haven't built one just yet.. look at https://github.com/mwiget/vmxdocker in
+the meantime. It's not really vrnetlab compatible though :/

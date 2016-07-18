@@ -172,9 +172,6 @@ class XRV:
                        % { 'i': i })
 
         run_command(cmd)
-        # bring up all the NICs
-        for i in range(0, self.num_nics):
-            run_command(["ip", "link", "set", "vr%02d_%02d" % (self.num_id, i), "up"])
 
 
     def bootstrap_init(self):

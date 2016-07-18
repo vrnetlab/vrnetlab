@@ -96,7 +96,7 @@ def _get_afi(ip):
 
 
 class XRV:
-    def __init__(self, username, password, num_id=None, ipv4_prefix=None):
+    def __init__(self, username, password, num_id=None):
         self.spins = 0
         self.cycle = 0
 
@@ -104,16 +104,11 @@ class XRV:
         self.password = password
 
         self.num_id = None
-        self.ipv4_prefix = None
 
         self.ram = 4096
         self.num_nics = 20
 
         self.state = 0
-
-        # basic argument sanity check
-        if not (num_id or ipv4_prefix):
-            raise ValueError("num_id or ipv4_prefix must be specified")
 
         # num_id sanity check
         if num_id:
@@ -124,18 +119,6 @@ class XRV:
             if not num_id > 0:
                 raise ValueError("num_id must be a positive integer")
             self.num_id = num_id
-
-        # ipv4_prefix sanity check
-        if ipv4_prefix:
-            if _get_afi(ipv4_prefix) == 4:
-                self.ipv4_prefix = ipv4_prefix
-            else:
-                raise ValueError("ipv4_prefix is not a valid IPv4 prefix, e.g. 192.0.2.1/24")
-
-	# fill in defaults for ipv4_prefix if it's not explicitly specified
-        if self.num_id:
-            if not self.ipv4_prefix:
-                self.ipv4_prefix = "10.0.0.%s/24" % self.num_id
 
         self.num_id = num_id
 
@@ -177,7 +160,7 @@ class XRV:
         cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
                    % { 'num_id': self.num_id, 'i': 0 })
         cmd.append("-netdev")
-        cmd.append("user,id=vr%(num_id)02d_%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.%(num_id)d:22,hostfwd=tcp::2830-10.0.0.%(num_id)d:830"
+        cmd.append("user,id=vr%(num_id)02d_%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
                    % { 'num_id': self.num_id, 'i': 0 })
 
         for i in range(1, self.num_nics):
@@ -288,8 +271,7 @@ class XRV:
         # configure mgmt interface
         self.wait_write("interface MgmtEth 0/0/CPU0/0")
         self.wait_write("no shutdown")
-        if self.ipv4_prefix:
-            self.wait_write("ipv4 address %s" % self.ipv4_prefix)
+        self.wait_write("ipv4 address 10.0.0.15")
         self.wait_write("exit")
         self.wait_write("commit")
         self.wait_write("exit")
@@ -314,12 +296,11 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--numeric-id', type=int, help='Numeric ID')
-    parser.add_argument('--ipv4-prefix', help='Management IPv4 prefix')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='vrnetlab', help='Password')
     args = parser.parse_args()
 
-    vr = XRV(args.username, args.password, args.numeric_id, args.ipv4_prefix)
+    vr = XRV(args.username, args.password, args.numeric_id)
     vr.start()
     print("Going into sleep mode")
     while True:

@@ -2,6 +2,7 @@
 
 import select
 import socket
+import sys
 
 
 class TcpBridge:
@@ -13,7 +14,12 @@ class TcpBridge:
     def routerintf2addr(self, hostintf):
         host, interface = hostintf.split("/")
 
-        res = socket.getaddrinfo("vr%02d" % int(host), "100%02d" % int(interface))
+        hostname = "vr%02d" % int(host)
+
+        try:
+            res = socket.getaddrinfo(hostname, "100%02d" % int(interface))
+        except socket.gaierror:
+            raise NoVR("Unable to resolve %s" % hostname)
         sockaddr = res[0][4]
         return sockaddr
 
@@ -57,6 +63,10 @@ class TcpBridge:
                 if len(buf) == 0:
                     return
                 remote.send(buf)
+
+class NoVR(Exception):
+    """ No virtual router
+    """
             
 
 if __name__ == '__main__':
@@ -67,5 +77,9 @@ if __name__ == '__main__':
 
     tt = TcpBridge()
     for p2p in args.p2p:
-        tt.add_p2p(p2p)
+        try:
+            tt.add_p2p(p2p)
+        except NoVR as exc:
+            print(exc, " Is it started and did you link it?")
+            sys.exit(1)
     tt.work()

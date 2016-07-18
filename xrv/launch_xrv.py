@@ -157,19 +157,19 @@ class XRV:
 
         # mgmt interface is always on a linux bridge!
         cmd.append("-device")
-        cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
+        cmd.append("e1000,netdev=p%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
                    % { 'num_id': self.num_id, 'i': 0 })
         cmd.append("-netdev")
-        cmd.append("user,id=vr%(num_id)02d_%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'num_id': self.num_id, 'i': 0 })
+        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
+                   % { 'i': 0 })
 
         for i in range(1, self.num_nics):
             cmd.append("-device")
-            cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
+            cmd.append("e1000,netdev=p%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
                        % { 'num_id': self.num_id, 'i': i })
             cmd.append("-netdev")
-            cmd.append("socket,id=vr%(num_id)s_%(i)02d,listen=:100%(i)02d"
-                       % { 'num_id': self.num_id, 'i': i })
+            cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
+                       % { 'i': i })
 
         run_command(cmd)
         # bring up all the NICs

@@ -93,7 +93,7 @@ def _get_afi(ip):
 
 
 class InitAlu:
-    def __init__(self, username, password, num_id=None, ipv4_prefix=None, ipv6_prefix=None):
+    def __init__(self, username, password, num_id=None, ipv4_prefix=None):
         self.spins = 0
         self.cycle = 0
 
@@ -102,15 +102,14 @@ class InitAlu:
 
         self.num_id = None
         self.ipv4_prefix = None
-        self.ipv6_prefix = None
         self.mgmt_bridge = None
 
         self.ram = 4096
         self.num_nics = 20
 
         # basic argument sanity check
-        if not (num_id or ipv4_prefix or ipv6_prefix):
-            raise ValueError("num_id or ipv4_prefix or ipv6_prefix must be specified")
+        if not (num_id or ipv4_prefix):
+            raise ValueError("num_id or ipv4_prefix must be specified")
 
         # num_id sanity check
         if num_id:
@@ -129,20 +128,10 @@ class InitAlu:
             else:
                 raise ValueError("ipv4_prefix is not a valid IPv4 prefix, e.g. 192.0.2.1/24")
 
-        # ipv6_prefix sanity check
-        if ipv6_prefix:
-            if _get_afi(ipv6_prefix) == 6:
-                self.ipv6_prefix = ipv6_prefix
-            else:
-                raise ValueError("ipv6_prefix is not a valid IPv6 prefix, e.g. 2001:db8::1/64")
-
-        # fill in defaults for ipv4_prefix and ipv6_prefix if they are not
-        # explicitly specified
+	# fill in defaults for ipv4_prefix if it's not explicitly specified
         if self.num_id:
             if not self.ipv4_prefix:
                 self.ipv4_prefix = "10.0.0.%s/24" % self.num_id
-            if not self.ipv6_prefix:
-                self.ipv6_prefix = "2001:db8::%s/64" % self.num_id
 
         self.num_id = num_id
 
@@ -254,8 +243,6 @@ class InitAlu:
         """
         if self.ipv4_prefix:
             self.wait_write("bof address %s" % self.ipv4_prefix)
-        if self.ipv6_prefix:
-            self.wait_write("bof address %s" % self.ipv6_prefix)
         self.wait_write(b"bof save")
         if self.username and self.password:
             self.wait_write("configure system security user \"%s\" password %s" % (self.username, self.password))
@@ -298,13 +285,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--numeric-id', type=int, help='Numeric ID')
     parser.add_argument('--ipv4-prefix', help='Management IPv4 prefix')
-    parser.add_argument('--ipv6-prefix', help='Management IPv6 prefix')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='vrnetlab', help='Password')
     parser.add_argument('--mgmt-bridge', help='Linux bridge to attach mgmt interface too. Will be created if it does not already exist.')
     args = parser.parse_args()
 
-    ia = InitAlu(args.username, args.password, args.numeric_id, args.ipv4_prefix, args.ipv6_prefix)
+    ia = InitAlu(args.username, args.password, args.numeric_id, args.ipv4_prefix)
     ia.mgmt_bridge = args.mgmt_bridge
     ia.start()
     print("Going into sleep mode")

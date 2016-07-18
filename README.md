@@ -13,7 +13,7 @@ agreements of commercial virtual routers do not allow me to distribute the
 images. See the README files of the respective virtual router types for more
 details.
 
-Let's assume you've built the xrv router.
+Let's assume you've built the `xrv` router.
 
 Start two virtual routers:
 ```
@@ -74,7 +74,7 @@ Cisco IOS XR Software, Version 5.3.3.51U[Default]
 You can also login via NETCONF:
 ```
 root@kvm-infra:/home/kll/vrnetlab# ssh -l vrnetlab 172.17.0.98 -p 830 -s netconf
-vrnetlab@172.17.0.99's password:
+vrnetlab@172.17.0.98's password:
 <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
  <capabilities>
   <capability>urn:ietf:params:netconf:base:1.1</capability>

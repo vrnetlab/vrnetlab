@@ -12,9 +12,7 @@ class TcpBridge:
 
 
     def routerintf2addr(self, hostintf):
-        host, interface = hostintf.split("/")
-
-        hostname = "vr%02d" % int(host)
+        hostname, interface = hostintf.split("/")
 
         try:
             res = socket.getaddrinfo(hostname, "100%02d" % int(interface))

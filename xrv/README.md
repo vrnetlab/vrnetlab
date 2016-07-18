@@ -14,6 +14,10 @@ push it to your repo.
 This is not tested with XRv9000, which has a different dataplane and
 potentially different setup/boot mechanics.
 
+It's been tested to at least boot with:
+
+ * 5.3.3.51U (TeraStream build but 5.3 is prolly fine)
+
 Usage
 -----
 The container must be `--privileged` to start KVM.

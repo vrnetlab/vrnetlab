@@ -14,6 +14,10 @@ can't protect the control plane through policers and whatnot.
 
 Yes, we probably should try to switch to a distributed VSR mode.
 
+It's been tested to at least boot with:
+
+ * 12.0.R6
+
 Usage
 -----
 The container must be `--privileged` to start KVM.

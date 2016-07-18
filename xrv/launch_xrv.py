@@ -168,8 +168,6 @@ class XRV:
             cmd.append("e1000,netdev=vr%(num_id)02d_%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
                        % { 'num_id': self.num_id, 'i': i })
             cmd.append("-netdev")
-            #cmd.append("tap,ifname=vr%(num_id)02d_%(i)02d,id=vr%(num_id)s_%(i)02d,script=no,downscript=no"
-            #           % { 'num_id': self.num_id, 'i': i })
             cmd.append("socket,id=vr%(num_id)s_%(i)02d,listen=:100%(i)02d"
                        % { 'num_id': self.num_id, 'i': i })
 

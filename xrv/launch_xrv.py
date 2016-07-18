@@ -31,69 +31,6 @@ def run_command(cmd, cwd=None, background=False):
         pass
     return res
 
-def _is_ipv4(ip):
-    """ Return true if given arg is a valid IPv4 address
-    """
-    try:
-        p = IPy.IP(ip)
-    except ValueError:
-        return False
-
-    if p.version() == 4:
-        return True
-    return False
-
-def _is_ipv6(ip):
-    """ Return true if given arg is a valid IPv6 address
-    """
-    try:
-        p = IPy.IP(ip)
-    except ValueError:
-        return False
-
-    if p.version() == 6:
-        return True
-    return False
-
-def _get_afi(ip):
-    """ Return address-family (4 or 6) for IP or None if invalid address
-    """
-
-    parts = unicode(ip).split("/")
-    if len(parts) == 1:
-        # just an address
-        if _is_ipv4(ip):
-            return 4
-        elif _is_ipv6(ip):
-            return 6
-        else:
-            return None
-    elif len(parts) == 2:
-        # a prefix!
-        try:
-            pl = int(parts[1])
-        except ValueError:
-            # if casting parts[1] to int failes, this is not a prefix..
-            return None
-
-        if _is_ipv4(parts[0]):
-            if pl >= 0 and pl <= 32:
-                # prefix mask must be between 0 and 32
-                return 4
-            # otherwise error
-            return None
-        elif _is_ipv6(parts[0]):
-            if pl >= 0 and pl <= 128:
-                # prefix mask must be between 0 and 128
-                return 6
-            # otherwise error
-            return None
-        else:
-            return None
-    else:
-        # more than two parts.. this is neither an address or a prefix
-        return None
-
 def gen_mac(last_octet=None):
     """ Generate a random MAC address that is in the qemu OUI space and that
         has the given last octet.

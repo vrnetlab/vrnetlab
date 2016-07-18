@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import random
 import re
 import signal
 import sys
@@ -93,6 +94,15 @@ def _get_afi(ip):
         # more than two parts.. this is neither an address or a prefix
         return None
 
+def gen_mac(last_octet=None):
+    """ Generate a random MAC address that is in the qemu OUI space and that
+        has the given last octet.
+    """
+    return "52:54:00:%02x:%02x:%02x" % (
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff),
+            last_octet
+        )
 
 
 class XRV:
@@ -157,16 +167,16 @@ class XRV:
 
         # mgmt interface is always on a linux bridge!
         cmd.append("-device")
-        cmd.append("e1000,netdev=p%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
-                   % { 'num_id': self.num_id, 'i': 0 })
+        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
+                   % { 'i': 0, 'mac': gen_mac(0) })
         cmd.append("-netdev")
         cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
                    % { 'i': 0 })
 
         for i in range(1, self.num_nics):
             cmd.append("-device")
-            cmd.append("e1000,netdev=p%(i)02d,mac=00:01:00:ff:%(num_id)s:%(i)02d"
-                       % { 'num_id': self.num_id, 'i': i })
+            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
+                       % { 'i': i, 'mac': gen_mac(i) })
             cmd.append("-netdev")
             cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
                        % { 'i': i })

@@ -44,29 +44,15 @@ def gen_mac(last_octet=None):
 
 
 class InitAlu:
-    def __init__(self, username, password, num_id=None):
+    def __init__(self, username, password):
         self.spins = 0
         self.cycle = 0
 
         self.username = username
         self.password = password
 
-        self.num_id = None
-
         self.ram = 4096
         self.num_nics = 20
-
-        # num_id sanity check
-        if num_id:
-            try:
-                _ = int(num_id)
-            except:
-                raise TypeError("num_id must be a positive integer")
-            if not num_id > 0:
-                raise ValueError("num_id must be a positive integer")
-            self.num_id = num_id
-
-        self.num_id = num_id
 
 
     def start(self, blocking=True):
@@ -217,12 +203,11 @@ class InitAlu:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--numeric-id', type=int, help='Numeric ID')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='vrnetlab', help='Password')
     args = parser.parse_args()
 
-    ia = InitAlu(args.username, args.password, args.numeric_id)
+    ia = InitAlu(args.username, args.password)
     ia.start()
     print("Going into sleep mode")
     while True:

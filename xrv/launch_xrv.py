@@ -199,7 +199,7 @@ class XRV:
         # configure mgmt interface
         self.wait_write("interface MgmtEth 0/0/CPU0/0")
         self.wait_write("no shutdown")
-        self.wait_write("ipv4 address 10.0.0.15")
+        self.wait_write("ipv4 address 10.0.0.15/24")
         self.wait_write("exit")
         self.wait_write("commit")
         self.wait_write("exit")

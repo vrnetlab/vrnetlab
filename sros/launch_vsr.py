@@ -93,7 +93,7 @@ def _get_afi(ip):
 
 
 class InitAlu:
-    def __init__(self, username, password, num_id=None, ipv4_prefix=None):
+    def __init__(self, username, password, num_id=None):
         self.spins = 0
         self.cycle = 0
 
@@ -101,15 +101,10 @@ class InitAlu:
         self.password = password
 
         self.num_id = None
-        self.ipv4_prefix = None
         self.mgmt_bridge = None
 
         self.ram = 4096
         self.num_nics = 20
-
-        # basic argument sanity check
-        if not (num_id or ipv4_prefix):
-            raise ValueError("num_id or ipv4_prefix must be specified")
 
         # num_id sanity check
         if num_id:
@@ -120,18 +115,6 @@ class InitAlu:
             if not num_id > 0:
                 raise ValueError("num_id must be a positive integer")
             self.num_id = num_id
-
-        # ipv4_prefix sanity check
-        if ipv4_prefix:
-            if _get_afi(ipv4_prefix) == 4:
-                self.ipv4_prefix = ipv4_prefix
-            else:
-                raise ValueError("ipv4_prefix is not a valid IPv4 prefix, e.g. 192.0.2.1/24")
-
-	# fill in defaults for ipv4_prefix if it's not explicitly specified
-        if self.num_id:
-            if not self.ipv4_prefix:
-                self.ipv4_prefix = "10.0.0.%s/24" % self.num_id
 
         self.num_id = num_id
 
@@ -241,8 +224,7 @@ class InitAlu:
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
-        if self.ipv4_prefix:
-            self.wait_write("bof address %s" % self.ipv4_prefix)
+        self.wait_write("bof address 10.0.0.15/24")
         self.wait_write(b"bof save")
         if self.username and self.password:
             self.wait_write("configure system security user \"%s\" password %s" % (self.username, self.password))
@@ -284,13 +266,12 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--numeric-id', type=int, help='Numeric ID')
-    parser.add_argument('--ipv4-prefix', help='Management IPv4 prefix')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='vrnetlab', help='Password')
     parser.add_argument('--mgmt-bridge', help='Linux bridge to attach mgmt interface too. Will be created if it does not already exist.')
     args = parser.parse_args()
 
-    ia = InitAlu(args.username, args.password, args.numeric_id, args.ipv4_prefix)
+    ia = InitAlu(args.username, args.password, args.numeric_id)
     ia.mgmt_bridge = args.mgmt_bridge
     ia.start()
     print("Going into sleep mode")

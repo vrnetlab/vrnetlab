@@ -222,7 +222,3 @@ vrnetlab to a tun device, but if all this should happen inside a docker
 container or if we should rely on setting this up on the docker host (using
 something similar to pipework) is not entirely clear to me. I'll probably work
 on it.
-
-##### Q: Where's the JUNOS router / vMX image?
-A: Haven't built one just yet.. look at https://github.com/mwiget/vmxdocker in
-the meantime. It's not really vrnetlab compatible though :/

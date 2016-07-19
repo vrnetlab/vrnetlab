@@ -1,10 +1,16 @@
 vrnetlab - VR Network Lab
 -------------------------
-vrnetlab uses docker to help you start virtual routers in a convenient fashion
-typically for the purpose of automated CI testing or development environments.
+Run your favourite virtual routers in docker for convenient labbing,
+development and testing.
 
-It's been developed at Deutsche Telekom as part of the automated CI test system
-for the TeraStream project.
+vrnetlab been developed for the TeraStream project at Deutsche Telekom to
+automate CI test related to network provisioning.
+
+It supports:
+
+ * Cisco XRv (not XRv90000)
+ * Juniper vMX
+ * Nokia VSR
 
 Usage
 -----

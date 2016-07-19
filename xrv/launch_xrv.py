@@ -224,7 +224,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='vrnetlab', help='Password')
+    parser.add_argument('--password', default='VR-netlab9', help='Password')
     args = parser.parse_args()
 
     vr = XRV(args.username, args.password)

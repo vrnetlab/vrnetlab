@@ -30,7 +30,7 @@ root@host# docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1
 172.17.0.98
 ```
 Now SSH to that address and login with the default credentials of
-vrnetlab/vrnetlab:
+vrnetlab/VR-netlab9:
 ```
 root@host# ssh -l vrnetlab 172.17.0.98
 The authenticity of host '172.17.0.98 (172.17.0.98)' can't be established.

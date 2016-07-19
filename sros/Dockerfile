@@ -16,6 +16,5 @@ RUN apt-get update -qy \
 ADD *.qcow2 /sros.qcow2
 ADD launch_vsr.py /
 
-EXPOSE 22 830 5000
-EXPOSE 10000-10099
+EXPOSE 22 830 5000 10000-10099
 ENTRYPOINT ["/launch_vsr.py"]

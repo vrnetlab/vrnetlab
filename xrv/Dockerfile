@@ -16,6 +16,5 @@ RUN apt-get update -qy \
 ADD *.vmdk* /xrv.vmdk
 ADD launch_xrv.py /
 
-EXPOSE 22 830 5000
-EXPOSE 10000-10099
+EXPOSE 22 830 5000 10000-10099
 ENTRYPOINT ["/launch_xrv.py"]

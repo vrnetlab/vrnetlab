@@ -18,6 +18,5 @@ COPY install_vmx.sh /
 RUN /install_vmx.sh
 COPY launch_vmx.py /
 
-EXPOSE 22 830 5000
-EXPOSE 10000-10099
+EXPOSE 22 830 5000 10000-10099
 ENTRYPOINT ["/launch_vmx.py"]

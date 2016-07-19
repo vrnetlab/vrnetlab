@@ -222,3 +222,11 @@ vrnetlab to a tun device, but if all this should happen inside a docker
 container or if we should rely on setting this up on the docker host (using
 something similar to pipework) is not entirely clear to me. I'll probably work
 on it.
+
+##### Q: How does this relate to GNS3, UNetLab and VIRL?
+A: It was a long time since I used GNS3 and I have only briefly looked at
+UNetLab and VIRL but from what I know or can see, these are all more targeted
+towards interactive labbing. You get a pretty UI and similar whereas vrnetlab
+is controlled in a completely programmatic fashion which makes them good at
+different things. vrnetlab is superb for CI and programmatic testing where the
+others probably target labs run by humans.

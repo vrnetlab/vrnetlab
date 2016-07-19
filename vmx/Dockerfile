@@ -13,8 +13,10 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
-ADD *.tgz /vmx.tgz
-ADD launch_vmx.py /
+COPY *.tgz /vmx.tgz
+COPY install_vmx.sh /
+RUN /install_vmx.sh
+COPY launch_vmx.py /
 
 EXPOSE 22 830 5000
 EXPOSE 10000-10099

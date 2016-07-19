@@ -82,36 +82,58 @@ class VMX:
     def start_vm(self):
         """ Start the VM
         """
-#RUNVCP="$qemu -M pc -smp 1 --enable-kvm -cpu host -m $vcpmem \
-#         -drive if=ide,file=$VCPIMAGE -drive if=ide,file=$HDDIMAGE $METADATA \
-
-#METADATA="-usb -usbdevice disk:format=raw:metadata.img -smbios type=0,vendor=Juniper -smbios type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"
+        # set up bridge for connecting VCP with vFPC
+        run_command(["brctl", "addbr", "int_cp"])
 
         # start VCP VM (RE)
         cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
                "-drive", "if=ide,file=/vmx/jinstall64-vmx.img",
-               "-drive", "if=ide,file=/vmx/vmxhdd.img"
+               "-drive", "if=ide,file=/vmx/vmxhdd.img",
+               "-smbios", "type=0,vendor=Juniper", "-smbios",
+               "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
+               "-usb", "-usbdevice", "disk:format=raw:/vmx/metadata_usb.img"
                ]
-
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")
-        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                   % { 'i': 0, 'mac': gen_mac(0) })
+        cmd.append("virtio-net-pci,netdev=vcp0,mac=%s" % gen_mac(0))
         cmd.append("-netdev")
-        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
-        for i in range(1, self.num_nics):
-            cmd.append("-device")
-            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
-            cmd.append("-netdev")
-            cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+        cmd.append("user,id=vcp0,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
+        # internal control plane interface to vFPC
+        cmd.append("-device")
+        cmd.append("virtio-net-pci,netdev=vcp1,mac=%s" % gen_mac(1))
+        cmd.append("-netdev")
+        cmd.append("tap,ifname=vcp1,id=vcp1,script=no,downscript=no")
 
         run_command(cmd)
 
+        # start VFP VM
+        cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
+               "-cpu", "SandyBridge", "-M", "pc", "-smp", "4",
+               "-serial", "telnet:0.0.0.0:5001,server,nowait",
+               "-drive", "if=ide,file=/vmx/vfpc.img",
+               ]
+
+        # mgmt interface is special - we use qemu user mode network
+        cmd.extend(["-device", "virtio-net-pci,netdev=vfpc0,mac=%s" % gen_mac(0)])
+        cmd.extend(["-netdev", "user,id=vfpc0,net=10.0.0.0/24"])
+        # internal control plane interface to vFPC
+        cmd.extend(["-device", "virtio-net-pci,netdev=vfpc1,mac=%s" % gen_mac(0)])
+        cmd.extend(["-netdev", "tap,ifname=vfpc1,id=vfpc1,script=no,downscript=no"])
+
+        for i in range(1, self.num_nics):
+            cmd.extend(["-device", "virtio-net-pci,netdev=p%(i)02d,mac=%(mac)s"
+                       % { 'i': i, 'mac': gen_mac(i) }])
+            cmd.extend(["-netdev", "socket,id=p%(i)02d,listen=:100%(i)02d"
+                       % { 'i': i }])
+
+        run_command(cmd)
+        run_command(["brctl", "addif", "int_cp", "vcp1"])
+        run_command(["brctl", "addif", "int_cp", "vfpc1"])
+        run_command(["ip", "link", "set", "int_cp", "up"])
+        run_command(["ip", "link", "set", "vcp1", "up"])
+        run_command(["ip", "link", "set", "vfpc1", "up"])
 
 
     def bootstrap_init(self):
@@ -131,7 +153,7 @@ class VMX:
             returns False, False    when there is still work to be done
         """
 
-        if self.spins > 30:
+        if self.spins > 60:
             # too many spins with no result
             if self.cycle == 0:
                 # but if it's our first cycle we try to tickle the device to get a prompt
@@ -182,7 +204,7 @@ class VMX:
         self.wait_write("set system root-authentication plain-text-password")
         self.wait_write(self.password, 'New password:')
         self.wait_write(self.password, 'Retype new password:')
-        self.wait_write("set interfaces em0 unit 0 family inet address 10.0.0.15/24")
+        self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24")
         self.wait_write("commit")
         self.wait_write("exit")
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import random
 import re
 import signal
@@ -30,7 +31,6 @@ def run_command(cmd, cwd=None, background=False):
     except:
         pass
     return res
-
 
 def gen_mac(last_octet=None):
     """ Generate a random MAC address that is in the qemu OUI space and that
@@ -81,11 +81,14 @@ class InitAlu:
     def start_vm(self):
         """ Start the VM
         """
-        cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
+        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait", "-smbios",
                "type=1,product=TIMOS:slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp",
                "-hda", "/sros.qcow2"
                ]
+        # enable hardware assist if KVM is available
+        if os.path.exists("/dev/kvm"):
+            cmd.insert(1, '-enable-kvm')
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")

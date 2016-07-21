@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import random
 import re
 import signal
@@ -83,10 +84,13 @@ class XRV:
         """ Start the VM
         """
 
-        cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
+        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
                "-hda", "/xrv.vmdk"
                ]
+        # enable hardware assist if KVM is available
+        if os.path.exists("/dev/kvm"):
+            cmd.insert(1, '-enable-kvm')
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")

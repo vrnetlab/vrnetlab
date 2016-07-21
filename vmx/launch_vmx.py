@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import random
 import re
 import signal
@@ -86,7 +87,7 @@ class VMX:
         run_command(["brctl", "addbr", "int_cp"])
 
         # start VCP VM (RE)
-        cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
+        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
                "-drive", "if=ide,file=/vmx/jinstall64-vmx.img",
                "-drive", "if=ide,file=/vmx/vmxhdd.img",
@@ -94,6 +95,9 @@ class VMX:
                "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
                "-usb", "-usbdevice", "disk:format=raw:/vmx/metadata_usb.img"
                ]
+        # enable hardware assist if KVM is available
+        if os.path.exists("/dev/kvm"):
+            cmd.insert(1, '-enable-kvm')
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")

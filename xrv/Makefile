@@ -7,6 +7,3 @@ usage:
 
 no-image:
 	@echo "ERROR: you have no .vmdk image"
-
-more-than-one-image:
-	@echo "ERROR: you have more than one .vmdk image"

@@ -7,6 +7,3 @@ usage:
 
 no-image:
 	@echo "ERROR: you have no .qcow2 image"
-
-more-than-one-image:
-	@echo "ERROR: you have more than one .qcow2 image"

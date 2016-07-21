@@ -7,6 +7,3 @@ usage:
 
 no-image:
 	@echo "ERROR: you have no .tgz file"
-
-more-than-one-image:
-	@echo "ERROR: you have more than one .tgz file"

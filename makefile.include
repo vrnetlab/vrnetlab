@@ -1,4 +1,5 @@
 VR_NAME=$(shell basename $$(pwd))
+IMAGES=$(shell ls *.vmdk* *.qcow2 2>/dev/null)
 NUM_IMAGES=$(shell ls $(IMAGES) | wc -l)
 
 ifdef DOCKER_REGISTRY

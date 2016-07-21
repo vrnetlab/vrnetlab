@@ -12,7 +12,3 @@ no-image:
 
 more-than-one-image:
 	@echo "ERROR: you have more than one .tgz file"
-
-incorrect-version-string:
-	@echo "ERROR: the .tgz file doesn't seem to contain a valid version number"
-	@echo "       expecting [0-9][0-9].[0-9]R[0-9]+.[0-9]+"

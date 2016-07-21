@@ -14,7 +14,3 @@ no-image:
 
 more-than-one-image:
 	@echo "ERROR: you have more than one .qcow2 image"
-
-incorrect-version-string:
-	@echo "ERROR: the .vmdk file doesn't seem to contain a valid version number"
-	@echo "       expecting [0-9][0-9].[0-9].[A-Z][0-9]+"

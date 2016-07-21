@@ -1,4 +1,3 @@
-NUM_IMAGES=$(shell ls *.tgz 2>/dev/null| wc -l)
 IMAGES=$(shell ls *.tgz 2>/dev/null)
 VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9][0-9]\.[0-9][A-Z][0-9]\+\.[0-9]\+\)[^0-9].*$$/\1/')
 -include ../makefile.include

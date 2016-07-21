@@ -1,0 +1,12 @@
+image: ubuntu:xenial
+
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - apt-get update && apt-get install -y docker.io make
+    - make
+    - if [ -n "$DOCKER_REGISTRY" ]; then docker login -u $DOCKER_USER -p=$DOCKER_PASSWORD -e foobar $DOCKER_REGISTRY; fi
+    - if [ -n "$DOCKER_REGISTRY" ]; then make docker-push; fi

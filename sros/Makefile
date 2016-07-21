@@ -18,7 +18,3 @@ more-than-one-image:
 incorrect-version-string:
 	@echo "ERROR: the .vmdk file doesn't seem to contain a valid version number"
 	@echo "       expecting [0-9][0-9].[0-9].[A-Z][0-9]+"
-
-docker-build:
-	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-sros:$(VERSION)"
-	docker build -t $(REGISTRY)vr-sros:$(VERSION) .

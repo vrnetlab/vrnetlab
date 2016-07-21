@@ -16,7 +16,3 @@ more-than-one-image:
 incorrect-version-string:
 	@echo "ERROR: the .tgz file doesn't seem to contain a valid version number"
 	@echo "       expecting [0-9][0-9].[0-9]R[0-9]+.[0-9]+"
-
-docker-build:
-	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-vmx:$(VERSION)"
-	docker build -t $(REGISTRY)vr-vmx:$(VERSION) .

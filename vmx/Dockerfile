@@ -13,7 +13,8 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
-COPY *.tgz /vmx.tgz
+ARG IMAGE
+COPY $IMAGE /vmx.tgz
 COPY install_vmx.sh /
 RUN /install_vmx.sh
 COPY launch_vmx.py /

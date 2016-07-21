@@ -13,7 +13,8 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
-ADD *.vmdk* /xrv.vmdk
+ARG IMAGE
+ADD $IMAGE /xrv.vmdk
 ADD launch_xrv.py /
 
 EXPOSE 22 830 5000 10000-10099

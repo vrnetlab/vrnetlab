@@ -13,7 +13,8 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
-ADD *.qcow2 /sros.qcow2
+ARG IMAGE
+ADD $IMAGE /sros.qcow2
 ADD launch_vsr.py /
 
 EXPOSE 22 830 5000 10000-10099

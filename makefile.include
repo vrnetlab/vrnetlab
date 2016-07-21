@@ -24,7 +24,7 @@ endif
 
 docker-build:
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
-	docker build -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .
+	docker build --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .
 
 docker-push:
 	docker push $(REGISTRY)vr-$(VR_NAME):$(VERSION)

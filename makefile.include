@@ -1,3 +1,4 @@
+VR_NAME=$(shell basename $$(pwd))
 ifdef DOCKER_REGISTRY
 ifneq ($(DOCKER_REGISTRY), $(shell echo $(DOCKER_REGISTRY) | sed -ne '/^[A-Za-z0-9.]\+:[0-9]\+$$/p'))
 $(error Bad docker registry URL. Should follow format registry.example.com:1234)
@@ -20,5 +21,8 @@ endif
 else
 docker-image: more-than-one-image usage
 endif
+
+docker-push:
+	docker push $(REGISTRY)vr-$(VR_NAME):$(VERSION)
 
 all: docker-image

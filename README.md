@@ -236,3 +236,26 @@ towards interactive labbing. You get a pretty UI and similar whereas vrnetlab
 is controlled in a completely programmatic fashion which makes them good at
 different things. vrnetlab is superb for CI and programmatic testing where the
 others probably target labs run by humans.
+
+Building with GitLab CI
+-----------------------
+vrnetlab ships with a .gitlab-ci.yml config file so if you happen to be using
+GitLab CI you can use this file to let your CI infrastructure build the docker
+images and push them to your registry. The CI config and makefiles are written
+in a generic manner and the specifics are controlled through environment
+variables so to use with GitLab CI you simply need to add three env vars:
+
+ * DOCKER_USER - the username to authenticate to the docker registry with
+ * DOCKER_PASSWORD - the password to authenticate to the docker registry with
+ * DOCKER_REGISTRY - the URL to the docker registry, like reg.example.com:5000
+
+Next you need to add the actual virtual router images to the git repository.
+You can create a separate branch where you add the images as to avoid certain
+git merge issues.
+```
+git checkout -b images
+git add xrv/iosxrv-k9-demo-6.0.0.vmdk
+git commit -a -m "Added Cisco XRv 6.0.0 image"
+git push your-git-repo images
+```
+Now CI should build the images and push to wherever $DOCKER_REGISTRY points.

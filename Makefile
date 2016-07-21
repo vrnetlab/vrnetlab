@@ -1,4 +1,4 @@
-VRS = sros xrv
+VRS = sros vmx xrv
 VRS_PUSH = $(VRS:=-push)
 
 .PHONY: $(VRS) $(VRS_PUSH)

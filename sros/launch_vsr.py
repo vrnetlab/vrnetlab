@@ -125,7 +125,7 @@ class InitAlu:
             returns False, False    when there is still work to be done
         """
 
-        if self.spins > 30:
+        if self.spins > 60:
             # too many spins with no result
             if self.cycle == 0:
                 # but if it's our first cycle we try to tickle the device to get a prompt

@@ -128,7 +128,7 @@ class XRV:
             returns False, False    when there is still work to be done
         """
 
-        if self.spins > 90:
+        if self.spins > 180:
             # too many spins with no result
             if self.cycle == 0:
                 # but if it's our first cycle we try to tickle the device to get a prompt

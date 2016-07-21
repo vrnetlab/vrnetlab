@@ -10,19 +10,17 @@ endif
 
 ifeq ($(NUM_IMAGES), 0)
 docker-image: no-image usage
-else ifeq ($(NUM_IMAGES), 1)
-
-ifeq ($(VERSION), $(IMAGE))
-docker-image: incorrect-version-string
 else
-docker-image: docker-build
-endif
-
-else
-docker-image: more-than-one-image usage
+docker-image:
+	for IMAGE in $(IMAGES); do \
+		echo "Making $$IMAGE"; \
+		$(MAKE) IMAGE=$$IMAGE docker-build; \
+	done
 endif
 
 docker-build:
+	@if [ -z "$$IMAGE" ]; then echo "No IMAGE specified"; exit 1; fi
+	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "Incorrect version string"; exit 1; fi
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
 	docker build --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .
 

@@ -198,6 +198,26 @@ The intention is to keep the arguments to each virtual router type as similar
 as possible so that a test orchestrator or similar need minimal knowledge about
 the different router types.
 
+System requirements
+-------------------
+CPU:
+
+ * sros: 1 core
+ * vmx: 5 cores
+ * xrv: 1 core
+
+RAM:
+
+ * sros: 4GB
+ * vmx: 8GB
+ * xrv: 4GB
+
+Disk space depends on what image you are using but here are some rough numbers:
+
+ * sros: ~600MB
+ * vmx: ~5GB
+ * xrv: ~1.5GB
+
 Docker healtcheck
 -----------------
 Docker v1.12 includes a healtcheck feature that would be really sweet to use to

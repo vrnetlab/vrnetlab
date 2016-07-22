@@ -270,7 +270,7 @@ variables so to use with GitLab CI you simply need to add three env vars:
  * DOCKER_REGISTRY - the URL to the docker registry, like reg.example.com:5000
 
 Next you need to add the actual virtual router images to the git repository.
-You can create a separate branch where you add the images as to avoid certain
+You can create a separate branch where you add the images as to avoid potential
 git merge issues.
 ```
 git checkout -b images
@@ -279,3 +279,14 @@ git commit -a -m "Added Cisco XRv 6.0.0 image"
 git push your-git-repo images
 ```
 Now CI should build the images and push to wherever $DOCKER_REGISTRY points.
+
+When new changes are commited to the upstream repo/master you can just rebase
+your branch on top of that:
+```
+git checkout master
+git pull origin master
+git checkout images
+git rebase master
+git push --force your-git-repo images
+```
+Note that you have to force push since you've rewritten git history.

@@ -101,7 +101,7 @@ class VMX:
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")
-        cmd.append("virtio-net-pci,netdev=vcp0,mac=%s" % gen_mac(0))
+        cmd.append("e1000,netdev=vcp0,mac=%s" % gen_mac(0))
         cmd.append("-netdev")
         cmd.append("user,id=vcp0,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
         # internal control plane interface to vFPC

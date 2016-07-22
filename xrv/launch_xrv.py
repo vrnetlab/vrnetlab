@@ -55,7 +55,7 @@ class XRV:
         self.password = password
 
         self.ram = 4096
-        self.num_nics = 18
+        self.num_nics = 16
 
         self.state = 0
 

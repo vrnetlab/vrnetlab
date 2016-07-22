@@ -10,14 +10,17 @@ import time
 
 import IPy
 
+def handle_SIGCHLD(signal, frame):
+    print('Reaping child')
+    os.waitpid(-1, os.WNOHANG)
 
-def signal_handler(signal, frame):
+def handle_SIGTERM(signal, frame):
     print('Shutting down...')
     sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
+signal.signal(signal.SIGINT, handle_SIGTERM)
+signal.signal(signal.SIGTERM, handle_SIGTERM)
+signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 def run_command(cmd, cwd=None, background=False):
     import subprocess

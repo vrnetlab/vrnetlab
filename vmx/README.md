@@ -26,3 +26,23 @@ as soon as you close it though. Use `-d` for long running routers.
 
 The vFPC has a serial port that is exposed on TCP port 5001. Normally you don't
 need to interact with it but I imagine it could be useful for some debugging.
+
+System requirements
+-------------------
+CPU: 5 cores - 4 for the vFPC (virtual FPC - the forwarding plane) and 1 for
+VCP (the RE / control plane).
+
+RAM: 8GB - 4 for VCP and 4 for vFPC
+
+Disk: ~5GB for JUNOS 15.1
+
+FUAQ - Frequently or Unfrequently Asked Questions
+-------------------------------------------------
+##### Q: Why use vMX and not VRR?
+A: Juniper does indeed publish a VRR image that only requires a single VM to
+run, which would decrease the required resources. The vMX VCP (RE / control
+plane image) can also be run in the same mode but would then lack certain
+forwarding features, notably multicast (which was a dealbreaker for me).
+vrnetlab doesn't focus on forwarding performance but the aim is to keep feature
+parity with real routers and if you can't test that your PIM neighbors come up
+correctly due to lack of multicast then.. well, that's no good.

@@ -42,7 +42,7 @@ root@host# docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1
 Now SSH to that address and login with the default credentials of
 vrnetlab/VR-netlab9:
 ```
-root@host# ssh -l vrnetlab 172.17.0.98
+root@host# ssh -l vrnetlab $(docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1)
 The authenticity of host '172.17.0.98 (172.17.0.98)' can't be established.
 RSA key fingerprint is e0:61:28:ba:12:77:59:5e:96:cc:58:e2:36:55:00:fa.
 Are you sure you want to continue connecting (yes/no)? yes
@@ -82,7 +82,7 @@ Cisco IOS XR Software, Version 5.3.3.51U[Default]
 
 You can also login via NETCONF:
 ```
-root@kvm-infra:/home/kll/vrnetlab# ssh -l vrnetlab 172.17.0.98 -p 830 -s netconf
+root@host# ssh -l vrnetlab $(docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1) -p 830 -s netconf
 vrnetlab@172.17.0.98's password:
 <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
  <capabilities>
@@ -99,6 +99,15 @@ vrnetlab@172.17.0.98's password:
   <capability>http://cisco.com/ns/yang/Cisco-IOS-XR-bundlemgr-cfg?module=Cisco-IOS-XR-bundlemgr-cfg&amp;revision=2015-08-27</capability>
 ...
 ```
+
+The serial console of the devices are mapped to port 5000. Use telnet to connect:
+```
+root@host# telnet $(docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1) 5000
+```
+Just like with any serial port, you can only have one connection at a time and
+while the router is booting the launch script will connect to the serial port
+to do the initialization of the router. As soon as it is done the port will be
+released and made available to the next connection.
 
 To connect two virtual routers with each other we can use the `tcpbridge`
 container. Let's say we want to connect Gi0/0/0/0 of vr1 and vr2 with each

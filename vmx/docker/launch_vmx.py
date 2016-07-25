@@ -99,12 +99,15 @@ class VMX:
                "-drive", "if=ide,file=/vmx/vmx.img",
                "-drive", "if=ide,file=/vmx/vmxhdd.img",
                "-smbios", "type=0,vendor=Juniper", "-smbios",
-               "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
-               "-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-re.img"
+               "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"
                ]
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             cmd.insert(1, '-enable-kvm')
+
+        # add metadata image if it exists
+        if os.path.exists("/metadata-usb-re.img"):
+            cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-re.img"])
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")
@@ -181,7 +184,7 @@ class VMX:
 
         print(".")
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"(^[^ ]+%|root@:~ #)"], 3)
+        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 3)
         if match: # got a match!
             print("match", match, res)
             if ridx == 0: # matched login prompt, so should login

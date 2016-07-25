@@ -96,11 +96,11 @@ class VMX:
         # start VCP VM (RE)
         cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
-               "-drive", "if=ide,file=/vmx/jinstall64-vmx.img",
+               "-drive", "if=ide,file=/vmx/vmx.img",
                "-drive", "if=ide,file=/vmx/vmxhdd.img",
                "-smbios", "type=0,vendor=Juniper", "-smbios",
                "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
-               "-usb", "-usbdevice", "disk:format=raw:/vmx/metadata_usb.img"
+               "-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-re.img"
                ]
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
@@ -125,6 +125,9 @@ class VMX:
                "-serial", "telnet:0.0.0.0:5001,server,nowait",
                "-drive", "if=ide,file=/vmx/vfpc.img",
                ]
+        # add metadata image if it exists
+        if os.path.exists("/metadata-usb-fpc0.img"):
+            cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-fpc0.img"])
 
         # mgmt interface is special - we use qemu user mode network
         cmd.extend(["-device", "virtio-net-pci,netdev=vfpc0,mac=%s" % gen_mac(0)])
@@ -178,7 +181,7 @@ class VMX:
 
         print(".")
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"^[^ ]+%"], 1)
+        (ridx, match, res) = self.tn.expect([b"login:", b"(^[^ ]+%|root@:~ #)"], 3)
         if match: # got a match!
             print("match", match, res)
             if ridx == 0: # matched login prompt, so should login

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import os
 import random
 import re
@@ -69,6 +70,7 @@ class InitAlu:
             this to complete the bootstrap process. Once bootstrap_spin()
             returns True you are done!
         """
+        start_time = datetime.datetime.now()
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
@@ -79,6 +81,8 @@ class InitAlu:
                 if done:
                     break
             self.bootstrap_end()
+        stop_time = datetime.datetime.now()
+        print("Startup took:", stop_time - start_time)
 
 
     def start_vm(self):

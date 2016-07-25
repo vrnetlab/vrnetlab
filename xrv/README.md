@@ -28,6 +28,7 @@ vr-xrv:5.3.3
 
 It's been tested to boot and respond to SSH with:
 
+ * 5.1.1.54U (TeraStream build)
  * 5.1.3 (iosxrv-k9-demo-5.1.3.vmdk)
  * 5.2.2 (iosxrv-k9-demo-5.2.2.vmdk)
  * 5.3.0 (iosxrv-k9-demo-5.3.0.vmdk)

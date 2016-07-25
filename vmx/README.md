@@ -14,6 +14,7 @@ vmx-15.1F4.15.tgz your final docker image will be called vr-vmx:15.1F4.15.
 It's been tested to boot and respond to SSH with:
 
  * 15.1F6.9 (vmx-bundle-15.1F6.9.tgz)
+ * 16.1R1.7 (vmx-bundle-16.1R1.7.tgz)
 
 Usage
 -----

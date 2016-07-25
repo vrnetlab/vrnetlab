@@ -49,6 +49,9 @@ def gen_mac(last_octet=None):
 
 class XRV:
     def __init__(self, username, password):
+        self.credentials = [
+                ['admin', 'admin']
+            ]
         self.spins = 0
         self.cycle = 0
 
@@ -165,10 +168,16 @@ class XRV:
                 self.wait_write(self.username, wait=None)
                 self.wait_write(self.password, wait="Enter secret:")
                 self.wait_write(self.password, wait="Enter secret again:")
+                self.credentials.insert(0, [self.username, self.password])
             if ridx == 3: # matched login prompt, so should login
                 print("match login prompt")
-                self.wait_write("admin", wait=None)
-                self.wait_write("admin", wait="Password:")
+                try:
+                    username, password = self.credentials.pop(0)
+                except IndexError as exc:
+                    print("no more credentials to try")
+                    return True, False
+                self.wait_write(username, wait=None)
+                self.wait_write(password, wait="Password:")
             if self.state > 0 and ridx == 4:
                 # run main config!
                 self.bootstrap_config()

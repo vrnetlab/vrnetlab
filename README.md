@@ -19,6 +19,10 @@ agreements of commercial virtual routers do not allow me to distribute the
 images. See the README files of the respective virtual router types for more
 details.
 
+You need KVM enabled in your kernel for hardware assisted virtualization. While
+it may be possible to run without it, it has not been tested. Make sure you
+load the kvm kernel module: `modprobe kvm`.
+
 Let's assume you've built the `xrv` router.
 
 Start two virtual routers:

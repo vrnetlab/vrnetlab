@@ -60,3 +60,11 @@ licenses, before which only the bandwidth license with the highest capacity
 would be used. In 16.1 the evaluation period of 30 days was removed to the
 benefit of a perpetual evaluation license but still with a global throughput
 cap of 1Mbps.
+
+##### Q: Why aren't you using config-drive to inject the config instead of serial?
+A: It is true that we could use a "config-drive" / the metadata-usb image on
+the VCP to inject a config. I opted for the serial driver as it was easier to
+start off with - I had already written it for SR-OS whereas I would have to
+spend some time on fixing a config-drive builder. I suppose it could prove more
+reliable than serial-hackery but we also have to face things like password
+encryption (or will JUNOS do that for us automatically?).

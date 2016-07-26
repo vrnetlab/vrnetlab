@@ -51,3 +51,12 @@ forwarding features, notably multicast (which was a dealbreaker for me).
 vrnetlab doesn't focus on forwarding performance but the aim is to keep feature
 parity with real routers and if you can't test that your PIM neighbors come up
 correctly due to lack of multicast then.. well, that's no good.
+
+##### Q: What about licenses?
+A: Older vMX in evaluation mode are limited to 30 days and with a throughput
+cap of 1Mbps. You can purchase bandwidth licenses to get rid of the time limit
+and have a higher throughput cap. vMX 15.1F4 introduced additive bandwidth
+licenses, before which only the bandwidth license with the highest capacity
+would be used. In 16.1 the evaluation period of 30 days was removed to the
+benefit of a perpetual evaluation license but still with a global throughput
+cap of 1Mbps.

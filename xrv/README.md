@@ -44,8 +44,8 @@ Usage
 docker run -d --privileged --name my-xrv-router vr-xrv
 ```
 You can run the image with `--privileged` to make use of KVM's hardware
-assisted virtualisation. Without which CPU emulation will be used instead.
-Although I haven't measured I imagine `--privileged` results in a considerable
+assisted virtualisation, without which CPU emulation will be used instead.
+Although I haven't measured, I imagine `--privileged` results in a considerable
 performance boost over emulation. Further, emulation mode hasn't been as
 thoroughly tested.
 
@@ -55,3 +55,34 @@ login over SSH / NETCONF with the specified credentials.
 If you want to look at the startup process you can specify `-i -t` to docker
 run and you'll get an interactive terminal, do note that docker will terminate
 as soon as you close it though. Use `-d` for long running routers.
+
+FUAQ - Frequently or Unfrequently Asked Questions
+-------------------------------------------------
+##### Q: What is the difference between XRv and XRv9000?
+A: Cisco is probably better at giving a thorough answer to this question but
+essentially XRv is meant for low-throughput labs while XRv9000 has a much
+higher performing forwarding plane that can be used for forwarding of
+production traffic.
+
+##### Q: Why not use XRv9000?
+A: It seems that all the forwarding plane features that I am looking for are
+available in XRv and so there is very little benefit to XRv9000. On the
+contrary, XRv supports up to 96 interfaces
+(http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/ios_xrv/install_config/b-xrv/b-xrv_chapter_01.html)
+with a single VM whereas XRv9000 seems to support up to 11 NICs (see
+http://www.cisco.com/c/en/us/td/docs/routers/virtual-routers/configuration/guide/b-xrv9k-cg/b-xrv9k-cg_chapter_0111.html).
+
+##### Q: How come there are only 16 NICs?
+A: AFAICT, qemu has a limit of one PCI bus and each PCI bus can support 32
+devices. IDE controller and similar consume some devices so we should be left
+with ~28 available PCI devices that could be used for NICs, however I have seen
+issues with using more than 17 NICs (16+1 mgmt) and so the limit is currently
+set lower. I imagine it can be raised by careful testing - perhaps it's XRv
+version or qemu version dependent!?
+
+##### Q: Is a license required?
+A: Yes and no. XRv can run in a demo mode or a production mode, where the
+former is free and the latter cost money. The download URL provided earlier is
+to the free demo version. In the demo mode there are hard-coded users (i.e. not
+very secure for production) and it is rate-limited to a total throughput of
+2Mbps.

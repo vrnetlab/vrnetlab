@@ -106,7 +106,7 @@ class VMX:
             cmd.insert(1, '-enable-kvm')
 
         # add metadata image if it exists
-        if os.path.exists("/metadata-usb-re.img"):
+        if os.path.exists("/vmx/metadata-usb-re.img"):
             cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-re.img"])
 
         # mgmt interface is special - we use qemu user mode network
@@ -129,7 +129,7 @@ class VMX:
                "-drive", "if=ide,file=/vmx/vfpc.img",
                ]
         # add metadata image if it exists
-        if os.path.exists("/metadata-usb-fpc0.img"):
+        if os.path.exists("/vmx/metadata-usb-fpc0.img"):
             cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-fpc0.img"])
 
         # mgmt interface is special - we use qemu user mode network
@@ -184,7 +184,7 @@ class VMX:
 
         print(".")
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 3)
+        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 5)
         if match: # got a match!
             print("match", match, res)
             if ridx == 0: # matched login prompt, so should login

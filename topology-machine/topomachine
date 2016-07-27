@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+
+import json
+import sys
+
+import jinja2
+
+class VrTopo:
+    """ vrnetlab topo builder
+    """
+    def __init__(self, config):
+        self.routers = {}
+        self.links = []
+        self.fullmeshes = {}
+        if 'routers' in config:
+            self.routers = config['routers']
+
+        # sanity checking - use a YANG model and pyang to validate input?
+        for r, val in self.routers.items():
+            if 'type' not in val:
+                raise ValueError("'type' is not defined for router %s" % r)
+            if val['type'] not in ('xrv', 'vmx', 'sros'):
+                raise ValueError("Unknown type %s for router %s" % (val['type'], r))
+
+        # expand p2p links
+        links = []
+        if 'p2p' in config:
+            for router, neighbors in config['p2p'].items():
+                for neighbor in neighbors:
+                    links.append({ 'left': { 'router': router }, 'right': {
+                        'router': neighbor }})
+
+        # expand fullmesh into links
+        if 'fullmeshes' in config:
+            for name, val in config['fullmeshes'].items():
+                fmlinks = self.expand_fullmesh(val)
+                links.extend(fmlinks)
+
+        self.links = self.assign_interfaces(links)
+
+        for router, val in self.routers.items():
+            if 'interfaces' in val:
+                for num_id in val['interfaces']:
+                    val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
+
+
+    def expand_fullmesh(self, routers):
+        """ Flatten a full-mesh into a list of links
+
+            Links are considered bi-directional, so you will only see a link A->B
+            and not a B->A.
+        """
+        pairs = {}
+        for a in routers:
+            for b in routers:
+                left = min(a, b)
+                right = max(a, b)
+
+                if left == right: # don't create link to ourself
+                    continue
+
+                if left not in pairs:
+                    pairs[left] = {}
+                pairs[left][right] = 1
+
+        links = []
+        for a in pairs:
+            for b in pairs[a]:
+                links.append({'left': { 'router': a }, 'right': { 'router': b }})
+
+        return links
+
+
+    def assign_interfaces(self, links):
+        """ Assign numeric interfaces to links
+        """
+        # assign interfaces to links
+        for link in links:
+            left = link['left']
+            left['numeric'] = self.get_interface(left['router'])
+            left['interface'] = self.intf_num_to_name(left['router'], left['numeric'])
+
+            right = link['right']
+            right['numeric'] = self.get_interface(right['router'])
+            right['interface'] = self.intf_num_to_name(right['router'], right['numeric'])
+
+        return links
+
+
+    def intf_num_to_name(self, router, interface):
+        """ Map numeric ID to interface name
+        """
+        r = self.routers[router]
+        if r['type'] == 'xrv':
+            return "GigabitEthernet0/0/0/%d" % (interface-1)
+        if r['type'] == 'vmx':
+            return "ge-0/0/%d" % (interface-1)
+        if r['type'] == 'sros':
+            return "1/1/%d" % (interface)
+
+        return None
+
+
+    def get_interface(self, router):
+        """ Return next available interface
+        """
+        if router not in self.routers:
+            raise ValueError("Router %s is not defined in config" % router)
+        if 'interfaces' not in self.routers[router]:
+            self.routers[router]['interfaces'] = {}
+        intfs = self.routers[router]['interfaces']
+
+        i = 1
+        for intf in range(len(intfs)):
+            if i not in intfs:
+                break
+            i += 1
+
+        intfs[i] = None
+
+        return i
+
+
+    def output(self, output_format='json'):
+        """ Output the resulting topology in given format
+
+            output_format can only be json for now
+        """
+        output = {
+                'routers': self.routers,
+                'links': self.links
+            }
+
+        if output_format == 'json':
+            return json.dumps(output, sort_keys=True, indent=4)
+        else:
+            raise ValueError("Invalid output format")
+
+
+def run_command(cmd, dry_run=False):
+    if dry_run:
+        print(" ".join(cmd))
+        return
+
+    import subprocess
+    try:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
+        return p.communicate()
+    except:
+        pass
+
+
+def run_topology(config, dry_run):
+    if 'routers' not in config:
+        print("No routers in config")
+        sys.exit(1)
+
+    for router, val in config['routers'].items():
+        cmd = ["docker", "run", "--privileged", "-d",
+               "--name", "%s%s" % (args.prefix, router),
+               "%s:%s" % (val["type"], val["version"])
+          ]
+        run_command(cmd, dry_run)
+
+    if 'links' in config:
+        cmd = ["docker", "run", "--privileged", "-d"]
+
+        cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in config['routers']])
+        cmd.append("tcpbridge")
+        cmd.extend(["--p2p %s/%s-%s/%s" % (link["left"]["router"],
+                                           link["left"]["numeric"],
+                                           link["right"]["router"],
+                                           link["right"]["numeric"]) for link in config['links']])
+        run_command(cmd, dry_run)
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--build", help="Build topology from config")
+    parser.add_argument("--run", help="Run topology")
+    parser.add_argument("--dry-run", action="store_true", default=False, help="Only print what would be performed during --run")
+    parser.add_argument("--prefix", default='', help="docker container name prefix")
+    parser.add_argument("--template", nargs=2, help="produce output based on topology information and a template")
+    args = parser.parse_args()
+
+    if args.dry_run and not args.run:
+        print("ERROR: --dry-run is only relevant with --run")
+        sys.exit(1)
+
+    if args.prefix and not args.run:
+        print("ERROR: --prefix is only relevant with --run")
+        sys.exit(1)
+
+    if args.build:
+        input_file = open(args.build, "r")
+        config = json.loads(input_file.read())
+        input_file.close()
+        try:
+            vt = VrTopo(config)
+        except Exception as exc:
+            print("ERROR:", exc)
+            sys.exit(1)
+        print(vt.output())
+
+    if args.run:
+        input_file = open(args.run, "r")
+        config = json.loads(input_file.read())
+        input_file.close()
+        if args.dry_run:
+            print("The following commands would be executed:")
+        run_topology(config, args.dry_run)
+
+    if args.template:
+        input_file = open(args.template[0], "r")
+        config = json.loads(input_file.read())
+        input_file.close()
+
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(['./']))
+        template = env.get_template(args.template[1])
+        print(template.render(config=config))
+

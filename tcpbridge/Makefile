@@ -9,3 +9,6 @@ endif
 
 all:
 	docker build -t $(REGISTRY)tcpbridge .
+
+docker-push:
+	docker push $(REGISTRY)tcpbridge

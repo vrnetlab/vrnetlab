@@ -23,7 +23,7 @@ class TcpBridge:
 
 
     def add_p2p(self, p2p):
-        source, destination = p2p.split("-")
+        source, destination = p2p.split("--")
         src_router, src_interface = source.split("/")
         dst_router, dst_interface = destination.split("/")
 

@@ -167,7 +167,8 @@ def run_topology(config, dry_run):
 
         cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in config['routers']])
         cmd.append("tcpbridge")
-        cmd.extend(["--p2p %s/%s-%s/%s" % (link["left"]["router"],
+        cmd.append("--p2p")
+        cmd.extend([" %s/%s--%s/%s" % (link["left"]["router"],
                                            link["left"]["numeric"],
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])

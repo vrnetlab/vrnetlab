@@ -170,7 +170,7 @@ class VMX:
             returns False, False    when there is still work to be done
         """
 
-        if self.spins > 120:
+        if self.spins > 300:
             # too many spins with no result
             if self.cycle == 0:
                 # but if it's our first cycle we try to tickle the device to get a prompt
@@ -184,7 +184,7 @@ class VMX:
 
         print(".")
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 5)
+        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
         if match: # got a match!
             print("match", match, res)
             if ridx == 0: # matched login prompt, so should login
@@ -211,7 +211,7 @@ class VMX:
         """ Do the actual bootstrap config
         """
         self.wait_write("cli", None)
-        self.wait_write("configure", '>')
+        self.wait_write("configure", '>', 10)
         self.wait_write("set system services ssh")
         self.wait_write("set system services netconf ssh")
         self.wait_write("set system services netconf rfc-compliant")
@@ -229,12 +229,12 @@ class VMX:
         self.tn.close()
 
 
-    def wait_write(self, cmd, wait='#'):
+    def wait_write(self, cmd, wait='#', timeout=None):
         """ Wait for something and then send command
         """
         if wait:
             print("Waiting for %s" % wait)
-            res = self.tn.read_until(wait.encode())
+            res = self.tn.read_until(wait.encode(), timeout=timeout)
             print("Read:", res)
         print("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())

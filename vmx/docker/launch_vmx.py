@@ -212,6 +212,7 @@ class VMX:
         """
         self.wait_write("cli", None)
         self.wait_write("configure", '>', 10)
+        self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
         self.wait_write("set system services ssh")
         self.wait_write("set system services netconf ssh")
         self.wait_write("set system services netconf rfc-compliant")

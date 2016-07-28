@@ -22,7 +22,10 @@ To convert a topology configuration into a ready to run topology use --build:
 topo --build my-topology-config.json > my-topo.json
 ```
 The output is printed to stdout so you can view it, pipe or redirect to a file
-if you want.
+if you want. Only run this command once and then use the resulting my-topo.json
+file multiple times with --run, --template and similar. Due to the way Python
+dicts work (not predictable order) the output will differ between runs which
+can result in a mismatch between interfaces.
 
 topology machine is also able to run the machines for you, i.e. execute docker
 run for the routers defined in the configuration file and start tcpbridge with

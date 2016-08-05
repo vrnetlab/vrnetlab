@@ -35,3 +35,31 @@ that. The ports are numbered 1/1/[1-20], 1/3/[1-20] and 1/5/[1-20].
 If you want to look at the startup process you can specify `-i -t` to docker
 run and you'll get an interactive terminal, do note that docker will terminate
 as soon as you close it though. Use `-d` for long running routers.
+
+License handling
+----------------
+You can feed a license file into SROS by putting a text file containing the
+license in this directory next to your .qcow2 image.  Name the license file the
+same as your .qcow2 file but append ".license", e.g. if you have
+"sros-14.0.R3.qcow2" you would name the license file
+"sros-14.0.R3.qcow2.license".
+
+The license is bound to a specific UUID and usually expires within a given
+time. The UUID is the first part of the license file and the launch script will
+automatically extract this and start the VSR with this UUID.
+
+If you have a time limited license you can put the start time of the license in
+the license file, simply by appending the date in ISO-8601 format (YYYY-mm-dd).
+The license usually has a '# BLA BLA TiMOS-XX.Y.*' at the end to signify what
+it is for, simply append the date there. The launch script will extract this
+date and start the VSR with this date + 1 day as to fool the licensing system.
+I suppose that you shouldn't configure NTP or similar on your VSR....
+
+FUAQ - Frequently or Unfrequently Asked Questions
+-------------------------------------------------
+##### Q: I can't run any useful commands, like "configure", what up?
+A: Are you perhaps using release 14? Nokia introduced more limitations on the
+VSR when run without license. Apparently it wasn't enough to restart once an
+hour and have severe rate-limiting (200pps per interface) but they also limited
+the commands you can run, including "configure", which makes the VSR completely
+useless without a license.

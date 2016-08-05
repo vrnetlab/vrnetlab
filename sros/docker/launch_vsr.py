@@ -46,6 +46,31 @@ def gen_mac(last_octet=None):
             last_octet
         )
 
+def mangle_uuid(uuid):
+    """ Mangle the UUID to fix endianness mismatch on first part
+    """
+    parts = uuid.split("-")
+
+    new_parts = [
+        uuid_rev_part(parts[0]),
+        uuid_rev_part(parts[1]),
+        uuid_rev_part(parts[2]),
+        parts[3],
+        parts[4]
+    ]
+
+    return '-'.join(new_parts)
+
+
+def uuid_rev_part(part):
+    """ Reverse part of a UUID
+    """
+    res = ""
+    for i in reversed(range(0, len(part), 2)):
+        res += part[i]
+        res += part[i+1]
+    return res
+
 
 class InitAlu:
     def __init__(self, username, password):
@@ -57,6 +82,31 @@ class InitAlu:
 
         self.ram = 4096
         self.num_nics = 20
+
+        self.uuid = "00000000-0000-0000-0000-000000000000"
+        self.license_start = None
+
+
+
+    def read_license(self):
+        """ Read the license file, if it exists, and extract the UUID and start
+            time of the license
+        """
+        if not os.path.isfile("/tftpboot/license.txt"):
+            return
+
+        lic_file = open("/tftpboot/license.txt", "r")
+        license = lic_file.read()
+        lic_file.close()
+        try:
+            uuid_input = license.split(" ")[0]
+            self.uuid = mangle_uuid(uuid_input)
+            m = re.search("([0-9]{4}-[0-9]{2}-)([0-9]{2})", license)
+            if m:
+                self.license_start = m.group(1) + str(int(m.group(2))+1)
+        except:
+            raise ValueError("Unable to parse license file")
+
 
 
     def start(self, blocking=True):
@@ -88,22 +138,28 @@ class InitAlu:
     def start_vm(self):
         """ Start the VM
         """
+        self.read_license()
+
+        bof = "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp"
+
         cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
-               "-serial", "telnet:0.0.0.0:5000,server,nowait", "-smbios",
-               "type=1,product=TIMOS:slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp",
-               "-hda", "/sros.qcow2"
+               "-serial", "telnet:0.0.0.0:5000,server,nowait", "-smbios", bof,
+               "-hda", "/sros.qcow2", "-uuid", self.uuid
                ]
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             cmd.insert(1, '-enable-kvm')
 
+        # do we have a license start date?
+        if self.license_start:
+            cmd.extend(["-rtc", "base=" + self.license_start])
+
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")
-        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                   % { 'i': 0, 'mac': gen_mac(0) })
+        cmd.append("e1000,netdev=mgmt,mac=%(mac)s"
+                   % { 'mac': gen_mac(0) })
         cmd.append("-netdev")
-        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
+        cmd.append("user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
 
         for i in range(1, self.num_nics):
             cmd.append("-device")
@@ -172,8 +228,6 @@ class InitAlu:
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
-        self.wait_write("bof address 10.0.0.15/24")
-        self.wait_write(b"bof save")
         if self.username and self.password:
             self.wait_write("configure system security user \"%s\" password %s" % (self.username, self.password))
             self.wait_write("configure system security user \"%s\" access console netconf" % (self.username))

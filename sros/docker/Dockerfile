@@ -15,6 +15,7 @@ RUN apt-get update -qy \
 
 ARG IMAGE
 ADD $IMAGE /sros.qcow2
+ADD $IMAGE.license /tftpboot/license.txt
 ADD launch_vsr.py /
 
 EXPOSE 22 830 5000 10000-10099

@@ -3,8 +3,9 @@ vrnetlab - VR Network Lab
 Run your favourite virtual routers in docker for convenient labbing,
 development and testing.
 
-vrnetlab been developed for the TeraStream project at Deutsche Telekom to
-automate CI test related to network provisioning.
+vrnetlab is being developed for the TeraStream project at Deutsche Telekom as
+part of an automated CI environment for testing our network provisioning
+system.
 
 It supports:
 

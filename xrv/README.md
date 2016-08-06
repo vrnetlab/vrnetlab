@@ -86,3 +86,9 @@ former is free and the latter cost money. The download URL provided earlier is
 to the free demo version. In the demo mode there are hard-coded users (i.e. not
 very secure for production) and it is rate-limited to a total throughput of
 2Mbps.
+
+##### Q: How come CVAC is not used to feed the initial configuration?
+A: CVAC uses a virtual CD-ROM drive to feed an initial configuration into XR.
+Unfortuately it doesn't support generating crypto keys, which is required for
+SSH, and so it cannot replace the serial approach to 100% and therefore I opted
+to do everything over the serial interface.

@@ -67,4 +67,5 @@ the VCP to inject a config. I opted for the serial driver as it was easier to
 start off with - I had already written it for SR-OS whereas I would have to
 spend some time on fixing a config-drive builder. I suppose it could prove more
 reliable than serial-hackery but we also have to face things like password
-encryption (or will JUNOS do that for us automatically?).
+encryption, i.e. how can we feed a plain-text password in that configuration
+file?

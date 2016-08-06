@@ -235,7 +235,13 @@ class VMX:
         """
         if wait:
             print("Waiting for %s" % wait)
-            res = self.tn.read_until(wait.encode(), timeout=timeout)
+            while True:
+                (ridx, match, res) = self.tn.expect([wait.encode(), b"Retry connection attempts"], timeout=timeout)
+                if match:
+                    if ridx == 0:
+                        break
+                    if ridx == 1:
+                        self.tn.write("yes\r".encode())
             print("Read:", res)
         print("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())

@@ -65,7 +65,7 @@ class TcpBridge:
                     i.connect()
                 if len(buf) == 0:
                     return
-                if debug:
+                if self.debug:
                     print("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
                 remote.send(buf)
 

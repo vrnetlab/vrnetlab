@@ -56,7 +56,7 @@ class VMX:
         self.password = password
 
         self.ram = 4096
-        self.num_nics = 20
+        self.num_nics = None
 
         self.state = 0
 
@@ -212,7 +212,7 @@ class VMX:
         """
         self.wait_write("cli", None)
         self.wait_write("configure", '>', 10)
-        self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
+        self.wait_write("set chassis fpc 0 pic 0 number-of-ports %d" % self.num_nics)
         self.wait_write("set system services ssh")
         self.wait_write("set system services netconf ssh")
         self.wait_write("set system services netconf rfc-compliant")
@@ -253,9 +253,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
+    parser.add_argument('--num-nics', default=20, help='Number of interfaces')
     args = parser.parse_args()
 
     vr = VMX(args.username, args.password)
+    vr.num_nics = args.num_nics
     vr.start()
     print("Going into sleep mode")
     while True:

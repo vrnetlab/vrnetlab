@@ -14,9 +14,7 @@ RUN apt-get update -qy \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
-ADD $IMAGE /sros.qcow2
-ADD $IMAGE.license /tftpboot/license.txt
-ADD launch_vsr.py /
+ADD . /
 
 EXPOSE 22 830 5000 10000-10099
 ENTRYPOINT ["/launch_vsr.py"]

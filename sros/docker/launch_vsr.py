@@ -138,6 +138,13 @@ class InitAlu:
     def start_vm(self):
         """ Start the VM
         """
+        # move files into place
+        for e in os.listdir("/"):
+            if re.search("\.qcow2$", e):
+                os.rename("/" + e, "/sros.qcow2")
+            if re.search("\.license$", e):
+                os.mkdir("/tftpboot")
+                os.rename("/" + e, "/tftpboot/license.txt")
         self.read_license()
 
         bof = "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp"

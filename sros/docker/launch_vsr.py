@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import logging
 import os
 import random
 import re
@@ -12,16 +13,22 @@ import time
 import IPy
 
 def handle_SIGCHLD(signal, frame):
-    print('Reaping child')
     os.waitpid(-1, os.WNOHANG)
 
 def handle_SIGTERM(signal, frame):
-    print('Shutting down...')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
+
+TRACE_LEVEL_NUM = 9
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+def trace(self, message, *args, **kws):
+    # Yes, logger takes its '*args' as 'args'.
+    if self.isEnabledFor(TRACE_LEVEL_NUM):
+        self._log(TRACE_LEVEL_NUM, message, args, **kws)
+logging.Logger.trace = trace
 
 def run_command(cmd, cwd=None, background=False):
     import subprocess
@@ -74,6 +81,7 @@ def uuid_rev_part(part):
 
 class InitAlu:
     def __init__(self, username, password):
+        self.logger = logging.getLogger()
         self.spins = 0
         self.cycle = 0
 
@@ -93,6 +101,7 @@ class InitAlu:
             time of the license
         """
         if not os.path.isfile("/tftpboot/license.txt"):
+            self.logger.info("No license file found")
             return
 
         lic_file = open("/tftpboot/license.txt", "r")
@@ -106,6 +115,7 @@ class InitAlu:
                 self.license_start = m.group(1) + str(int(m.group(2))+1)
         except:
             raise ValueError("Unable to parse license file")
+        self.logger.info("License file found for UUID %s with start date %s" % (self.uud, self.license_start))
 
 
 
@@ -132,12 +142,13 @@ class InitAlu:
                     break
             self.bootstrap_end()
         stop_time = datetime.datetime.now()
-        print("Startup took:", stop_time - start_time)
+        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
 
 
     def start_vm(self):
         """ Start the VM
         """
+        self.logger.info("Starting VM")
         # move files into place
         for e in os.listdir("/"):
             if re.search("\.qcow2$", e):
@@ -210,13 +221,10 @@ class InitAlu:
                 # give up
                 return True, False
 
-
-        print(".")
         (ridx, match, res) = self.tn.expect([b"Login:", b"^[^ ]+#"], 1)
         if match: # got a match!
-            print("match")
             if ridx == 0: # matched login prompt, so should login
-                print("match login prompt")
+                self.logger.debug("matched login prompt")
                 self.wait_write("admin", wait=None)
                 self.wait_write("admin", wait="Password:")
             # run main config!
@@ -226,7 +234,7 @@ class InitAlu:
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b'':
-            print("OUTPUT:", res)
+            self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
 
@@ -266,10 +274,10 @@ class InitAlu:
         """ Wait for something and then send command
         """
         if wait:
-            print("Waiting for %s" % wait)
+            self.logger.debug("Waiting for %s" % wait)
             res = self.tn.read_until(wait.encode())
-            print("Read:", res)
-        print("Running command: %s" % cmd)
+            self.logger.debug("Read: %s" % res.decode())
+        self.logger.debug("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 
@@ -277,12 +285,21 @@ class InitAlu:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     args = parser.parse_args()
 
+    LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
+    logging.basicConfig(format=LOG_FORMAT)
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.DEBUG)
+    if args.trace:
+        logger.setLevel(1)
+
     ia = InitAlu(args.username, args.password)
     ia.start()
-    print("Going into sleep mode")
+    logger.info("Going into sleep mode")
     while True:
         time.sleep(1)

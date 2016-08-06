@@ -116,9 +116,9 @@ class VMX:
         cmd.append("user,id=vcp0,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
         # internal control plane interface to vFPC
         cmd.append("-device")
-        cmd.append("virtio-net-pci,netdev=vcp1,mac=%s" % gen_mac(1))
+        cmd.append("virtio-net-pci,netdev=vcp-int,mac=%s" % gen_mac(1))
         cmd.append("-netdev")
-        cmd.append("tap,ifname=vcp1,id=vcp1,script=no,downscript=no")
+        cmd.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
 
         run_command(cmd)
 
@@ -133,11 +133,14 @@ class VMX:
             cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-fpc0.img"])
 
         # mgmt interface is special - we use qemu user mode network
-        cmd.extend(["-device", "virtio-net-pci,netdev=vfpc0,mac=%s" % gen_mac(0)])
-        cmd.extend(["-netdev", "user,id=vfpc0,net=10.0.0.0/24"])
+        cmd.extend(["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % gen_mac(0)])
+        cmd.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
         # internal control plane interface to vFPC
-        cmd.extend(["-device", "virtio-net-pci,netdev=vfpc1,mac=%s" % gen_mac(0)])
-        cmd.extend(["-netdev", "tap,ifname=vfpc1,id=vfpc1,script=no,downscript=no"])
+        cmd.extend(["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % gen_mac(0)])
+        cmd.extend(["-netdev", "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
+        # dummy interface. not sure why vFPC wants it
+        cmd.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" % gen_mac(0)])
+        cmd.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
 
         for i in range(1, self.num_nics):
             cmd.extend(["-device", "virtio-net-pci,netdev=p%(i)02d,mac=%(mac)s"
@@ -146,11 +149,11 @@ class VMX:
                        % { 'i': i }])
 
         run_command(cmd)
-        run_command(["brctl", "addif", "int_cp", "vcp1"])
-        run_command(["brctl", "addif", "int_cp", "vfpc1"])
+        run_command(["brctl", "addif", "int_cp", "vcp-int"])
+        run_command(["brctl", "addif", "int_cp", "vfpc-int"])
         run_command(["ip", "link", "set", "int_cp", "up"])
-        run_command(["ip", "link", "set", "vcp1", "up"])
-        run_command(["ip", "link", "set", "vfpc1", "up"])
+        run_command(["ip", "link", "set", "vcp-int", "up"])
+        run_command(["ip", "link", "set", "vfpc-int", "up"])
 
 
     def bootstrap_init(self):

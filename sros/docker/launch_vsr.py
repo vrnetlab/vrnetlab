@@ -167,6 +167,9 @@ class InitAlu:
                    % { 'mac': gen_mac(0) })
         cmd.append("-netdev")
         cmd.append("user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
+        # dummy interface
+        cmd.extend(["-device", "e1000,netdev=dummy,mac=%s" % gen_mac(0)])
+        cmd.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
 
         for i in range(1, self.num_nics):
             cmd.append("-device")

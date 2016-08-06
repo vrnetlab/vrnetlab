@@ -23,6 +23,11 @@ packet.
 
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
+##### Q: Can I use '--' in the names of my vrnetlab containers?
+A: No, since -- is used as the separator in the --p2p argument list for
+separating two vrnetlab instances you can not use -- in the name of the
+container itself.
+
 ##### Q: Is this fast?
 A: I haven't tested but I would assume it is incredibly slow.
 

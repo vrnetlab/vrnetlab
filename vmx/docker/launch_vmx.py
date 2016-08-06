@@ -55,7 +55,7 @@ class VMX:
         self.username = username
         self.password = password
 
-        self.ram = 4096
+        self.ram = 2048
         self.num_nics = None
 
         self.state = 0
@@ -123,8 +123,8 @@ class VMX:
         run_command(cmd)
 
         # start VFP VM
-        cmd = ["kvm", "-display", "none", "-daemonize", "-m", str(self.ram),
-               "-cpu", "SandyBridge", "-M", "pc", "-smp", "4",
+        cmd = ["kvm", "-display", "none", "-daemonize", "-m", "4096",
+               "-cpu", "SandyBridge", "-M", "pc", "-smp", "3",
                "-serial", "telnet:0.0.0.0:5001,server,nowait",
                "-drive", "if=ide,file=/vmx/vfpc.img",
                ]

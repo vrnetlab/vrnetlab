@@ -12,9 +12,9 @@ vrssh() {
 	VR_ADDRESS=$(vr_mgmt_ip $VROUTER)
 
 	if [ -z "$USER" ] ; then
-		ssh $VR_ADDRESS -l vrnetlab
+		ssh -oStrictHostKeyChecking=no $VR_ADDRESS -l vrnetlab
 	else
-		ssh $VR_ADDRESS -l $USER
+		ssh -oStrictHostKeyChecking=no $VR_ADDRESS -l $USER
 	fi
 }
 

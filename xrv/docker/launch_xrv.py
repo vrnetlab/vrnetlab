@@ -61,7 +61,6 @@ class XRV:
                 ['admin', 'admin']
             ]
         self.spins = 0
-        self.cycle = 0
 
         self.username = username
         self.password = password
@@ -69,31 +68,25 @@ class XRV:
         self.ram = 4096
         self.num_nics = 16
 
-        self.state = 0
+        self.xr_ready = False
 
 
-    def start(self, blocking=True):
+    def start(self):
         """ Start the virtual router
 
             This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port. It is
-            possible to set blocking=False which means only the first parts of
-            the startup process are run. You are expected to call the
-            bootstrap_spin() function periodically (like once a second) after
-            this to complete the bootstrap process. Once bootstrap_spin()
-            returns True you are done!
+            and the do initial bootstraping of it over serial port.
         """
         start_time = datetime.datetime.now()
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         self.bootstrap_init()
-        if blocking:
-            while True:
-                done, res = self.bootstrap_spin()
-                if done:
-                    break
-            self.bootstrap_end()
+        while True:
+            done, res = self.bootstrap_spin()
+            if done:
+                break
+        self.bootstrap_end()
         stop_time = datetime.datetime.now()
         self.logger.info("Startup complete in: %s" % (stop_time - start_time))
 
@@ -148,17 +141,9 @@ class XRV:
             returns False, False    when there is still work to be done
         """
 
-        if self.spins > 180:
-            # too many spins with no result
-            if self.cycle == 0:
-                # but if it's our first cycle we try to tickle the device to get a prompt
-                self.wait_write("", wait=None)
-
-                self.cycle += 1
-                self.spins = 0
-            else:
-                # give up
-                return True, False
+        if self.spins > 300:
+            # too many spins with no result ->  give up
+            return True, False
 
         (ridx, match, res) = self.tn.expect([b"Press RETURN to get started",
             b"SYSTEM CONFIGURATION COMPLETE",
@@ -171,7 +156,7 @@ class XRV:
             if ridx == 1: # system configuration complete
                 self.logger.info("IOS XR system configuration is complete, should be able to proceed with bootstrap configuration")
                 self.wait_write("", wait=None)
-                self.state = 1
+                self.xr_ready = True
             if ridx == 2: # initial user config
                 self.logger.info("Creating initial user")
                 self.wait_write(self.username, wait=None)
@@ -188,7 +173,7 @@ class XRV:
                 self.logger.debug("trying to log in with %s / %s" % (username, password))
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
-            if self.state > 0 and ridx == 4:
+            if self.xr_ready == True and ridx == 4:
                 # run main config!
                 self.bootstrap_config()
                 return True, True

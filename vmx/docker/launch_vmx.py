@@ -12,16 +12,22 @@ import time
 import IPy
 
 def handle_SIGCHLD(signal, frame):
-    print('Reaping child')
     os.waitpid(-1, os.WNOHANG)
 
 def handle_SIGTERM(signal, frame):
-    print('Shutting down...')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
+
+TRACE_LEVEL_NUM = 9
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+def trace(self, message, *args, **kws):
+    # Yes, logger takes its '*args' as 'args'.
+    if self.isEnabledFor(TRACE_LEVEL_NUM):
+        self._log(TRACE_LEVEL_NUM, message, args, **kws)
+logging.Logger.trace = trace
 
 def run_command(cmd, cwd=None, background=False):
     import subprocess
@@ -49,6 +55,7 @@ def gen_mac(last_octet=None):
 
 class VMX:
     def __init__(self, username, password):
+        self.logger = logging.getLogger()
         self.spins = 0
         self.cycle = 0
 
@@ -84,12 +91,13 @@ class VMX:
                     break
             self.bootstrap_end()
         stop_time = datetime.datetime.now()
-        print("Startup took:", stop_time - start_time)
+        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
 
 
     def start_vm(self):
         """ Start the VM
         """
+        self.logger.info("Starting VCP VM")
         # set up bridge for connecting VCP with vFPC
         run_command(["brctl", "addbr", "int_cp"])
 
@@ -123,6 +131,7 @@ class VMX:
         run_command(cmd)
 
         # start VFP VM
+        self.logger.info("Starting vFPC VM")
         cmd = ["kvm", "-display", "none", "-daemonize", "-m", "4096",
                "-cpu", "SandyBridge", "-M", "pc", "-smp", "3",
                "-serial", "telnet:0.0.0.0:5001,server,nowait",
@@ -185,13 +194,10 @@ class VMX:
                 # give up
                 return True, False
 
-        print(".")
-
         (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
         if match: # got a match!
-            print("match", match, res)
             if ridx == 0: # matched login prompt, so should login
-                print("match login prompt")
+                self.logger.info("matched login prompt")
                 self.wait_write("root", wait=None)
             if ridx == 1:
                 # run main config!
@@ -201,7 +207,7 @@ class VMX:
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b'':
-            print("OUTPUT:", res)
+            self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
 
@@ -237,7 +243,7 @@ class VMX:
         """ Wait for something and then send command
         """
         if wait:
-            print("Waiting for %s" % wait)
+            self.logger.debug("Waiting for %s" % wait)
             while True:
                 (ridx, match, res) = self.tn.expect([wait.encode(), b"Retry connection attempts"], timeout=timeout)
                 if match:
@@ -245,8 +251,8 @@ class VMX:
                         break
                     if ridx == 1:
                         self.tn.write("yes\r".encode())
-            print("Read:", res)
-        print("Running command: %s" % cmd)
+            self.logger.debug("Read: %s" % res.decode())
+        self.logger.debug("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 
@@ -254,14 +260,23 @@ class VMX:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--num-nics', default=20, help='Number of interfaces')
     args = parser.parse_args()
 
+    LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
+    logging.basicConfig(format=LOG_FORMAT)
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.DEBUG)
+    if args.trace:
+        logger.setLevel(1)
+
     vr = VMX(args.username, args.password)
     vr.num_nics = args.num_nics
     vr.start()
-    print("Going into sleep mode")
+    logger.info("Going into sleep mode")
     while True:
         time.sleep(1)

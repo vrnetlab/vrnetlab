@@ -170,6 +170,11 @@ vrssh vr1 myuser
 ```
 vrcons vr1
 ```
+4. Create a bridge between two router interfaces, the below command bridges
+interface 1 of router vr1 with interface 1 of router 2.
+```
+vrbridge vr1 1 vr2 1
+```
 
 To load these aliases on login, copy it to ~/.vrnetlab_bashrc and add the
 following to your .bashrc

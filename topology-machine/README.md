@@ -6,7 +6,7 @@ In particular, there are two activites related to building a topology that can
 be really tedious and topology machine is meant to help you with these:
 
  * building a full-mesh
- * assigning interfaces to 
+ * assigning interfaces to point-to-point links between routers
 
 Full-meshes defined in the configuration file will be expanded into
 point-to-point links between all the member routers.

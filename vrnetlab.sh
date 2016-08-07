@@ -22,3 +22,12 @@ vrcons() {
 	VROUTER=$1
 	telnet $(vr_mgmt_ip $VROUTER) 5000
 }
+
+vrbridge() {
+	VR1=$1
+	VP1=$2
+	VR2=$3
+	VP2=$4
+
+	docker run -d  --name "bridge-${VR1}-${VP1}-${VR2}-${VP2}" --link $VR1 --link $VR2 tcpbridge --p2p "${VR1}/${VP1}--${VR2}/${VP2}"
+}

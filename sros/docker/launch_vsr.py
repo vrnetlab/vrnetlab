@@ -115,7 +115,7 @@ class InitAlu:
                 self.license_start = m.group(1) + str(int(m.group(2))+1)
         except:
             raise ValueError("Unable to parse license file")
-        self.logger.info("License file found for UUID %s with start date %s" % (self.uud, self.license_start))
+        self.logger.info("License file found for UUID %s with start date %s" % (self.uuid, self.license_start))
 
 
 

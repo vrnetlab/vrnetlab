@@ -192,7 +192,7 @@ class XRV:
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b'':
-            self.logger.trace("OUTPUT:", res)
+            self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
 

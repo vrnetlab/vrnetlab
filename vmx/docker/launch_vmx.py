@@ -6,6 +6,7 @@ import os
 import random
 import re
 import signal
+import subprocess
 import sys
 import telnetlib
 import time
@@ -31,7 +32,6 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 def run_command(cmd, cwd=None, background=False):
-    import subprocess
     res = None
     try:
         if background:
@@ -57,8 +57,9 @@ def gen_mac(last_octet=None):
 class VMX:
     def __init__(self, username, password):
         self.logger = logging.getLogger()
+        self.vcp_started = False
+        self.vfpc_started = False
         self.spins = 0
-        self.cycle = 0
 
         self.username = username
         self.password = password
@@ -66,44 +67,43 @@ class VMX:
         self.ram = 2048
         self.num_nics = None
 
-        self.state = 0
 
-
-    def start(self, blocking=True):
+    def start(self):
         """ Start the virtual router
 
             This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port. It is
-            possible to set blocking=False which means only the first parts of
-            the startup process are run. You are expected to call the
-            bootstrap_spin() function periodically (like once a second) after
-            this to complete the bootstrap process. Once bootstrap_spin()
-            returns True you are done!
+            and the do initial bootstraping of it over serial port.
         """
         start_time = datetime.datetime.now()
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        self.bootstrap_init()
-        if blocking:
-            while True:
-                done, res = self.bootstrap_spin()
-                if done:
-                    break
-            self.bootstrap_end()
+        while not (self.vcp_started and self.vfpc_started):
+            if not self.bootstrap_spin():
+                break
+        self.bootstrap_end()
         stop_time = datetime.datetime.now()
         self.logger.info("Startup complete in: %s" % (stop_time - start_time))
 
 
     def start_vm(self):
-        """ Start the VM
+        """ Start the VMs
         """
-        self.logger.info("Starting VCP VM")
         # set up bridge for connecting VCP with vFPC
         run_command(["brctl", "addbr", "int_cp"])
+        run_command(["ip", "link", "set", "int_cp", "up"])
+        self.start_vcp()
+        self.start_vfpc()
+
+
+
+    def start_vcp(self):
+        """ Start the VCP
+        """
+        self.logger.info("Starting VCP VM")
 
         # start VCP VM (RE)
-        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
+        cmd = ["qemu-system-x86_64", "-display", "none", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
                "-drive", "if=ide,file=/vmx/vmx.img",
                "-drive", "if=ide,file=/vmx/vmxhdd.img",
@@ -129,11 +129,26 @@ class VMX:
         cmd.append("-netdev")
         cmd.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
 
-        run_command(cmd)
+        self.p_vcp = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        try:
+            self.p_vcp.communicate('', 1)
+        except:
+            pass
 
+        run_command(["brctl", "addif", "int_cp", "vcp-int"])
+        run_command(["ip", "link", "set", "vcp-int", "up"])
+
+        self.tn_vcp = telnetlib.Telnet("127.0.0.1", 5000)
+
+
+
+    def start_vfpc(self):
+        """ Start the vFPC
+        """
         # start VFP VM
         self.logger.info("Starting vFPC VM")
-        cmd = ["kvm", "-display", "none", "-daemonize", "-m", "4096",
+
+        cmd = ["kvm", "-display", "none", "-m", "4096",
                "-cpu", "SandyBridge", "-M", "pc", "-smp", "3",
                "-serial", "telnet:0.0.0.0:5001,server,nowait",
                "-drive", "if=ide,file=/vmx/vfpc.img",
@@ -158,44 +173,54 @@ class VMX:
             cmd.extend(["-netdev", "socket,id=p%(i)02d,listen=:100%(i)02d"
                        % { 'i': i }])
 
-        run_command(cmd)
-        run_command(["brctl", "addif", "int_cp", "vcp-int"])
+        self.p_vfpc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        try:
+            self.p_vfpc.communicate('', 1)
+        except:
+            pass
+
         run_command(["brctl", "addif", "int_cp", "vfpc-int"])
-        run_command(["ip", "link", "set", "int_cp", "up"])
-        run_command(["ip", "link", "set", "vcp-int", "up"])
         run_command(["ip", "link", "set", "vfpc-int", "up"])
 
+        # setup telnet connection
+        self.tn_vfpc = telnetlib.Telnet("127.0.0.1", 5001)
 
-    def bootstrap_init(self):
-        """ Do the initial part of the bootstrap process
-        """
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
-        
+
+
+    def stop_vcp(self):
+        self.p_vcp.terminate()
+        try:
+            self.p_vcp.communicate(timeout=10)
+        except:
+            self.p_vcp.kill()
+            self.p_vcp.communicate(timeout=10)
+
+
+    def stop_vfpc(self):
+        try:
+            self.p_vfpc.terminate()
+        except ProcessLookupError:
+            return
+
+        try:
+            self.p_vfpc.communicate(timeout=10)
+        except:
+            self.p_vfpc.kill()
+            self.p_vfpc.communicate(timeout=10)
+
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
 
-            It can be used when you don't want to block waiting for the router
-            to boot, like when you are booting multiple routers in parallel.
-
-            returns True, True      when it's done and succeeded
-            returns True, False     when it's done but failed
-            returns False, False    when there is still work to be done
+            returns False when it has failed and given up, otherwise True
         """
 
         if self.spins > 300:
-            # too many spins with no result
-            if self.cycle == 0:
-                # but if it's our first cycle we try to tickle the device to get a prompt
-                self.wait_write("", wait=None)
+            # too many spins with no result -> give up
+            self.logger.error("startup took too long - giving up")
+            return False
 
-                self.cycle += 1
-                self.spins = 0
-            else:
-                # give up
-                return True, False
-
-        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
+        (ridx, match, res) = self.tn_vcp.expect([b"login:", b"root@(%|:~ #)"], 1)
         if match: # got a match!
             if ridx == 0: # matched login prompt, so should login
                 self.logger.info("matched login prompt")
@@ -203,18 +228,34 @@ class VMX:
             if ridx == 1:
                 # run main config!
                 self.bootstrap_config()
-                return True, True
-
-        # no match, if we saw some output from the router it's probably
-        # booting, so let's give it some more time
-        if res != b'':
-            self.logger.trace("OUTPUT: %s" % res.decode())
-            # reset spins if we saw some output
-            self.spins = 0
+                self.vcp_started = True
+        else:
+            # no match, if we saw some output from the router it's probably
+            # booting, so let's give it some more time
+            if res != b'':
+                self.logger.trace("OUTPUT VCP: %s" % res.decode())
+                # reset spins if we saw some output
+                self.spins = 0
 
         self.spins += 1
 
-        return False, False
+        if self.vcp_started and not self.vfpc_started:
+            self.logger.debug("tickling vFPC")
+            self.tn_vfpc.write(b"\r")
+
+        (ridx, match, res) = self.tn_vfpc.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
+        if match:
+            if ridx == 0: # got login - vFPC start succeeded!
+                self.logger.info("vFPC successfully started")
+                self.vfpc_started = True
+            if ridx == 1: # vFPC start failed - restart it
+                self.logger.info("vFPC start failed, restarting")
+                self.stop_vfpc()
+                self.start_vfpc()
+        if res != b'':
+            self.logger.trace("OUTPUT VFPC: %s" % res.decode())
+
+        return True
 
 
     def bootstrap_config(self):
@@ -236,8 +277,10 @@ class VMX:
         self.wait_write("commit")
         self.wait_write("exit")
 
+
     def bootstrap_end(self):
-        self.tn.close()
+        self.tn_vcp.close()
+        self.tn_vfpc.close()
 
 
     def wait_write(self, cmd, wait='#', timeout=None):
@@ -246,15 +289,15 @@ class VMX:
         if wait:
             self.logger.trace("Waiting for %s" % wait)
             while True:
-                (ridx, match, res) = self.tn.expect([wait.encode(), b"Retry connection attempts"], timeout=timeout)
+                (ridx, match, res) = self.tn_vcp.expect([wait.encode(), b"Retry connection attempts"], timeout=timeout)
                 if match:
                     if ridx == 0:
                         break
                     if ridx == 1:
-                        self.tn.write("yes\r".encode())
+                        self.tn_vcp.write("yes\r".encode())
             self.logger.trace("Read: %s" % res.decode())
         self.logger.debug("writing to serial console: %s" % cmd)
-        self.tn.write("{}\r".format(cmd).encode())
+        self.tn_vcp.write("{}\r".format(cmd).encode())
 
 
 

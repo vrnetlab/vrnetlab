@@ -253,7 +253,7 @@ class VMX:
                     if ridx == 1:
                         self.tn.write("yes\r".encode())
             self.logger.trace("Read: %s" % res.decode())
-        self.logger.debug("Running command: %s" % cmd)
+        self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 

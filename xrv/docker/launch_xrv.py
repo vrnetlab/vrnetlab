@@ -166,11 +166,14 @@ class XRV:
             b"Username:", b"^[^ ]+#"], 1)
         if match: # got a match!
             if ridx == 0: # press return to get started, so we press return!
+                self.logger.debug("got 'press return to get started...'")
                 self.wait_write("", wait=None)
             if ridx == 1: # system configuration complete
+                self.logger.info("IOS XR system configuration is complete, should be able to proceed with initial configuration")
                 self.wait_write("", wait=None)
                 self.state = 1
             if ridx == 2: # initial user config
+                self.logger.info("Creating initial user")
                 self.wait_write(self.username, wait=None)
                 self.wait_write(self.password, wait="Enter secret:")
                 self.wait_write(self.password, wait="Enter secret again:")
@@ -182,6 +185,7 @@ class XRV:
                 except IndexError as exc:
                     self.logger.error("no more credentials to try")
                     return True, False
+                self.logger.debug("trying to log in with %s / %s" % (username, password))
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
             if self.state > 0 and ridx == 4:
@@ -242,7 +246,7 @@ class XRV:
             self.logger.trace("Waiting for %s" % wait)
             res = self.tn.read_until(wait.encode())
             self.logger.trace("Read: %s" % res.decode())
-        self.logger.debug("Running command: %s" % cmd)
+        self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 

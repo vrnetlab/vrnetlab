@@ -277,7 +277,7 @@ class InitAlu:
             self.logger.trace("Waiting for %s" % wait)
             res = self.tn.read_until(wait.encode())
             self.logger.trace("Read: %s" % res.decode())
-        self.logger.debug("Running command: %s" % cmd)
+        self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 

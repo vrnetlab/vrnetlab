@@ -13,6 +13,7 @@ It supports:
  * Juniper vMX
  * Nokia VSR
 
+
 Usage
 -----
 You have to build the virtual router docker images yourself since the license
@@ -154,6 +155,8 @@ The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
 mapped to the virtual serial device (use telnet). All the NICs of the virtual
 routers are exposed via TCP ports in the range 10001-10099.
 
+Use `docker rm -f vr1` to stop and remote a virtual router.
+
 There are some handy shell functions in vrnetlab.sh that provides shorthands
 for connecting to ssh and console.
 
@@ -176,7 +179,6 @@ following to your .bashrc
 ```
 test -f ~/.vrnetlab_bashrc && . ~/.vrnetlab_bashrc
 ``` 
-
 
 
 Virtual routers
@@ -237,30 +239,17 @@ The intention is to keep the arguments to each virtual router type as similar
 as possible so that a test orchestrator or similar need minimal knowledge about
 the different router types.
 
+
 System requirements
 -------------------
-CPU:
+See the README file of each virtual router type for system requirements.
 
- * sros: 1 core
- * vmx: 5 cores
- * xrv: 1 core
-
-RAM:
-
- * sros: 4GB
- * vmx: 8GB
- * xrv: 4GB
-
-Disk space depends on what image you are using but here are some rough numbers:
-
- * sros: ~600MB
- * vmx: ~5GB
- * xrv: ~1.5GB
 
 Docker healtcheck
 -----------------
 Docker v1.12 includes a healtcheck feature that would be really sweet to use to
 tell if the router has been bootstrapped or not.
+
 
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
@@ -275,6 +264,12 @@ A: I don't think Cisco, Juniper or Nokia would allow me to distribute their virt
 A: I don't like the concept as it means you have to ship around an extra file.
    If it's a self-contained image then all you have to do is push it to your
    docker registry and then ask a box in your swarm cluster to spin it up!
+
+##### Q: Using docker typically means no persistent storage. How is configuration persisted across restarts?
+A: It is not persisted. The state of the virtual routers is lost once they are
+stopped/removed. It's not possible to restart vrnetlab or at least it's not at
+all tested and I don't see how it would work really. Since the primary use case
+is lab / CI you should embrace the statelessness :)
 
 ##### Q: Do you plan to support classic IOS?
 A: Hell to the no! ;)
@@ -295,6 +290,7 @@ towards interactive labbing. You get a pretty UI and similar whereas vrnetlab
 is controlled in a completely programmatic fashion which makes them good at
 different things. vrnetlab is superb for CI and programmatic testing where the
 others probably target labs run by humans.
+
 
 Building with GitLab CI
 -----------------------

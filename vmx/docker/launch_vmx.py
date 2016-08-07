@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import logging
 import os
 import random
 import re
@@ -243,7 +244,7 @@ class VMX:
         """ Wait for something and then send command
         """
         if wait:
-            self.logger.debug("Waiting for %s" % wait)
+            self.logger.trace("Waiting for %s" % wait)
             while True:
                 (ridx, match, res) = self.tn.expect([wait.encode(), b"Retry connection attempts"], timeout=timeout)
                 if match:
@@ -251,7 +252,7 @@ class VMX:
                         break
                     if ridx == 1:
                         self.tn.write("yes\r".encode())
-            self.logger.debug("Read: %s" % res.decode())
+            self.logger.trace("Read: %s" % res.decode())
         self.logger.debug("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 

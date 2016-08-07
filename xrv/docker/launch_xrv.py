@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import logging
 import os
 import random
 import re
@@ -12,16 +13,22 @@ import time
 import IPy
 
 def handle_SIGCHLD(signal, frame):
-    print('Reaping child')
     os.waitpid(-1, os.WNOHANG)
 
 def handle_SIGTERM(signal, frame):
-    print('Shutting down...')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
+
+TRACE_LEVEL_NUM = 9
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+def trace(self, message, *args, **kws):
+    # Yes, logger takes its '*args' as 'args'.
+    if self.isEnabledFor(TRACE_LEVEL_NUM):
+        self._log(TRACE_LEVEL_NUM, message, args, **kws)
+logging.Logger.trace = trace
 
 def run_command(cmd, cwd=None, background=False):
     import subprocess
@@ -49,6 +56,7 @@ def gen_mac(last_octet=None):
 
 class XRV:
     def __init__(self, username, password):
+        self.logger = logging.getLogger()
         self.credentials = [
                 ['admin', 'admin']
             ]
@@ -87,13 +95,14 @@ class XRV:
                     break
             self.bootstrap_end()
         stop_time = datetime.datetime.now()
-        print("Startup took:", stop_time - start_time)
+        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
 
 
 
     def start_vm(self):
         """ Start the VM
         """
+        self.logger.info("Starting VM")
 
         cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
@@ -151,14 +160,11 @@ class XRV:
                 # give up
                 return True, False
 
-        print(".")
-
         (ridx, match, res) = self.tn.expect([b"Press RETURN to get started",
             b"SYSTEM CONFIGURATION COMPLETE",
             b"Enter root-system username",
             b"Username:", b"^[^ ]+#"], 1)
         if match: # got a match!
-            print("match", match, res)
             if ridx == 0: # press return to get started, so we press return!
                 self.wait_write("", wait=None)
             if ridx == 1: # system configuration complete
@@ -170,11 +176,11 @@ class XRV:
                 self.wait_write(self.password, wait="Enter secret again:")
                 self.credentials.insert(0, [self.username, self.password])
             if ridx == 3: # matched login prompt, so should login
-                print("match login prompt")
+                self.logger.debug("matched login prompt")
                 try:
                     username, password = self.credentials.pop(0)
                 except IndexError as exc:
-                    print("no more credentials to try")
+                    self.logger.error("no more credentials to try")
                     return True, False
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
@@ -186,7 +192,7 @@ class XRV:
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b'':
-            print("OUTPUT:", res)
+            self.logger.trace("OUTPUT:", res)
             # reset spins if we saw some output
             self.spins = 0
 
@@ -233,10 +239,10 @@ class XRV:
         """ Wait for something and then send command
         """
         if wait:
-            print("Waiting for %s" % wait)
+            self.logger.trace("Waiting for %s" % wait)
             res = self.tn.read_until(wait.encode())
-            print("Read:", res)
-        print("Running command: %s" % cmd)
+            self.logger.trace("Read: %s" % res.decode())
+        self.logger.debug("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 
@@ -244,12 +250,21 @@ class XRV:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     args = parser.parse_args()
 
+    LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
+    logging.basicConfig(format=LOG_FORMAT)
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.DEBUG)
+    if args.trace:
+        logger.setLevel(1)
+
     vr = XRV(args.username, args.password)
     vr.start()
-    print("Going into sleep mode")
+    logger.info("Going into sleep mode")
     while True:
         time.sleep(1)

@@ -274,9 +274,9 @@ class InitAlu:
         """ Wait for something and then send command
         """
         if wait:
-            self.logger.debug("Waiting for %s" % wait)
+            self.logger.trace("Waiting for %s" % wait)
             res = self.tn.read_until(wait.encode())
-            self.logger.debug("Read: %s" % res.decode())
+            self.logger.trace("Read: %s" % res.decode())
         self.logger.debug("Running command: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 

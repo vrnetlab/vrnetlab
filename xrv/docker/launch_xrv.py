@@ -169,7 +169,7 @@ class XRV:
                 self.logger.debug("got 'press return to get started...'")
                 self.wait_write("", wait=None)
             if ridx == 1: # system configuration complete
-                self.logger.info("IOS XR system configuration is complete, should be able to proceed with initial configuration")
+                self.logger.info("IOS XR system configuration is complete, should be able to proceed with bootstrap configuration")
                 self.wait_write("", wait=None)
                 self.state = 1
             if ridx == 2: # initial user config
@@ -208,6 +208,7 @@ class XRV:
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
+        self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
         self.wait_write("crypto key generate rsa\r")
         if self.username and self.password:
@@ -243,9 +244,9 @@ class XRV:
         """ Wait for something and then send command
         """
         if wait:
-            self.logger.trace("Waiting for %s" % wait)
+            self.logger.trace("waiting for '%s' on serial console" % wait)
             res = self.tn.read_until(wait.encode())
-            self.logger.trace("Read: %s" % res.decode())
+            self.logger.trace("read from serial console: %s" % res.decode())
         self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 

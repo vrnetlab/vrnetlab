@@ -154,6 +154,30 @@ The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
 mapped to the virtual serial device (use telnet). All the NICs of the virtual
 routers are exposed via TCP ports in the range 10001-10099.
 
+There are some handy shell functions in vrnetlab.sh that provides shorthands
+for connecting to ssh and console.
+
+1. Load the functions into your shell
+```
+. vrnetlab.sh
+```
+2. Login via ssh to router vr1, you can optionally specify a username. If no
+username is provided, the default of vrnetlab will be used.
+```
+vrssh vr1 myuser 
+```
+3. Connect console to router vr1
+```
+vrcons vr1
+```
+
+To load these aliases on login, copy it to ~/.vrnetlab_bashrc and add the
+following to your .bashrc
+```
+test -f ~/.vrnetlab_bashrc && . ~/.vrnetlab_bashrc
+``` 
+
+
 
 Virtual routers
 ---------------

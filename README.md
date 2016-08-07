@@ -150,6 +150,8 @@ and don't forget to link the virtual routers:
 ```
 docker run -d --name tcpbridge --link vr1 --link vr2 --link vr3 tcpbridge --p2p vr1/1--vr2/1 vr1/2--vr3/1
 ```
+See topology-machine/README.md for details on topology machine which can help
+you with managing more complex topologies.
 
 The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
 mapped to the virtual serial device (use telnet). All the NICs of the virtual

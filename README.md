@@ -162,7 +162,9 @@ for connecting to ssh and console.
 . vrnetlab.sh
 ```
 2. Login via ssh to router vr1, you can optionally specify a username. If no
-username is provided, the default of vrnetlab will be used.
+username is provided, the default of vrnetlab will be used. If sshpass is
+installed, you will not be promted for password when you login with the default
+username.
 ```
 vrssh vr1 myuser 
 ```

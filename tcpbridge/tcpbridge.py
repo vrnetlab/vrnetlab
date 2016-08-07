@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 import select
 import socket
 import sys
@@ -7,6 +8,7 @@ import sys
 
 class TcpBridge:
     def __init__(self):
+        self.logger = logging.getLogger()
         self.sockets = []
         self.socket2remote = {}
         self.socket2hostintf = {}
@@ -65,8 +67,7 @@ class TcpBridge:
                     i.connect()
                 if len(buf) == 0:
                     return
-                if self.debug:
-                    print("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
+                self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
                 remote.send(buf)
 
 class NoVR(Exception):
@@ -81,8 +82,12 @@ if __name__ == '__main__':
     parser.add_argument('--p2p', nargs='+', help='point-to-point link')
     args = parser.parse_args()
 
+    LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
+    logging.basicConfig(format=LOG_FORMAT)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
     tt = TcpBridge()
-    tt.debug = args.debug
     for p2p in args.p2p:
         try:
             tt.add_p2p(p2p)

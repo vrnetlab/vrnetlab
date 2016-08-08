@@ -59,6 +59,8 @@ class VMX:
         self.logger = logging.getLogger()
         self.vcp_started = False
         self.vfpc_started = False
+        self.tn_vcp = None
+        self.tn_vfpc = None
         self.spins = 0
 
         self.username = username
@@ -75,7 +77,13 @@ class VMX:
             and the do initial bootstraping of it over serial port.
         """
         start_time = datetime.datetime.now()
-        self.start_vm()
+        # set up bridge for connecting VCP with vFPC
+        run_command(["brctl", "addbr", "int_cp"])
+        run_command(["ip", "link", "set", "int_cp", "up"])
+
+        # start VCP VMs, we delay the start of vFPC to consume less CPU
+        self.start_vcp()
+
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         while not (self.vcp_started and self.vfpc_started):
@@ -84,16 +92,6 @@ class VMX:
         self.bootstrap_end()
         stop_time = datetime.datetime.now()
         self.logger.info("Startup complete in: %s" % (stop_time - start_time))
-
-
-    def start_vm(self):
-        """ Start the VMs
-        """
-        # set up bridge for connecting VCP with vFPC
-        run_command(["brctl", "addbr", "int_cp"])
-        run_command(["ip", "link", "set", "int_cp", "up"])
-        self.start_vcp()
-        self.start_vfpc()
 
 
 
@@ -225,6 +223,7 @@ class VMX:
             if ridx == 0: # matched login prompt, so should login
                 self.logger.info("matched login prompt")
                 self.wait_write("root", wait=None)
+                self.start_vfpc()
             if ridx == 1:
                 # run main config!
                 self.bootstrap_config()
@@ -243,17 +242,18 @@ class VMX:
             self.logger.debug("tickling vFPC")
             self.tn_vfpc.write(b"\r")
 
-        (ridx, match, res) = self.tn_vfpc.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
-        if match:
-            if ridx == 0: # got login - vFPC start succeeded!
-                self.logger.info("vFPC successfully started")
-                self.vfpc_started = True
-            if ridx == 1: # vFPC start failed - restart it
-                self.logger.info("vFPC start failed, restarting")
-                self.stop_vfpc()
-                self.start_vfpc()
-        if res != b'':
-            self.logger.trace("OUTPUT VFPC: %s" % res.decode())
+        if self.tn_vfpc is not None:
+            (ridx, match, res) = self.tn_vfpc.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
+            if match:
+                if ridx == 0: # got login - vFPC start succeeded!
+                    self.logger.info("vFPC successfully started")
+                    self.vfpc_started = True
+                if ridx == 1: # vFPC start failed - restart it
+                    self.logger.info("vFPC start failed, restarting")
+                    self.stop_vfpc()
+                    self.start_vfpc()
+            if res != b'':
+                self.logger.trace("OUTPUT VFPC: %s" % res.decode())
 
         return True
 

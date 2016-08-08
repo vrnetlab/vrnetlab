@@ -148,7 +148,6 @@ class InitAlu:
     def start_vm(self):
         """ Start the VM
         """
-        self.logger.info("Starting VM")
         # move files into place
         for e in os.listdir("/"):
             if re.search("\.qcow2$", e):
@@ -158,6 +157,7 @@ class InitAlu:
                 os.rename("/" + e, "/tftpboot/license.txt")
         self.read_license()
 
+        self.logger.info("Starting VM")
         bof = "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp"
 
         cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),

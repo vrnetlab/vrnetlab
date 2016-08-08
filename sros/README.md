@@ -63,3 +63,7 @@ VSR when run without license. Apparently it wasn't enough to restart once an
 hour and have severe rate-limiting (200pps per interface) but they also limited
 the commands you can run, including "configure", which makes the VSR completely
 useless without a license.
+
+##### Q: How many interfaces are available?
+A: Without a license; 12.0 seems to support up to 14 interfaces. 13.0 does 5.
+Not sure about 14.

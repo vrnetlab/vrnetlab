@@ -112,7 +112,7 @@ class InitAlu:
             self.uuid = mangle_uuid(uuid_input)
             m = re.search("([0-9]{4}-[0-9]{2}-)([0-9]{2})", license)
             if m:
-                self.license_start = m.group(1) + str(int(m.group(2))+1)
+                self.license_start = "%s%02d" % (m.group(1), int(m.group(2))+1)
         except:
             raise ValueError("Unable to parse license file")
         self.logger.info("License file found for UUID %s with start date %s" % (self.uuid, self.license_start))

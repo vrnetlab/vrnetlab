@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import sys
 
 import jinja2
@@ -155,10 +156,13 @@ def run_topology(config, dry_run):
         print("No routers in config")
         sys.exit(1)
 
+    docker_registry = ""
+    if os.getenv("DOCKER_REGISTRY"):
+        docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
     for router, val in config['routers'].items():
         cmd = ["docker", "run", "--privileged", "-d",
                "--name", "%s%s" % (args.prefix, router),
-               "%s:%s" % (val["type"], val["version"])
+               "%svr-%s:%s" % (docker_registry, val["type"], val["version"])
           ]
         run_command(cmd, dry_run)
 
@@ -166,7 +170,7 @@ def run_topology(config, dry_run):
         cmd = ["docker", "run", "--privileged", "-d"]
 
         cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in config['routers']])
-        cmd.append("tcpbridge")
+        cmd.append(docker_registry + "tcpbridge")
         cmd.append("--p2p")
         cmd.extend([" %s/%s--%s/%s" % (link["left"]["router"],
                                            link["left"]["numeric"],

@@ -26,20 +26,23 @@ class VrTopo:
         # expand p2p links
         links = []
         if 'p2p' in config:
-            for router, neighbors in config['p2p'].items():
+            for router in sorted(config['p2p']):
+                neighbors = config['p2p'][router]
                 for neighbor in neighbors:
                     links.append({ 'left': { 'router': router }, 'right': {
                         'router': neighbor }})
 
         # expand fullmesh into links
         if 'fullmeshes' in config:
-            for name, val in config['fullmeshes'].items():
+            for name in sorted(config['fullmeshes']):
+                val = config['fullmeshes'][name]
                 fmlinks = self.expand_fullmesh(val)
                 links.extend(fmlinks)
 
         self.links = self.assign_interfaces(links)
 
-        for router, val in self.routers.items():
+        for router in sorted(self.routers):
+            val = self.routers[router]
             if 'interfaces' in val:
                 for num_id in val['interfaces']:
                     val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
@@ -52,8 +55,8 @@ class VrTopo:
             and not a B->A.
         """
         pairs = {}
-        for a in routers:
-            for b in routers:
+        for a in sorted(routers):
+            for b in sorted(routers):
                 left = min(a, b)
                 right = max(a, b)
 
@@ -65,8 +68,8 @@ class VrTopo:
                 pairs[left][right] = 1
 
         links = []
-        for a in pairs:
-            for b in pairs[a]:
+        for a in sorted(pairs):
+            for b in sorted(pairs[a]):
                 links.append({'left': { 'router': a }, 'right': { 'router': b }})
 
         return links

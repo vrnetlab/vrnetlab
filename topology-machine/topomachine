@@ -159,7 +159,8 @@ def run_topology(config, dry_run):
     docker_registry = ""
     if os.getenv("DOCKER_REGISTRY"):
         docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
-    for router, val in config['routers'].items():
+    for router in sorted(config['routers']):
+        val = config['routers'][router]
         cmd = ["docker", "run", "--privileged", "-d",
                "--name", "%s%s" % (args.prefix, router),
                "%svr-%s:%s" % (docker_registry, val["type"], val["version"])

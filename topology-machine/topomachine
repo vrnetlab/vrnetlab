@@ -173,7 +173,7 @@ def run_topology(config, dry_run):
     if 'links' in config:
         cmd = ["docker", "run", "--privileged", "-d", "--name", "tcpbridge"]
 
-        cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in config['routers']])
+        cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in sorted(config['routers'])])
         cmd.append(docker_registry + "tcpbridge")
         cmd.append("--p2p")
         cmd.extend([" %s/%s--%s/%s" % (link["left"]["router"],

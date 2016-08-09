@@ -9,6 +9,7 @@ system.
 
 It supports:
 
+ * Cisco Nexus NX-OS (using Titanium emulator)
  * Cisco XRv (not XRv90000)
  * Juniper vMX
  * Nokia VSR

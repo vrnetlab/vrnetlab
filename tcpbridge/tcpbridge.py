@@ -14,7 +14,7 @@ class TcpBridge:
         self.socket2hostintf = {}
 
 
-    def routerintf2addr(self, hostintf):
+    def hostintf2addr(self, hostintf):
         hostname, interface = hostintf.split("/")
 
         try:
@@ -30,8 +30,8 @@ class TcpBridge:
         src_router, src_interface = source.split("/")
         dst_router, dst_interface = destination.split("/")
 
-        src = self.routerintf2addr(source)
-        dst = self.routerintf2addr(destination)
+        src = self.hostintf2addr(source)
+        dst = self.hostintf2addr(destination)
 
         left = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         right = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -64,7 +64,8 @@ class TcpBridge:
                 try:
                     buf = i.recv(2048)
                 except ConnectionResetError:
-                    i.connect()
+                    self.logger.warning("connection dropped, reconnecting to source %s" % self.socket2hostintf[i])
+                    i.connect(self.hostintf2addr(self.socket2hostintf[i]))
                 if len(buf) == 0:
                     return
                 self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))

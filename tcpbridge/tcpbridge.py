@@ -76,14 +76,14 @@ class TcpBridge:
                         i.connect(self.hostintf2addr(self.socket2hostintf[i]))
                     except:
                         self.logger.warning("reconnect failed, retrying on next spin")
-                        continue
+                    continue
                 except OSError:
                     self.logger.warning("endpoint not connecting, connecting to source %s" % self.socket2hostintf[i])
                     try:
                         i.connect(self.hostintf2addr(self.socket2hostintf[i]))
                     except:
                         self.logger.warning("connect failed, retrying on next spin")
-                        continue
+                    continue
 
                 if len(buf) == 0:
                     return
@@ -96,7 +96,7 @@ class TcpBridge:
                         remote.connect(self.hostintf2addr(self.socket2hostintf[remote]))
                     except:
                         self.logger.warning("connect failed, retrying on next spin")
-                        continue
+                    continue
 
 class NoVR(Exception):
     """ No virtual router

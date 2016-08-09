@@ -1,0 +1,33 @@
+system {
+    host-name {{ hostname }};
+}
+interfaces {
+    lo0 {
+        unit 0 {
+            family inet {
+                address 10.255.0.{{id}}/32;
+            }
+            family inet6 {
+                address 2001:db8::{{id}}/128;
+            }
+        }
+    }
+{%- for link in links %}
+    {{link.interface}} {
+        description "{{link.remote.router}}: {{link.remote.interface}}";
+        unit 0 {
+            family inet {
+                address 10.1.{{link.id}}.{{link.octet}}/30;
+            }
+	    family inet6 {
+                address 2001:db8::1:{{link.id}}:{{link.octet}}/126;
+            }
+        }
+    }
+{%- endfor %}
+}
+protocols {
+    lldp {
+        interface all;
+    }
+}

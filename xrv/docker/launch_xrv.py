@@ -213,6 +213,9 @@ class XRV:
         self.wait_write("netconf agent ssh") # for 5.1.1
         self.wait_write("netconf-yang agent ssh") # for 5.3.3
 
+        # configure xml agent
+        self.wait_write("xml agent tty")
+
         # configure mgmt interface
         self.wait_write("interface MgmtEth 0/0/CPU0/0")
         self.wait_write("no shutdown")

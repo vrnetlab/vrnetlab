@@ -12,13 +12,26 @@ vrssh() {
 	VR_ADDRESS=$(vr_mgmt_ip $VROUTER)
 
 	if [ -z "$USER" ] ; then
-		ssh $VR_ADDRESS -l vrnetlab
+		if [ -x $(command -v sshpass) ]; then
+			sshpass -p VR-netlab9 ssh -oStrictHostKeyChecking=no $VR_ADDRESS -l vrnetlab
+		else
+			ssh -oStrictHostKeyChecking=no $VR_ADDRESS -l vrnetlab
+		fi
 	else
-		ssh $VR_ADDRESS -l $USER
+		ssh -oStrictHostKeyChecking=no $VR_ADDRESS -l $USER
 	fi
 }
 
 vrcons() {
 	VROUTER=$1
 	telnet $(vr_mgmt_ip $VROUTER) 5000
+}
+
+vrbridge() {
+	VR1=$1
+	VP1=$2
+	VR2=$3
+	VP2=$4
+
+	docker run -d  --name "bridge-${VR1}-${VP1}-${VR2}-${VP2}" --link $VR1 --link $VR2 tcpbridge --p2p "${VR1}/${VP1}--${VR2}/${VP2}"
 }

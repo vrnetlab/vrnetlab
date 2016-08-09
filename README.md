@@ -168,13 +168,20 @@ for connecting to ssh and console.
 . vrnetlab.sh
 ```
 2. Login via ssh to router vr1, you can optionally specify a username. If no
-username is provided, the default of vrnetlab will be used.
+username is provided, the default of vrnetlab will be used. If sshpass is
+installed, you will not be promted for password when you login with the default
+username.
 ```
 vrssh vr1 myuser 
 ```
 3. Connect console to router vr1
 ```
 vrcons vr1
+```
+4. Create a bridge between two router interfaces, the below command bridges
+interface 1 of router vr1 with interface 1 of router 2.
+```
+vrbridge vr1 1 vr2 1
 ```
 
 To load these aliases on login, copy it to ~/.vrnetlab_bashrc and add the

@@ -36,8 +36,18 @@ class TcpBridge:
         left = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         right = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        left.connect(src)
-        right.connect(dst)
+        # dict to map back to hostname & interface
+        self.socket2hostintf[left] = "%s/%s" % (src_router, src_interface)
+        self.socket2hostintf[right] = "%s/%s" % (dst_router, dst_interface)
+
+        try:
+            left.connect(src)
+        except:
+            self.logger.info("Unable to connect to %s" % self.socket2hostintf[left])
+        try:
+            right.connect(dst)
+        except:
+            self.logger.info("Unable to connect to %s" % self.socket2hostintf[right])
 
         # add to list of sockets
         self.sockets.append(left)
@@ -47,9 +57,6 @@ class TcpBridge:
         self.socket2remote[left] = right
         self.socket2remote[right] = left
 
-        # dict to map back to hostname & interface
-        self.socket2hostintf[left] = "%s/%s" % (src_router, src_interface)
-        self.socket2hostintf[right] = "%s/%s" % (dst_router, dst_interface)
         
 
     def work(self):
@@ -65,11 +72,31 @@ class TcpBridge:
                     buf = i.recv(2048)
                 except ConnectionResetError:
                     self.logger.warning("connection dropped, reconnecting to source %s" % self.socket2hostintf[i])
-                    i.connect(self.hostintf2addr(self.socket2hostintf[i]))
+                    try:
+                        i.connect(self.hostintf2addr(self.socket2hostintf[i]))
+                    except:
+                        self.logger.warning("reconnect failed, retrying on next spin")
+                        continue
+                except OSError:
+                    self.logger.warning("endpoint not connecting, connecting to source %s" % self.socket2hostintf[i])
+                    try:
+                        i.connect(self.hostintf2addr(self.socket2hostintf[i]))
+                    except:
+                        self.logger.warning("connect failed, retrying on next spin")
+                        continue
+
                 if len(buf) == 0:
                     return
                 self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
-                remote.send(buf)
+                try:
+                    remote.send(buf)
+                except BrokenPipeError:
+                    self.logger.warning("unable to send packet %05d bytes %s -> %s due to remote being down, trying reconnect" % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
+                    try:
+                        remote.connect(self.hostintf2addr(self.socket2hostintf[remote]))
+                    except:
+                        self.logger.warning("connect failed, retrying on next spin")
+                        continue
 
 class NoVR(Exception):
     """ No virtual router

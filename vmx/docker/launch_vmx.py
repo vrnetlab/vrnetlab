@@ -69,6 +69,17 @@ class VMX:
         self.ram = 2048
         self.num_nics = None
 
+        self.vcp_image = None
+
+
+    def read_version(self):
+        for e in os.listdir("/vmx/"):
+            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9])\.([0-9]))\.qcow2$", e)
+            if m:
+                self.image = "/vmx/" + e
+                self.version = m.group(1)
+                self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(6))]
+
 
     def start(self):
         """ Start the virtual router
@@ -76,6 +87,9 @@ class VMX:
             This can take a long time as we are waiting for the router to start
             and the do initial bootstraping of it over serial port.
         """
+        self.read_version()
+        self.logger.info("Starting vMX %s" % self.version)
+
         start_time = datetime.datetime.now()
         # set up bridge for connecting VCP with vFPC
         run_command(["brctl", "addbr", "int_cp"])
@@ -103,7 +117,7 @@ class VMX:
         # start VCP VM (RE)
         cmd = ["qemu-system-x86_64", "-display", "none", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
-               "-drive", "if=ide,file=/vmx/vmx.img",
+               "-drive", "if=ide,file=%s" % self.image,
                "-drive", "if=ide,file=/vmx/vmxhdd.img",
                "-smbios", "type=0,vendor=Juniper", "-smbios",
                "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"
@@ -161,9 +175,15 @@ class VMX:
         # internal control plane interface to vFPC
         cmd.extend(["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % gen_mac(0)])
         cmd.extend(["-netdev", "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
-        # dummy interface. not sure why vFPC wants it
-        cmd.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" % gen_mac(0)])
-        cmd.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
+
+        if self.version_info[0] == 15:
+            # dummy interface. not sure why vFPC wants it. version 16 doesn't
+            # need it while version 15 does. Not sure about older versions nor
+            # do I know if all version 15 or version 16 act the same. I've only
+            # tested with vmx-bundle-15.1F6.9.tgz  vmx-bundle-16.1R1.7.tgz to
+            # determine this behaviour.
+            cmd.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" % gen_mac(0)])
+            cmd.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
 
         for i in range(1, self.num_nics):
             cmd.extend(["-device", "virtio-net-pci,netdev=p%(i)02d,mac=%(mac)s"

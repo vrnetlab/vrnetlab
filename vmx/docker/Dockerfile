@@ -14,10 +14,8 @@ RUN apt-get update -qy \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
-COPY $IMAGE /vmx.tgz
-COPY install_vmx.sh /
+COPY . /
 RUN /install_vmx.sh
-COPY launch_vmx.py /
 
 EXPOSE 22 830 5000 10000-10099
 ENTRYPOINT ["/launch_vmx.py"]

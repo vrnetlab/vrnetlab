@@ -21,7 +21,9 @@ docker-image:
 	done
 endif
 
-docker-build:
+docker-pre-build: ;
+
+docker-build: docker-pre-build
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
 	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"

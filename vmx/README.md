@@ -11,10 +11,11 @@ if you want, like `my-repo.example.com/vr-vmx` and then push it to your repo.
 The tag is the same as the version of the JUNOS image, so if you have
 vmx-15.1F4.15.tgz your final docker image will be called vr-vmx:15.1F4.15.
 
-It's been tested to boot and respond to SSH with:
+It's been tested to boot, respond to SSH and have correct interface mapping
+with:
 
- * 15.1F6.9 (vmx-bundle-15.1F6.9.tgz)
- * 16.1R1.7 (vmx-bundle-16.1R1.7.tgz)
+ * 15.1F6.9 (vmx-bundle-15.1F6.9.tgz MD5:eb128cffde6ab29fdb27b2f52301c5f9)
+ * 16.1R1.7 (vmx-bundle-16.1R1.7.tgz MD5:d96766848731c12c0492e3ae2349b426)
 
 Usage
 -----

@@ -15,6 +15,10 @@ then push it to your repo. The tag is the same as the version of the vEOS
 image, so if you have vEOS-lab-4.16.6M.vmdk your final docker image will be
 called vr-veos:4.16.6M
 
+It's been tested to boot, respond to SSH and have correct interface mapping
+with the following images:
+
+ * vEOS-lab-4.16.6M.vmdk  MD5:b3f7b7cee17f2e66bb38b453a4939fef
 
 Usage
 -----

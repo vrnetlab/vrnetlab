@@ -221,6 +221,9 @@ The virtual machines are packaged up in docker container. Since we need to
 start KVM the docker containers have to be run with `--privileged` which
 effectively defeats the security features of docker. Our use of docker is
 essentially reduced to being a packaging format but a rather good one at that.
+Also note that since we still rely on KVM the same amount of resources, if not
+sightly more, will be consumed by vrnetlab. A container is no thinner than a VM
+if the container contains a VM!
 
 The assignment of a management IP address is handed over to docker, so you can
 use whatever docker IPAM plugin you want. Overall the network setup of the
@@ -281,6 +284,17 @@ A: It is not persisted. The state of the virtual routers is lost once they are
 stopped/removed. It's not possible to restart vrnetlab or at least it's not at
 all tested and I don't see how it would work really. Since the primary use case
 is lab / CI you should embrace the statelessness :)
+
+##### Q: Will this consume less resources than the normal way of running XRv, vmX etc?
+A: No. vrnetlab still runs KVM (in docker) to start the virtual router which
+means that we will consume just as much CPU and memory, if not slightly more,
+than running the router in KVM.
+
+##### Q: If it doesn't consume less resources than KVM, why use Docker?
+A: It's used primarily as a packaging format. All vrnetlab containers can be
+run with similar arguments. The differences between different platforms are
+effectively hidden to present a clean uniform interface. That's certainly not
+true for trying to run XRv or vMX directly with qemu / virsh.
 
 ##### Q: Do you plan to support classic IOS?
 A: Hell to the no! ;)

@@ -12,10 +12,16 @@ The tag is the same as the version of the JUNOS image, so if you have
 vmx-15.1F4.15.tgz your final docker image will be called vr-vmx:15.1F4.15.
 
 It's been tested to boot, respond to SSH and have correct interface mapping
-with:
+with the following images:
 
- * 15.1F6.9 (vmx-bundle-15.1F6.9.tgz MD5:eb128cffde6ab29fdb27b2f52301c5f9)
- * 16.1R1.7 (vmx-bundle-16.1R1.7.tgz MD5:d96766848731c12c0492e3ae2349b426)
+ * vmx-14.1R6.4.tgz  MD5:49d37693fc4c5971fe99703149b39776
+ * vmx-15.1F4.15.tgz  MD5:86c28d89d6db5497521ebbb2c7de4472
+ * vmx-bundle-15.1F6.9.tgz  MD5:eb128cffde6ab29fdb27b2f52301c5f9
+ * vmx-bundle-16.1R1.7.tgz  MD5:d96766848731c12c0492e3ae2349b426
+
+It is NOT working with the following images:
+
+ * vmx-15.1F3.11.tgz  MD5:978fc8c0db05179564d0680040db8196
 
 Usage
 -----

@@ -130,6 +130,7 @@ class InitAlu:
             this to complete the bootstrap process. Once bootstrap_spin()
             returns True you are done!
         """
+        self.update_health(2, "SROS starting")
         start_time = datetime.datetime.now()
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
@@ -266,8 +267,18 @@ class InitAlu:
         self.wait_write("admin save")
         self.wait_write("logout")
 
+
     def bootstrap_end(self):
         self.tn.close()
+        self.update_health(0, "SROS started")
+
+
+
+    def update_health(self, exit_status, message):
+        health_file = open("/health", "w")
+        health_file.write("%d %s" % (exit_status, message))
+        health_file.close()
+
 
 
     def wait_write(self, cmd, wait='#'):

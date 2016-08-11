@@ -12,6 +12,8 @@ import time
 
 import IPy
 
+import vrnetlab
+
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
@@ -79,14 +81,14 @@ def uuid_rev_part(part):
     return res
 
 
-class InitAlu:
-    def __init__(self, username, password):
+class SROS(vrnetlab.VR):
+    def __init__(self):
         self.logger = logging.getLogger()
         self.spins = 0
         self.cycle = 0
 
-        self.username = username
-        self.password = password
+        self.username = None
+        self.password = None
 
         self.ram = 4096
         self.num_nics = 20
@@ -273,14 +275,6 @@ class InitAlu:
         self.update_health(0, "SROS started")
 
 
-
-    def update_health(self, exit_status, message):
-        health_file = open("/health", "w")
-        health_file.write("%d %s" % (exit_status, message))
-        health_file.close()
-
-
-
     def wait_write(self, cmd, wait='#'):
         """ Wait for something and then send command
         """
@@ -309,7 +303,9 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    ia = InitAlu(args.username, args.password)
+    ia = SROS()
+    ia.username = args.username
+    ia.password = args.password
     ia.start()
     logger.info("Going into sleep mode")
     while True:

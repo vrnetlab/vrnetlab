@@ -28,6 +28,7 @@ docker-build: docker-pre-build
 	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
 	-rm -f docker/*.qcow2* docker/*.tgz* docker/*.vmdk*
+	cp ../common/* docker/
 	cp $(IMAGE)* docker/
 	(cd docker; docker build --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
 

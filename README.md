@@ -113,11 +113,11 @@ while the router is booting the launch script will connect to the serial port
 to do the initialization of the router. As soon as it is done the port will be
 released and made available to the next connection.
 
-To connect two virtual routers with each other we can use the `tcpbridge`
+To connect two virtual routers with each other we can use the `vr-xcon`
 container. Let's say we want to connect Gi0/0/0/0 of vr1 and vr2 with each
 other, we would do:
 ```
-docker run -d --name tcpbridge --link vr1 --link vr2 tcpbridge --p2p vr1/1--vr2/1
+docker run -d --name vr-xcon --link vr1 --link vr2 vr-xcon --p2p vr1/1--vr2/1
 ```
 
 Configure a link network on vr1 and vr2 and you should be able to ping!
@@ -142,7 +142,7 @@ All of the NICs of the virtual routers are exposed via TCP ports by KVM. TCP
 port 10001 maps to the first NIC of the virtual router, which in the case of an
 XR router is GigabitEthernet 0/0/0/0. By simply connecting two of these TCP
 sockets together we can bridge the traffic between those two NICs and this is
-exactly what tcpbridge is for. Use the `--p2p` argument to specify the links.
+exactly what vr-xcon is for. Use the `--p2p` argument to specify the links.
 The format is X/Y--Z/N where X is the name of the first router and Y is the
 port on that router. Z is the second router and N is the port on the second
 router.
@@ -150,7 +150,7 @@ router.
 To set up more than one p2p link, simply add more mapping separated by space
 and don't forget to link the virtual routers:
 ```
-docker run -d --name tcpbridge --link vr1 --link vr2 --link vr3 tcpbridge --p2p vr1/1--vr2/1 vr1/2--vr3/1
+docker run -d --name vr-xcon --link vr1 --link vr2 --link vr3 vr-xcon --p2p vr1/1--vr2/1 vr1/2--vr3/1
 ```
 See topology-machine/README.md for details on topology machine which can help
 you with managing more complex topologies.

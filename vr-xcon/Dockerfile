@@ -11,6 +11,6 @@ RUN apt-get update -qy \
     python3-ipy \
  && rm -rf /var/lib/apt/lists/*
 
-ADD tcpbridge.py /
+ADD xcon.py /
 
-ENTRYPOINT ["/tcpbridge.py"]
+ENTRYPOINT ["/xcon.py"]

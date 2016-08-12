@@ -8,7 +8,7 @@ else
 endif
 
 all:
-	docker build -t $(REGISTRY)tcpbridge .
+	docker build -t $(REGISTRY)vr-xcon .
 
 docker-push:
-	docker push $(REGISTRY)tcpbridge
+	docker push $(REGISTRY)vr-xcon

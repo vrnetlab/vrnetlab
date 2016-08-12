@@ -1,9 +1,111 @@
 #!/usr/bin/env python3
 
+import fcntl
 import logging
+import os
 import select
 import socket
+import struct
 import sys
+
+
+
+class Tcp2Tap:
+    def __init__(self, hostintf, tap_intf = 'tap0'):
+        self.logger = logging.getLogger()
+        # setup TCP side
+        self.hostintf = hostintf
+        self.tcp_addr = self.hostintf2addr(hostintf)
+        self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcp.connect(self.tcp_addr)
+
+        # track current state of TCP side tunnel. 0 = reading size, 1 = reading packet
+        self.tcp_state = 0
+        self.tcp_buf = b''
+        self.tcp_remaining = 0
+
+        # setup tap side
+        TUNSETIFF = 0x400454ca
+        IFF_TUN = 0x0001
+        IFF_TAP = 0x0002
+        IFF_NO_PI = 0x1000
+        self.tap = os.open("/dev/net/tun", os.O_RDWR)
+        # we want a tap interface, no packet info and it should be called tap0
+        # TODO: implement dynamic name using tap%d, right now we assume we are
+        # only program in this namespace (docker container) that creates tap0
+        ifs = fcntl.ioctl(self.tap, TUNSETIFF, struct.pack("16sH", tap_intf.encode(), IFF_TAP | IFF_NO_PI))
+        # ifname - good for when we do dynamic interface name
+        ifname = ifs[:16].decode().strip("\x00")
+
+    def hostintf2addr(self, hostintf):
+        hostname, interface = hostintf.split("/")
+
+        try:
+            res = socket.getaddrinfo(hostname, "100%02d" % int(interface))
+        except socket.gaierror:
+            raise NoVR("Unable to resolve %s" % hostname)
+        sockaddr = res[0][4]
+        return sockaddr
+
+    def work(self):
+        while True:
+            ir = select.select([self.tcp, self.tap],[],[])[0][0]
+            if ir == self.tcp:
+                self.logger.debug("received packet from TCP and sending to tap interface")
+                try:
+                    buf = ir.recv(2048)
+                except ConnectionResetError:
+                    self.logger.warning("connection dropped, reconnecting to tcp side %s" % self.hostintf)
+                    try:
+                        self.tcp.connect(self.tcp_addr)
+                        self.tcp_state = 0
+                    except:
+                        self.logger.warning("reconnect failed, retrying on next spin")
+                    continue
+                except OSError:
+                    self.logger.warning("endpoint not connected, reconnecting to tcp side %s" % self.hostintf)
+                    try:
+                        self.tcp.connect(self.tcp_addr)
+                        self.tcp_state = 0
+                    except:
+                        self.logger.warning("connect failed, retrying on next spin")
+                    continue
+
+                self.tcp_buf += buf
+                self.logger.debug("read %d bytes from tcp, tcp_buf length %d" % (len(buf), len(self.tcp_buf)))
+                while True:
+                    if self.tcp_state == 0:
+                        # we want to read the size, which is 4 bytes, if we
+                        # don't have enough bytes wait for the next spin
+                        if not len(self.tcp_buf) > 4:
+                            self.logger.debug("reading size - less than 4 bytes available in buf; waiting for next spin")
+                            break
+                        size = socket.ntohl(struct.unpack("I", self.tcp_buf[:4])[0]) # first 4 bytes is size of packet
+                        self.tcp_buf = self.tcp_buf[4:] # remove first 4 bytes of buf
+                        self.tcp_remaining = size
+                        self.tcp_state = 1
+                        self.logger.debug("reading size - pkt size: %d" % self.tcp_remaining)
+
+                    if self.tcp_state == 1: # read packet data
+                        # we want to read the whole packet, which is specified
+                        # by tcp_remaining, if we don't have enough bytes we
+                        # wait for the next spin
+                        if len(self.tcp_buf) < self.tcp_remaining:
+                            self.logger.debug("reading packet - less than remaining bytes; waiting for next spin")
+                            break
+                        self.logger.debug("reading packet - reading %d bytes" % self.tcp_remaining)
+                        payload = self.tcp_buf[:self.tcp_remaining]
+                        self.tcp_buf = self.tcp_buf[self.tcp_remaining:]
+                        self.tcp_remaining = 0
+                        self.tcp_state = 0
+                        os.write(self.tap, payload)
+
+            else:
+                # we always get full packets from the tap interface
+                self.logger.debug("received packet from tap interface and sending to TCP")
+                payload = os.read(self.tap, 2048)
+                buf = struct.pack("I", socket.htonl(len(payload))) + payload
+                self.tcp.send(buf)
 
 
 class TcpBridge:
@@ -98,6 +200,8 @@ class TcpBridge:
                         self.logger.warning("connect failed, retrying on next spin")
                     continue
 
+
+
 class NoVR(Exception):
     """ No virtual router
     """
@@ -107,8 +211,15 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", default=False, help='enable debug')
-    parser.add_argument('--p2p', nargs='+', help='point-to-point link')
+    parser.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
+    parser.add_argument('--vr2tap', help='virtual router to tap, specfiy vr & interface, e.g. vr-1/1')
+    parser.add_argument('--tap-if', default="tap0", help='name of tap interface (use with --vr2tap)')
     args = parser.parse_args()
+
+    # sanity
+    if args.p2p and args.vr2tap:
+        print("--p2p and --vr2tap are mutually exclusive", file=sys.stderr)
+        sys.exit(1)
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
     logging.basicConfig(format=LOG_FORMAT)
@@ -117,11 +228,16 @@ if __name__ == '__main__':
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
-    tt = TcpBridge()
-    for p2p in args.p2p:
-        try:
-            tt.add_p2p(p2p)
-        except NoVR as exc:
-            print(exc, " Is it started and did you link it?")
-            sys.exit(1)
-    tt.work()
+    if args.p2p:
+        tt = TcpBridge()
+        for p2p in args.p2p:
+            try:
+                tt.add_p2p(p2p)
+            except NoVR as exc:
+                print(exc, " Is it started and did you link it?")
+                sys.exit(1)
+        tt.work()
+
+    if args.vr2tap:
+        t2t = Tcp2Tap(args.vr2tap, args.tap_if)
+        t2t.work()

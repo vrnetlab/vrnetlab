@@ -35,3 +35,7 @@ supposed to use your normal provisioning system for this.
 
 vr-bgp exposes a super simple HTTP API to announce routes and collect received
 routes.
+
+vr-bgp only supports a single BGP neighbor at a time which might seem tedious
+at first but it also simplifies things a lot as we can key information merely
+on bgp speaker rather than on individual neighbors.

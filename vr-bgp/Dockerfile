@@ -22,5 +22,6 @@ RUN wget -O exabgp.tar.gz https://github.com/Exa-Networks/exabgp/archive/3.4.16.
 ADD vr-bgp.py /
 ADD exabgp.conf.tpl /
 ADD bgpapi.py /
+ADD bgprec.py /
 
 ENTRYPOINT ["/vr-bgp.py"]

@@ -5,11 +5,13 @@ import sys
 
 # keep track of what we announce so we can easily withdraw
 announced_routes = {}
+# keep track of received routes
+received_routes = {}
 
 app = Flask(__name__)
 
-@app.route('/announce_routes', methods=['POST'])
-def announce_routes():
+@app.route('/announce', methods=['POST'])
+def announce():
     global announced_routes
 
     if request.headers['Content-Type'] != 'application/json':
@@ -40,6 +42,20 @@ def announce_routes():
     announced_routes = new_routes
 
     return 'announced: %d  withdrawn: %d  currently announcing: %d\n' % (len(to_announce), len(to_withdraw), len(announced_routes))
+
+
+@app.route('/received', methods=['GET'])
+def received():
+    import sqlite3
+    conn = sqlite3.connect('/tmp/bgp.db')
+    c = conn.cursor()
+    c.execute("SELECT prefix, attributes FROM received_routes")
+    res = {}
+    for row in c.fetchall():
+        res[row[0]] = json.loads(row[1])
+
+    return json.dumps(res)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',debug=True)

@@ -17,21 +17,28 @@ can become really tedious to sort out what goes where and any additions or
 deletions to your topology means instant headache... which is where topo
 machine comes in.
 
-To convert a topology configuration into a ready to run topology use --build:
+You write a high level topology definition which topology machine can convert
+into a low level topology definition through --build:
 ```
-topo --build my-topology-config.json > my-topo.json
+topo --build hltopo.json > lltopo.json
 ```
 The output is printed to stdout so you can view it, pipe or redirect to a file
-if you want. Only run this command once and then use the resulting my-topo.json
-file multiple times with --run, --template and similar. Due to the way Python
-dicts work (not predictable order) the output will differ between runs which
-can result in a mismatch between interfaces.
+if you want. You only need to run the build the low level topology from the
+high level topology once. All subsequent use of --run, --template or similar
+uses that one resulting low level topology. Naturally, if you update the high
+level topology you must rerun the --build topology to update the low level
+topology.
 
-topology machine is also able to run the machines for you, i.e. execute docker
-run for the routers defined in the configuration file and start tcpbridge with
-the relevant arguments to complete the topology:
+topomachine does not currently use any information from the low level topology
+(produced during a previous --build operation) which means that removing a link
+will very likely result in changes to the majority of links in the topology as
+they will be re-assigned to new interfaces.
+
+topology machine is able to run the machines for you, i.e. execute docker run
+for the routers defined in the configuration file and start tcpbridge with the
+relevant arguments to complete the topology:
 ```
-topo --run my-topo.json
+topo --run lltopo.json
 ```
 which will then start the docker containers based on the computed topology.
 There's a --dry-run option if you just want to see what commands would be
@@ -49,7 +56,7 @@ topology machine assist you in producing this service config.
 Use `--template` to produce output based on the provided topology information
 and template:
 ```
-topo --template my-topo.json my-template.template
+topo --template lltopo.json my-template.template
 ```
 Output is printed to stdout which can redirected to a file. Jinja2 is used as
 the templating language. See example-template.template for how a config to a

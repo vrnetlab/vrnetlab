@@ -18,7 +18,6 @@ if __name__ == '__main__':
     parser.add_argument('--neighbor', required=True, help='IP address of the neighbor')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
-    parser.add_argument('--vr', required=True, help='virtual router and interface to connect to, e.g. vr-1/1')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -29,7 +28,7 @@ if __name__ == '__main__':
         logger.setLevel(logging.DEBUG)
 
     # start tcp2tap to connect to virtual route
-    t2t = subprocess.Popen(["/xcon.py", "--vr2tap", args.vr])
+    t2t = subprocess.Popen(["/xcon.py", "--tap-listen", "1"])
     # wait for tcp2tap to bring up the tap0 interface
     time.sleep(1)
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])

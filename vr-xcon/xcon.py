@@ -11,13 +11,13 @@ import sys
 
 
 class Tcp2Tap:
-    def __init__(self, hostintf, tap_intf = 'tap0'):
+    def __init__(self, tap_intf = 'tap0', listen_port=10001):
         self.logger = logging.getLogger()
         # setup TCP side
-        self.hostintf = hostintf
-        self.tcp_addr = self.hostintf2addr(hostintf)
-        self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp.connect(self.tcp_addr)
+        self.s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        self.s.bind(('::0', 10001))
+        self.s.listen(1)
+        self.tcp = None
 
         # track current state of TCP side tunnel. 0 = reading size, 1 = reading packet
         self.tcp_state = 0
@@ -37,38 +37,23 @@ class Tcp2Tap:
         # ifname - good for when we do dynamic interface name
         ifname = ifs[:16].decode().strip("\x00")
 
-    def hostintf2addr(self, hostintf):
-        hostname, interface = hostintf.split("/")
-
-        try:
-            res = socket.getaddrinfo(hostname, "100%02d" % int(interface))
-        except socket.gaierror:
-            raise NoVR("Unable to resolve %s" % hostname)
-        sockaddr = res[0][4]
-        return sockaddr
 
     def work(self):
         while True:
-            ir = select.select([self.tcp, self.tap],[],[])[0][0]
-            if ir == self.tcp:
+            skts = [self.s, self.tap]
+            if self.tcp is not None:
+                skts.append(self.tcp)
+            ir = select.select(skts,[],[])[0][0]
+            if ir == self.s:
+                self.logger.debug("received incoming TCP connection, setting up!")
+                self.tcp, addr = self.s.accept()
+            elif ir == self.tcp:
                 self.logger.debug("received packet from TCP and sending to tap interface")
+
                 try:
                     buf = ir.recv(2048)
-                except ConnectionResetError:
-                    self.logger.warning("connection dropped, reconnecting to tcp side %s" % self.hostintf)
-                    try:
-                        self.tcp.connect(self.tcp_addr)
-                        self.tcp_state = 0
-                    except:
-                        self.logger.warning("reconnect failed, retrying on next spin")
-                    continue
-                except OSError:
-                    self.logger.warning("endpoint not connected, reconnecting to tcp side %s" % self.hostintf)
-                    try:
-                        self.tcp.connect(self.tcp_addr)
-                        self.tcp_state = 0
-                    except:
-                        self.logger.warning("connect failed, retrying on next spin")
+                except (ConnectionResetError, OSError):
+                    self.logger.warning("connection dropped")
                     continue
 
                 self.tcp_buf += buf
@@ -102,10 +87,14 @@ class Tcp2Tap:
 
             else:
                 # we always get full packets from the tap interface
-                self.logger.debug("received packet from tap interface and sending to TCP")
                 payload = os.read(self.tap, 2048)
                 buf = struct.pack("I", socket.htonl(len(payload))) + payload
-                self.tcp.send(buf)
+                if self.tcp is None:
+                    self.logger.warning("received packet from tap interface but TCP not connected, discarding packet")
+                else:
+                    self.logger.debug("received packet from tap interface and sending to TCP")
+                    self.tcp.send(buf)
+
 
 
 class TcpBridge:
@@ -212,13 +201,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", default=False, help='enable debug')
     parser.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
-    parser.add_argument('--vr2tap', help='virtual router to tap, specfiy vr & interface, e.g. vr-1/1')
-    parser.add_argument('--tap-if', default="tap0", help='name of tap interface (use with --vr2tap)')
+    parser.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
+    parser.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
     args = parser.parse_args()
 
     # sanity
-    if args.p2p and args.vr2tap:
-        print("--p2p and --vr2tap are mutually exclusive", file=sys.stderr)
+    if args.p2p and args.tap_listen:
+        print("--p2p and --tap-listen are mutually exclusive", file=sys.stderr)
         sys.exit(1)
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -238,6 +227,6 @@ if __name__ == '__main__':
                 sys.exit(1)
         tt.work()
 
-    if args.vr2tap:
-        t2t = Tcp2Tap(args.vr2tap, args.tap_if)
+    if args.tap_listen:
+        t2t = Tcp2Tap(args.tap_if, 10000 + int(args.tap_listen))
         t2t.work()

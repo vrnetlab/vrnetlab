@@ -57,5 +57,21 @@ def received():
     return json.dumps(res)
 
 
+@app.route('/neighbors', methods=['GET'])
+def get_neighbors():
+    import sqlite3
+    conn = sqlite3.connect('/tmp/bgp.db')
+    c = conn.cursor()
+    c.execute("SELECT ip, state, ts FROM neighbors")
+    res = {}
+    for row in c.fetchall():
+        res[row[0]] = {
+            'state': row[1],
+            'timestamp': row[2]
+        }
+
+    return json.dumps(res)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0',debug=True)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 import json
 import sqlite3
 import sys
@@ -7,13 +8,34 @@ import sys
 # debug log file
 f = open("/tmp/bgp.log", "a")
 
-conn = sqlite3.connect('/tmp/bgp.db')
+conn = sqlite3.connect('/tmp/bgp.db', detect_types=sqlite3.PARSE_DECLTYPES)
 c = conn.cursor()
 try:
     c.execute("SELECT * FROM received_routes")
 except sqlite3.OperationalError:
+    # create table to store received routes
     c.execute("CREATE TABLE received_routes (prefix string, attributes string)")
     c.execute("CREATE UNIQUE INDEX received_routes__prefix ON received_routes(prefix)")
+
+    # create table to store neighbor state
+    c.execute("CREATE TABLE neighbors (ip string, state string, ts timestamp)")
+    c.execute("CREATE UNIQUE INDEX neighbors_ip ON neighbors(ip)")
+
+
+def upsert_neighbor_state(ip, state, timestamp):
+    f.write("selecting %s from database\n" % ip)  
+    f.flush()
+    c.execute("SELECT * FROM neighbors WHERE ip=?", [ip])
+    if c.fetchone() is None:
+        f.write("INSERTING to db\n")
+        f.flush()
+        c.execute("INSERT INTO neighbors (ip, state, ts) VALUES (?, ?, ?)", [ip, state, timestamp])
+    else:
+        f.write("UPDATING db\n")
+        f.flush()
+        c.execute("UPDATE neighbors SET state = ?, ts = ? WHERE ip = ?", [state, timestamp, ip])
+    conn.commit()
+
 
 def upsert_prefix(prefix, attributes):
     f.write("selecting %s from database\n" % prefix)  
@@ -34,17 +56,19 @@ def parse_message(line):
     # Parse JSON string  to dictionary
     msg = json.loads(line)
 
-    # Convert Unix timestamp to python datetime
-    #timestamp = datetime.fromtimestamp(msg['time'])
+    timestamp = datetime.fromtimestamp(msg['time'])
+
+    if msg['type'] == 'state':
+        neighbor_ip = msg['neighbor']['ip']
+        state = msg['neighbor']['state']
+        upsert_neighbor_state(neighbor_ip, state, timestamp)
 
     if msg['type'] == 'update':
         update = msg['neighbor']['message']['update']
-        attributes = update['attribute']
         for afi, neighbors in update['announce'].items():
             for neighbor, prefixes in neighbors.items():
                 for prefix in prefixes:
-                    f.write("prefix received: %s\n" % prefix)
-                    f.flush()
+                    attributes = update['attribute']
                     upsert_prefix(prefix, attributes)
 
 # TODO: handle withdraw:

@@ -12,10 +12,13 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", help='enable debug')
-    parser.add_argument('--ip-prefix', required=True, help='IP prefix to configure on the link')
+    parser.add_argument('--ipv4-local-address', help='local address or route table will be used')
+    parser.add_argument('--ipv4-neighbor', help='IP address of the neighbor')
+    parser.add_argument('--ipv4-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--ipv6-local-address', help='local address or route table will be used')
+    parser.add_argument('--ipv6-neighbor', help='IP address of the neighbor')
+    parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
     parser.add_argument('--local-as', required=True, help='local AS')
-    parser.add_argument('--local-address', help='local address or route table will be used')
-    parser.add_argument('--neighbor', required=True, help='IP address of the neighbor')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
     args = parser.parse_args()
@@ -32,15 +35,31 @@ if __name__ == '__main__':
     # wait for tcp2tap to bring up the tap0 interface
     time.sleep(1)
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])
-    subprocess.check_call(["ip", "address", "add", args.ip_prefix, "dev", "tap0"])
+    if args.ipv4_prefix:
+        subprocess.check_call(["ip", "address", "add", args.ipv4_prefix, "dev", "tap0"])
+    if args.ipv6_prefix:
+        subprocess.check_call(["ip", "address", "add", args.ipv6_prefix, "dev", "tap0"])
 
     config = {
-        'NEIGHBOR': args.neighbor,
-        'LOCAL_ADDRESS': args.local_address or args.ip_prefix.split("/")[0],
+        'IPV4_NEIGHBOR': args.ipv4_neighbor,
+        'IPV6_NEIGHBOR': args.ipv6_neighbor,
+        'IPV4_LOCAL_ADDRESS': None,
+        'IPV6_LOCAL_ADDRESS': None,
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',
     }
+    if args.ipv4_local_address or args.ipv4_prefix:
+        config['IPV4_LOCAL_ADDRESS'] = args.ipv4_local_address or args.ipv4_prefix.split("/")[0]
+    if args.ipv6_local_address or args.ipv6_prefix:
+        config['IPV6_LOCAL_ADDRESS'] = args.ipv6_local_address or args.ipv6_prefix.split("/")[0]
+    if args.ipv4_neighbor and config['IPV4_LOCAL_ADDRESS'] is None:
+        print("Please set --ipv4-prefix when --ipv4-neighbor is defined", file=sys.stderr)
+        sys.exit(1)
+    if args.ipv6_neighbor and config['IPV6_LOCAL_ADDRESS'] is None:
+        print("Please set --ipv6-prefix when --ipv6-neighbor is defined", file=sys.stderr)
+        sys.exit(1)
+
 
     # generate exabgp config - with Jinja2? get all the config options
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(['/']))

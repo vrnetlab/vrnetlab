@@ -16,8 +16,16 @@ group test {
     router-id {{config.ROUTER_ID}};
     local-as {{config.LOCAL_AS}};
 
-    neighbor {{config.NEIGHBOR}} {
+{% if config.IPV4_NEIGHBOR %}
+    neighbor {{config.IPV4_NEIGHBOR}} {
         peer-as {{config.PEER_AS}};
-        local-address {{config.LOCAL_ADDRESS}};
+        local-address {{config.IPV4_LOCAL_ADDRESS}};
     }
+{% endif %}
+{% if config.IPV6_NEIGHBOR %}
+    neighbor {{config.IPV6_NEIGHBOR}} {
+        peer-as {{config.PEER_AS}};
+        local-address {{config.IPV6_LOCAL_ADDRESS}};
+    }
+{% endif %}
 }

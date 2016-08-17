@@ -1,4 +1,4 @@
-FROM plajjan/vr-xcon
+FROM vrnetlab/vr-xcon
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive

@@ -194,14 +194,10 @@ if __name__ == '__main__':
     config = json.loads(input_file.read())
     input_file.close()
 
-    try:
-        cb = ConfigBootstrap(config, args.xr, args.junos)
-        cb.render_config()
+    cb = ConfigBootstrap(config, args.xr, args.junos)
+    cb.render_config()
 
-        if args.run:
-            cb.apply_config()
-        else:
-            cb.diff_config()
-    except Exception as ex:
-        print("ERROR:", ex)
-        sys.exit(1)
+    if args.run:
+        cb.apply_config()
+    else:
+        cb.diff_config()

@@ -16,7 +16,8 @@ a local tap interface, which makes it easy to use other apps together with
 vrnetlab router containers. Run vr-xcon with `--tap-listen INTERFACE` to listen
 to a port - the mapping is the same as for other vrnetlab routers, i.e.
 INTERFACE=1 will mean it listens on TCP port 10001 and this makes it easy to
-interconnect using vr-xcon.
+interconnect using vr-xcon. See vr-bgp for an example of how `--tap-listen` can
+be used in real life.
 
 
 Building the docker image

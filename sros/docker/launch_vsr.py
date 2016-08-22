@@ -6,6 +6,7 @@ import os
 import random
 import re
 import signal
+import subprocess
 import sys
 import telnetlib
 import time
@@ -33,7 +34,6 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 def run_command(cmd, cwd=None, background=False):
-    import subprocess
     res = None
     try:
         if background:
@@ -85,7 +85,6 @@ class SROS(vrnetlab.VR):
     def __init__(self):
         self.logger = logging.getLogger()
         self.spins = 0
-        self.cycle = 0
 
         self.username = None
         self.password = None
@@ -137,7 +136,6 @@ class SROS(vrnetlab.VR):
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        self.bootstrap_init()
         if blocking:
             while True:
                 done, res = self.bootstrap_spin()
@@ -163,7 +161,7 @@ class SROS(vrnetlab.VR):
         self.logger.info("Starting VM")
         bof = "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp"
 
-        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
+        cmd = ["qemu-system-x86_64", "-display", "none", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait", "-smbios", bof,
                "-hda", "/sros.qcow2", "-uuid", self.uuid
                ]
@@ -193,14 +191,29 @@ class SROS(vrnetlab.VR):
             cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
                        % { 'i': i })
 
-        run_command(cmd)
+        self.p_vm = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        try:
+            self.p_vm.communicate('', 1)
+        except:
+            pass
 
-
-    def bootstrap_init(self):
-        """ Do the initial part of the bootstrap process
-        """
         self.tn = telnetlib.Telnet("127.0.0.1", 5000)
-        
+
+
+    def stop_vm(self):
+        try:
+            self.p_vm.terminate()
+        except ProcessLookupError:
+            return
+
+        try:
+            self.p_vm.communicate(timeout=10)
+        except:
+            self.p_vm.kill()
+            self.p_vm.communicate(timeout=10)
+
+
+
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
 
@@ -213,16 +226,13 @@ class SROS(vrnetlab.VR):
         """
 
         if self.spins > 60:
-            # too many spins with no result
-            if self.cycle == 0:
-                # but if it's our first cycle we try to tickle the device to get a prompt
-                self.wait_write("", wait=None)
-
-                self.cycle += 1
-                self.spins = 0
-            else:
-                # give up
-                return True, False
+            # too many spins with no result, probably means SROS hasn't started
+            # successfully, so we restart it
+            self.logger.warning("no output from serial console, restarting VM")
+            self.stop_vm()
+            self.start_vm()
+            self.spins = 0
+            return False, False
 
         (ridx, match, res) = self.tn.expect([b"Login:", b"^[^ ]+#"], 1)
         if match: # got a match!

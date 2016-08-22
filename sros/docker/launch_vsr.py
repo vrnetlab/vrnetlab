@@ -85,6 +85,7 @@ class SROS(vrnetlab.VR):
     def __init__(self):
         self.logger = logging.getLogger()
         self.spins = 0
+        self.vm_started = False
 
         self.username = None
         self.password = None
@@ -120,28 +121,21 @@ class SROS(vrnetlab.VR):
 
 
 
-    def start(self, blocking=True):
+    def start(self):
         """ Start the virtual router
 
             This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port. It is
-            possible to set blocking=False which means only the first parts of
-            the startup process are run. You are expected to call the
-            bootstrap_spin() function periodically (like once a second) after
-            this to complete the bootstrap process. Once bootstrap_spin()
-            returns True you are done!
+            and the do initial bootstraping of it over serial port.
         """
         self.update_health(2, "SROS starting")
         start_time = datetime.datetime.now()
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        if blocking:
-            while True:
-                done, res = self.bootstrap_spin()
-                if done:
-                    break
-            self.bootstrap_end()
+        while not self.vm_started:
+            if not self.bootstrap_spin()
+                break
+        self.bootstrap_end()
         stop_time = datetime.datetime.now()
         self.logger.info("Startup complete in: %s" % (stop_time - start_time))
 
@@ -232,7 +226,7 @@ class SROS(vrnetlab.VR):
             self.stop_vm()
             self.start_vm()
             self.spins = 0
-            return False, False
+            return False
 
         (ridx, match, res) = self.tn.expect([b"Login:", b"^[^ ]+#"], 1)
         if match: # got a match!
@@ -242,7 +236,8 @@ class SROS(vrnetlab.VR):
                 self.wait_write("admin", wait="Password:")
             # run main config!
             self.bootstrap_config()
-            return True, True
+            self.vm_started = True
+            return True
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -253,7 +248,7 @@ class SROS(vrnetlab.VR):
 
         self.spins += 1
 
-        return False, False
+        return True
 
 
     def bootstrap_config(self):

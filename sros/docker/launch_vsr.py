@@ -133,7 +133,7 @@ class SROS(vrnetlab.VR):
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         while not self.vm_started:
-            if not self.bootstrap_spin()
+            if not self.bootstrap_spin():
                 break
         self.bootstrap_end()
         stop_time = datetime.datetime.now()

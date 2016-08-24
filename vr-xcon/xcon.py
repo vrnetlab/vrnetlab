@@ -155,7 +155,8 @@ class TcpBridge:
             try:
                 ir,_,_ = select.select(self.sockets, [], [])
             except select.error as exc:
-                break
+                self.logger.error("select error: %s" % str(exc))
+                continue
 
             for i in ir:
                 remote = self.socket2remote[i]
@@ -177,7 +178,8 @@ class TcpBridge:
                     continue
 
                 if len(buf) == 0:
-                    return
+                    continue
+
                 self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
                 try:
                     remote.send(buf)

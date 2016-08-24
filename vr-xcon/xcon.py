@@ -155,8 +155,7 @@ class TcpBridge:
             try:
                 ir,_,_ = select.select(self.sockets, [], [])
             except select.error as exc:
-                self.logger.error("select error: %s" % str(exc))
-                continue
+                break
 
             for i in ir:
                 remote = self.socket2remote[i]
@@ -166,6 +165,7 @@ class TcpBridge:
                     self.logger.warning("connection dropped, reconnecting to source %s" % self.socket2hostintf[i])
                     try:
                         i.connect(self.hostintf2addr(self.socket2hostintf[i]))
+                        self.logger.debug("reconnect to %s successful" % self.socket2hostintf[i])
                     except:
                         self.logger.warning("reconnect failed, retrying on next spin")
                     continue
@@ -173,13 +173,13 @@ class TcpBridge:
                     self.logger.warning("endpoint not connecting, connecting to source %s" % self.socket2hostintf[i])
                     try:
                         i.connect(self.hostintf2addr(self.socket2hostintf[i]))
+                        self.logger.debug("connect to %s successful" % self.socket2hostintf[i])
                     except:
                         self.logger.warning("connect failed, retrying on next spin")
                     continue
 
                 if len(buf) == 0:
-                    continue
-
+                    return
                 self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
                 try:
                     remote.send(buf)
@@ -187,6 +187,7 @@ class TcpBridge:
                     self.logger.warning("unable to send packet %05d bytes %s -> %s due to remote being down, trying reconnect" % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
                     try:
                         remote.connect(self.hostintf2addr(self.socket2hostintf[remote]))
+                        self.logger.debug("connect to %s successful" % self.socket2hostintf[remote])
                     except:
                         self.logger.warning("connect failed, retrying on next spin")
                     continue

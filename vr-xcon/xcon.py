@@ -161,21 +161,21 @@ class TcpBridge:
                 remote = self.socket2remote[i]
                 try:
                     buf = i.recv(2048)
-                except ConnectionResetError:
+                except ConnectionResetError as exc:
                     self.logger.warning("connection dropped, reconnecting to source %s" % self.socket2hostintf[i])
                     try:
                         i.connect(self.hostintf2addr(self.socket2hostintf[i]))
                         self.logger.debug("reconnect to %s successful" % self.socket2hostintf[i])
-                    except:
-                        self.logger.warning("reconnect failed, retrying on next spin")
+                    except Exception as exc:
+                        self.logger.warning("reconnect failed %s" % str(exc))
                     continue
-                except OSError:
-                    self.logger.warning("endpoint not connecting, connecting to source %s" % self.socket2hostintf[i])
+                except OSError as exc:
+                    self.logger.warning("endpoint not connected, connecting to source %s" % self.socket2hostintf[i])
                     try:
                         i.connect(self.hostintf2addr(self.socket2hostintf[i]))
                         self.logger.debug("connect to %s successful" % self.socket2hostintf[i])
                     except:
-                        self.logger.warning("connect failed, retrying on next spin")
+                        self.logger.warning("connect failed %s" % str(exc))
                     continue
 
                 if len(buf) == 0:
@@ -188,8 +188,8 @@ class TcpBridge:
                     try:
                         remote.connect(self.hostintf2addr(self.socket2hostintf[remote]))
                         self.logger.debug("connect to %s successful" % self.socket2hostintf[remote])
-                    except:
-                        self.logger.warning("connect failed, retrying on next spin")
+                    except Exception as exc:
+                        self.logger.warning("connect failed %s" % str(exc))
                     continue
 
 

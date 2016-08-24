@@ -16,6 +16,7 @@ RUN apt-get update -qy \
  && rm -rf /var/lib/apt/lists/* \
  && wget -O exabgp.tar.gz https://github.com/Exa-Networks/exabgp/archive/3.4.16.tar.gz \
  && tar zxvf exabgp.tar.gz \
+ && rm exabgp.tar.gz \
  && cd /exabgp* && python setup.py install
 
 ADD . /

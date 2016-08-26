@@ -96,6 +96,10 @@ class SROS(vrnetlab.VR):
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.license_start = None
 
+        self.p_vm = None
+
+        self.start_time = None
+
 
 
     def read_license(self):
@@ -127,22 +131,41 @@ class SROS(vrnetlab.VR):
             This can take a long time as we are waiting for the router to start
             and the do initial bootstraping of it over serial port.
         """
-        self.update_health(2, "SROS starting")
-        start_time = datetime.datetime.now()
-        self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        while not self.vm_started:
-            if not self.bootstrap_spin():
-                break
-        self.bootstrap_end()
-        stop_time = datetime.datetime.now()
-        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
+        while True:
+            self.check_qemu()
+            if not self.vm_started:
+                self.bootstrap_spin()
+
+
+
+    def check_qemu(self):
+        """ Check health of qemu. This is mostly just seeing if there's error
+            output on STDOUT from qemu which means we restart it.
+        """
+        if self.p_vm is None:
+            self.start_vm()
+
+        # check for output
+        try:
+            outs, errs = self.p_vm.communicate(timeout=1)
+        except subprocess.TimeoutExpired:
+            return
+
+        if re.search("KVM internal error", errs):
+            self.update_health(2, "KVM internal error. restarting VM")
+            self.stop_vm()
+            self.start_vm()
+
 
 
     def start_vm(self):
         """ Start the VM
         """
+        self.vm_started = False
+        self.update_health(2, "starting VM")
+        self.start_time = datetime.datetime.now()
         # move files into place
         for e in os.listdir("/"):
             if re.search("\.qcow2$", e):
@@ -185,16 +208,19 @@ class SROS(vrnetlab.VR):
             cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
                        % { 'i': i })
 
-        self.p_vm = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        self.p_vm = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                     universal_newlines=True)
         try:
-            self.p_vm.communicate('', 1)
-        except:
+            self.p_vm.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
             pass
+        time.sleep(5)
 
         self.tn = telnetlib.Telnet("127.0.0.1", 5000)
 
 
     def stop_vm(self):
+        self.vm_started = False
         try:
             self.p_vm.terminate()
         except ProcessLookupError:
@@ -237,6 +263,11 @@ class SROS(vrnetlab.VR):
             # run main config!
             self.bootstrap_config()
             self.vm_started = True
+            self.tn.close()
+            # calc startup time
+            startup_time = datetime.datetime.now() - start_time
+            self.logger.info("Startup complete in: %s" % startup_time)
+            self.update_health(0, "SROS started")
             return True
 
         # no match, if we saw some output from the router it's probably
@@ -275,10 +306,6 @@ class SROS(vrnetlab.VR):
         self.wait_write("logout")
 
 
-    def bootstrap_end(self):
-        self.tn.close()
-        self.update_health(0, "SROS started")
-
 
     def wait_write(self, cmd, wait='#'):
         """ Wait for something and then send command
@@ -312,6 +339,3 @@ if __name__ == '__main__':
     ia.username = args.username
     ia.password = args.password
     ia.start()
-    logger.info("Going into sleep mode")
-    while True:
-        time.sleep(1)

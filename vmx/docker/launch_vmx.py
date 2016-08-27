@@ -13,6 +13,8 @@ import time
 
 import IPy
 
+import vrnetlab
+
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
@@ -54,11 +56,12 @@ def gen_mac(last_octet=None):
         )
 
 
-class VMX:
+class VMX(vrnetlab.VR):
     def __init__(self, username, password):
         self.logger = logging.getLogger()
         self.vcp_started = False
         self.vfpc_started = False
+        self.p_vcp = None
         self.tn_vcp = None
         self.tn_vfpc = None
         self.spins = 0
@@ -92,29 +95,52 @@ class VMX:
         self.read_version()
         self.logger.info("Starting vMX %s" % self.version)
 
-        start_time = datetime.datetime.now()
         # set up bridge for connecting VCP with vFPC
         run_command(["brctl", "addbr", "int_cp"])
         run_command(["ip", "link", "set", "int_cp", "up"])
 
-        # start VCP VMs, we delay the start of vFPC to consume less CPU
-        self.start_vcp()
-
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        while not (self.vcp_started and self.vfpc_started):
-            if not self.bootstrap_spin():
-                break
-        self.bootstrap_end()
-        stop_time = datetime.datetime.now()
-        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
+        while True:
+            self.check_qemu()
+            if not (self.vcp_started and self.vfpc_started):
+                self.bootstrap_spin()
+            else:
+                self.bootstrap_end()
+                self.update_health(0, "vMX running")
+
+
+
+    def check_qemu(self):
+        """ Check health of qemu. This is mostly just seeing if there's error
+            output on STDOUT from qemu which means we restart it.
+        """
+        if self.p_vcp is None:
+            self.start_vcp()
+
+        # check for output
+        try:
+            outs, errs = self.p_vcp.communicate(timeout=1)
+        except subprocess.TimeoutExpired:
+            return
+        self.logger.debug("STDOUT: %s" % outs)
+        self.logger.debug("STDERR: %s" % errs)
+
+        if errs != "":
+            self.logger.debug("KVM error, restarting VCP")
+            self.update_health(2, "KVM error, restarting VCP")
+            self.stop_vcp()
+            self.start_vcp()
 
 
 
     def start_vcp(self):
         """ Start the VCP
         """
+        self.vcp_started = False
         self.logger.info("Starting VCP VM")
+        self.update_health(2, "Starting VCP VM")
+        self.start_time = datetime.datetime.now()
 
         # start VCP VM (RE)
         cmd = ["qemu-system-x86_64", "-display", "none", "-m", str(self.ram),
@@ -143,7 +169,9 @@ class VMX:
         cmd.append("-netdev")
         cmd.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
 
-        self.p_vcp = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        self.p_vcp = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE,
+                                      universal_newlines=True)
         try:
             self.p_vcp.communicate('', 1)
         except:
@@ -159,6 +187,7 @@ class VMX:
     def start_vfpc(self):
         """ Start the vFPC
         """
+        self.vfpc_started = False
         # start VFP VM
         self.logger.info("Starting vFPC VM")
 
@@ -206,7 +235,12 @@ class VMX:
 
 
     def stop_vcp(self):
-        self.p_vcp.terminate()
+        self.vcp_started = False
+        try:
+            self.p_vcp.terminate()
+        except ProcessLookupError:
+            return
+
         try:
             self.p_vcp.communicate(timeout=10)
         except:
@@ -215,6 +249,7 @@ class VMX:
 
 
     def stop_vfpc(self):
+        self.vfpc_started = False
         try:
             self.p_vfpc.terminate()
         except ProcessLookupError:
@@ -234,8 +269,11 @@ class VMX:
         """
 
         if self.spins > 300:
-            # too many spins with no result -> give up
-            self.logger.error("startup took too long - giving up")
+            # too many spins with no result -> restart
+            self.logger.warning("no output from serial console, restarting VM")
+            self.stop_vcp()
+            self.start_vcp()
+            self.spins = 0
             return False
 
         (ridx, match, res) = self.tn_vcp.expect([b"login:", b"root@(%|:~ #)"], 1)
@@ -248,6 +286,12 @@ class VMX:
                 # run main config!
                 self.bootstrap_config()
                 self.vcp_started = True
+                #self.tn_vcp.close()
+                # calc startup time
+                startup_time = datetime.datetime.now() - self.start_time
+                self.logger.info("Startup complete in: %s" % startup_time)
+                return True
+
         else:
             # no match, if we saw some output from the router it's probably
             # booting, so let's give it some more time

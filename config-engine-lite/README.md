@@ -22,13 +22,13 @@ Usage
 After building the docker image, you run it like this.
 
 ```
-docker run -v $(pwd)/templates:/templates -v $(pwd)/topology:/topology --link router1 --link router2 vr-configengine --topo /topology/my-topology.json --xr /templates/xr.j2 --junos /templates/junos.j2 --run
+docker run -v $(pwd)/templates:/templates -v $(pwd)/topology:/topology --link router1 --link router2 vr-configengine --topo /topology/lltopo.json --xr /templates/xr.j2 --junos /templates/junos.j2 --run
 ```
 
  * -v $(pwd)/templates:/templates - Mount a directory containing your templates inside the container
  * -v $(pwd)/topology/topology - Mount a directory containing your topology files inside the container
  * --link router1 --link router2 - Link all routers specified in your topology, enabling config-engine-lite to configure them
- * --topo /topology/my-topology.json - The low level topology built by topology-machine, This references to the /topology mountpoint
+ * --topo /topology/lltopo.json - The low level topology built by topology-machine, This references to the /topology mountpoint
  * --xr /templates/xr.j2 - Configuration template for ios-xr, this references to the /templates mountpoint
  * --junos /templates/junos.j2 - Configuration template for JunOS, this refrences to the /templates mountpoint
  * --run - Actually deploy the configuration. If this is not specified, the configuration changes will not be committed and config diff will be printed.

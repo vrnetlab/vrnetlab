@@ -7,6 +7,11 @@ import time
 
 import jinja2
 
+def handle_SIGTERM(signal, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_SIGTERM)
+signal.signal(signal.SIGTERM, handle_SIGTERM)
 
 if __name__ == '__main__':
     import argparse

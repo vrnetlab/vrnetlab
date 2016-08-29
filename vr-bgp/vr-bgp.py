@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 
 import logging
+import signal
 import subprocess
 import sys
 import time
 
 import jinja2
 
+def handle_SIGCHLD(signal, frame):
+    os.waitpid(-1, os.WNOHANG)
+
 def handle_SIGTERM(signal, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
+signal.signal(signal.SIGCHLD, handle_SIGCHLD)
+
 
 if __name__ == '__main__':
     import argparse

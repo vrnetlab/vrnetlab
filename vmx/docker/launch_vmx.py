@@ -172,6 +172,7 @@ class VMX(vrnetlab.VR):
         self.p_vcp = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE,
                                       universal_newlines=True)
+        self.p_vcp.communicate('', 1)
         try:
             self.p_vcp.communicate('', 1)
         except:

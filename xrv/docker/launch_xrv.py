@@ -10,7 +10,7 @@ import sys
 import telnetlib
 import time
 
-import IPy
+import vrnetlab
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -30,120 +30,28 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
 logging.Logger.trace = trace
 
-def run_command(cmd, cwd=None, background=False):
-    import subprocess
-    res = None
-    try:
-        if background:
-            p = subprocess.Popen(cmd, cwd=cwd)
-        else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
-            res = p.communicate()
-    except:
-        pass
-    return res
-
-def gen_mac(last_octet=None):
-    """ Generate a random MAC address that is in the qemu OUI space and that
-        has the given last octet.
-    """
-    return "52:54:00:%02x:%02x:%02x" % (
-            random.randint(0x00, 0xff),
-            random.randint(0x00, 0xff),
-            last_octet
-        )
 
 
-class XRV:
+class XRV_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        self.logger = logging.getLogger()
+        super(XRV_vm, self).__init__(username, password)
+        self.disk_image = "/xrv.vmdk"
         self.credentials = [
                 ['admin', 'admin']
             ]
-        self.spins = 0
-
-        self.username = username
-        self.password = password
-
-        self.ram = 4096
-        self.num_nics = 16
 
         self.xr_ready = False
 
 
-    def start(self):
-        """ Start the virtual router
-
-            This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port.
-        """
-        start_time = datetime.datetime.now()
-        self.start_vm()
-        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
-        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        self.bootstrap_init()
-        while True:
-            done, res = self.bootstrap_spin()
-            if done:
-                break
-        self.bootstrap_end()
-        stop_time = datetime.datetime.now()
-        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
-
-
-
-    def start_vm(self):
-        """ Start the VM
-        """
-        self.logger.info("Starting VM")
-
-        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
-               "-serial", "telnet:0.0.0.0:5000,server,nowait",
-               "-hda", "/xrv.vmdk"
-               ]
-        # enable hardware assist if KVM is available
-        if os.path.exists("/dev/kvm"):
-            cmd.insert(1, '-enable-kvm')
-
-        # mgmt interface is special - we use qemu user mode network
-        cmd.append("-device")
-        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                   % { 'i': 0, 'mac': gen_mac(0) })
-        cmd.append("-netdev")
-        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
-
-        for i in range(1, self.num_nics):
-            cmd.append("-device")
-            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
-            cmd.append("-netdev")
-            cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
-
-        run_command(cmd)
-
-
-    def bootstrap_init(self):
-        """ Do the initial part of the bootstrap process
-        """
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
-        
-
     def bootstrap_spin(self):
-        """ This function should be called periodically to do work.
-
-            It can be used when you don't want to block waiting for the router
-            to boot, like when you are booting multiple routers in parallel.
-
-            returns True, True      when it's done and succeeded
-            returns True, False     when it's done but failed
-            returns False, False    when there is still work to be done
+        """ 
         """
 
         if self.spins > 300:
             # too many spins with no result ->  give up
-            return True, False
+            self.stop()
+            self.start()
+            return
 
         (ridx, match, res) = self.tn.expect([b"Press RETURN to get started",
             b"SYSTEM CONFIGURATION COMPLETE",
@@ -169,14 +77,21 @@ class XRV:
                     username, password = self.credentials.pop(0)
                 except IndexError as exc:
                     self.logger.error("no more credentials to try")
-                    return True, False
+                    return
                 self.logger.debug("trying to log in with %s / %s" % (username, password))
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
             if self.xr_ready == True and ridx == 4:
                 # run main config!
                 self.bootstrap_config()
-                return True, True
+                # close telnet connection
+                self.tn.close()
+                # startup time?
+                startup_time = datetime.datetime.now() - self.start_time
+                self.logger.info("Startup complete in: %s" % startup_time)
+                # mark as running
+                self.running = True
+                return
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -187,7 +102,8 @@ class XRV:
 
         self.spins += 1
 
-        return False, False
+        return
+
 
 
     def bootstrap_config(self):
@@ -224,19 +140,12 @@ class XRV:
         self.wait_write("commit")
         self.wait_write("exit")
 
-    def bootstrap_end(self):
-        self.tn.close()
 
 
-    def wait_write(self, cmd, wait='#'):
-        """ Wait for something and then send command
-        """
-        if wait:
-            self.logger.trace("waiting for '%s' on serial console" % wait)
-            res = self.tn.read_until(wait.encode())
-            self.logger.trace("read from serial console: %s" % res.decode())
-        self.logger.debug("writing to serial console: %s" % cmd)
-        self.tn.write("{}\r".format(cmd).encode())
+class XRV(vrnetlab.VR):
+    def __init__(self, username, password):
+        super(XRV, self).__init__(username, password)
+        self.vms = [ XRV_vm(username, password) ]
 
 
 
@@ -258,6 +167,3 @@ if __name__ == '__main__':
 
     vr = XRV(args.username, args.password)
     vr.start()
-    logger.info("Going into sleep mode")
-    while True:
-        time.sleep(1)

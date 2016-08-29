@@ -147,11 +147,8 @@ def run_command(cmd, dry_run=False):
         return
 
     import subprocess
-    try:
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
-        return p.communicate()
-    except:
-        pass
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    return p.communicate()
 
 
 def run_topology(config, dry_run):
@@ -164,24 +161,37 @@ def run_topology(config, dry_run):
         docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
     for router in sorted(config['routers']):
         val = config['routers'][router]
+        name = "%s%s" % (args.prefix, router)
         cmd = ["docker", "run", "--privileged", "-d",
-               "--name", "%s%s" % (args.prefix, router),
+               "--name", name,
                "%svr-%s:%s" % (docker_registry, val["type"], val["version"])
           ]
-        run_command(cmd, dry_run)
+
+        output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
+        if output.strip() == "true":
+            output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
+            print("Container already running. Health: %s" % output.strip())
+        else:
+            run_command(cmd, dry_run)
 
     if 'links' in config:
-        cmd = ["docker", "run", "--privileged", "-d", "--name", "%svr-xcon" % args.prefix]
+        name = "%svr-xcon" % args.prefix
+        cmd = ["docker", "run", "--privileged", "-d", "--name", name]
 
         cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in sorted(config['routers'])])
-        cmd.append("vrnetlab/vr-xcon")
+        cmd.append(name)
         cmd.append("--p2p")
         cmd.extend([" %s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
                                            link["left"]["numeric"],
                                            args.prefix,
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
-        run_command(cmd, dry_run)
+        output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
+        if output.strip() == "true":
+            output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
+            print("Container already running. Health: %s" % output.strip())
+        else:
+            run_command(cmd, dry_run)
 
 
 

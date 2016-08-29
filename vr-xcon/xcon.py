@@ -4,10 +4,21 @@ import fcntl
 import logging
 import os
 import select
+import signal
 import socket
 import struct
 import sys
 
+
+def handle_SIGCHLD(signal, frame):
+    os.waitpid(-1, os.WNOHANG)
+
+def handle_SIGTERM(signal, frame):
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_SIGTERM)
+signal.signal(signal.SIGTERM, handle_SIGTERM)
+signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 
 class Tcp2Tap:

@@ -171,16 +171,19 @@ def run_topology(config, dry_run):
         run_command(cmd, dry_run)
 
     if 'links' in config:
-        cmd = ["docker", "run", "--privileged", "-d", "--name", "vr-xcon"]
+        cmd = ["docker", "run", "--privileged", "-d", "--name", "%svr-xcon" % args.prefix]
 
         cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in sorted(config['routers'])])
-        cmd.append(docker_registry + "vr-xcon")
+        cmd.append("vrnetlab/vr-xcon")
         cmd.append("--p2p")
-        cmd.extend([" %s/%s--%s/%s" % (link["left"]["router"],
+        cmd.extend([" %s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
                                            link["left"]["numeric"],
+                                           args.prefix,
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
         run_command(cmd, dry_run)
+
+
 
 if __name__ == '__main__':
     import argparse

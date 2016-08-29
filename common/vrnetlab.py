@@ -51,9 +51,17 @@ class VM:
         self.tn = None
 
         #  various settings
+        self.uuid = None
+        self.fake_start_date = None
         self.ram = 4096
         self.num_nics = 20
+        self.num_fake_nics = 0
         self.disk_image = None
+        self.smbios = None
+        self.qemu_args = ["qemu-system-x86_64", "-display", "none" ]
+        # enable hardware assist if KVM is available
+        if os.path.exists("/dev/kvm"):
+            self.qemu_args.insert(1, '-enable-kvm')
 
 
 
@@ -61,14 +69,19 @@ class VM:
         self.logger.info("Starting %s" % self.__class__.__name__)
         self.start_time = datetime.datetime.now()
 
-        self.qemu_args = ["qemu-system-x86_64", "-display", "none",
-                          "-m", str(self.ram), "-serial",
-                          "telnet:0.0.0.0:5000,server,nowait", "-hda",
-                          self.disk_image ]
+        self.qemu_args.extend(["-m", str(self.ram),
+                               "-serial", "telnet:0.0.0.0:5000,server,nowait",
+                               "-hda", self.disk_image])
 
-        # enable hardware assist if KVM is available
-        if os.path.exists("/dev/kvm"):
-            self.qemu_args.insert(1, '-enable-kvm')
+        if self.uuid:
+            self.qemu_args.extend(["-uuid", self.uuid])
+
+        # do we have a fake start date?
+        if self.fake_start_date:
+            self.qemu_args.extend(["-rtc", "base=" + self.fake_start_date])
+
+        if self.smbios:
+            self.qemu_args.extend(["-smbios", self.smbios])
 
         # mgmt interface is special - we use qemu user mode network
         self.qemu_args.append("-device")
@@ -77,6 +90,11 @@ class VM:
         self.qemu_args.append("-netdev")
         self.qemu_args.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
                    % { 'i': 0 })
+
+        for i in range(self.num_fake_nics):
+            # dummy interface
+            self.qemu_args.extend(["-device", "e1000,netdev=dummy%s,mac=%s" % (str(i), gen_mac(0))])
+            self.qemu_args.extend(["-netdev", "tap,ifname=dummy%s,id=dummy%s,script=no,downscript=no" % (str(i), str(i))])
 
         for i in range(1, self.num_nics):
             self.qemu_args.append("-device")

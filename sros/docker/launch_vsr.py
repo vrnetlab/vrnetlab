@@ -153,8 +153,8 @@ class SROS(vrnetlab.VR):
         except subprocess.TimeoutExpired:
             return
 
-        if re.search("KVM internal error", errs):
-            self.update_health(2, "KVM internal error. restarting VM")
+        if errs != "":
+            self.update_health(2, "KVM error. restarting VM")
             self.stop_vm()
             self.start_vm()
 
@@ -209,6 +209,7 @@ class SROS(vrnetlab.VR):
                        % { 'i': i })
 
         self.p_vm = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,
                                      universal_newlines=True)
         try:
             self.p_vm.communicate(timeout=5)

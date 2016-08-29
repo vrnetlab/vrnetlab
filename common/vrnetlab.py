@@ -103,6 +103,17 @@ class VM:
     def stop(self):
         self.running = False
 
+        try:
+            self.p.terminate()
+        except ProcessLookupError:
+            return
+
+        try:
+            self.p.communicate(timeout=10)
+        except:
+            self.p.kill()
+            self.p.communicate(timeout=10)
+
 
     def wait_write(self, cmd, wait='#'):
         """ Wait for something and then send command

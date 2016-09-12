@@ -38,12 +38,14 @@ class VM:
         return self.__class__.__name__
 
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
 
         # username / password to configure
         self.username = username
         self.password = password
+
+        self.num = num
 
         self.running = False
         self.spins = 0
@@ -53,12 +55,13 @@ class VM:
         #  various settings
         self.uuid = None
         self.fake_start_date = None
-        self.ram = 4096
-        self.num_nics = 20
-        self.num_fake_nics = 0
-        self.disk_image = None
-        self.smbios = None
+        self.nic_type = "e1000"
+        self.num_nics = 0
+        self.smbios = []
         self.qemu_args = ["qemu-system-x86_64", "-display", "none" ]
+        self.qemu_args.extend(["-m", str(ram),
+                               "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
+                               "-drive", "if=ide,file=%s" % disk_image])
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             self.qemu_args.insert(1, '-enable-kvm')
@@ -69,10 +72,8 @@ class VM:
         self.logger.info("Starting %s" % self.__class__.__name__)
         self.start_time = datetime.datetime.now()
 
-        self.qemu_args.extend(["-m", str(self.ram),
-                               "-serial", "telnet:0.0.0.0:5000,server,nowait",
-                               "-hda", self.disk_image])
 
+        # uuid
         if self.uuid:
             self.qemu_args.extend(["-uuid", self.uuid])
 
@@ -80,45 +81,60 @@ class VM:
         if self.fake_start_date:
             self.qemu_args.extend(["-rtc", "base=" + self.fake_start_date])
 
-        if self.smbios:
-            self.qemu_args.extend(["-smbios", self.smbios])
+        # smbios
+        for e in self.smbios:
+            self.qemu_args.extend(["-smbios", e])
 
-        # mgmt interface is special - we use qemu user mode network
-        self.qemu_args.append("-device")
-        self.qemu_args.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                              % { 'i': 0, 'mac': gen_mac(0) })
-        self.qemu_args.append("-netdev")
-        self.qemu_args.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
-
-        for i in range(self.num_fake_nics):
-            # dummy interface
-            self.qemu_args.extend(["-device", "e1000,netdev=dummy%s,mac=%s" % (str(i), gen_mac(0))])
-            self.qemu_args.extend(["-netdev", "tap,ifname=dummy%s,id=dummy%s,script=no,downscript=no" % (str(i), str(i))])
-
-        for i in range(1, self.num_nics):
-            self.qemu_args.append("-device")
-            self.qemu_args.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
-            self.qemu_args.append("-netdev")
-            self.qemu_args.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+        # generate mgmt NICs
+        self.qemu_args.extend(self.gen_mgmt())
+        # generate normal NICs
+        self.qemu_args.extend(self.gen_nics())
 
         self.logger.debug(self.qemu_args)
 
         self.p = subprocess.Popen(self.qemu_args, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
                                   universal_newlines=True)
 
         try:
-            self.p.communicate(timeout=1)
+            self.p.communicate(timeout=2)
         except:
             pass
 
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
+        self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+
+
+    def gen_mgmt(self):
+        """ Generate qemu args for the mgmt interface(s)
+        """
+        res = []
+        # mgmt interface is special - we use qemu user mode network
+        res.append("-device")
+        res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
+                              % { 'i': 0, 'mac': gen_mac(0) })
+        res.append("-netdev")
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830" % { 'i': 0 })
+
+        return res
+
+
+    def gen_nics(self):
+        """ Generate qemu args for the normal traffic carrying interface(s)
+        """
+        res = []
+        for i in range(1, self.num_nics):
+            res.append("-device")
+            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
+                       % { 'i': i, 'mac': gen_mac(i) })
+            res.append("-netdev")
+            res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
+                       % { 'i': i })
+        return res
+
 
 
     def stop(self):
+        """ Stop this VM
+        """
         self.running = False
 
         try:
@@ -134,7 +150,7 @@ class VM:
 
 
     def wait_write(self, cmd, wait='#'):
-        """ Wait for something and then send command
+        """ Wait for something on the serial port and then send command
         """
         if wait:
             self.logger.trace("waiting for '%s' on serial console" % wait)
@@ -148,6 +164,7 @@ class VM:
         self.check_qemu()
         if not self.running:
             self.bootstrap_spin()
+
 
 
     def check_qemu(self):
@@ -168,7 +185,6 @@ class VM:
 
         if errs != "":
             self.logger.debug("KVM error, restarting")
-            self.update_health(2, "KVM error, restarting")
             self.stop()
             self.start()
 
@@ -210,3 +226,5 @@ class VR:
                     self.update_health(1, "VM failed - restarting")
                 else:
                     self.update_health(1, "starting")
+
+

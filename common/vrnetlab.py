@@ -40,6 +40,7 @@ class VM:
 
     def __init__(self, username, password):
         self.logger = logging.getLogger()
+        self.num = 0
 
         # username / password to configure
         self.username = username
@@ -54,10 +55,10 @@ class VM:
         self.uuid = None
         self.fake_start_date = None
         self.ram = 4096
+        self.nic_type = "e1000"
         self.num_nics = 20
-        self.num_fake_nics = 0
         self.disk_image = None
-        self.smbios = None
+        self.smbios = []
         self.qemu_args = ["qemu-system-x86_64", "-display", "none" ]
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
@@ -70,9 +71,10 @@ class VM:
         self.start_time = datetime.datetime.now()
 
         self.qemu_args.extend(["-m", str(self.ram),
-                               "-serial", "telnet:0.0.0.0:5000,server,nowait",
-                               "-hda", self.disk_image])
+                               "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
+                               "-drive", "if=ide,file=%s" % self.disk_image])
 
+        # uuid
         if self.uuid:
             self.qemu_args.extend(["-uuid", self.uuid])
 
@@ -80,34 +82,18 @@ class VM:
         if self.fake_start_date:
             self.qemu_args.extend(["-rtc", "base=" + self.fake_start_date])
 
-        if self.smbios:
-            self.qemu_args.extend(["-smbios", self.smbios])
+        # smbios
+        for e in self.smbios:
+            self.qemu_args.extend(["-smbios", e])
 
-        # mgmt interface is special - we use qemu user mode network
-        self.qemu_args.append("-device")
-        self.qemu_args.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                              % { 'i': 0, 'mac': gen_mac(0) })
-        self.qemu_args.append("-netdev")
-        self.qemu_args.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
-
-        for i in range(self.num_fake_nics):
-            # dummy interface
-            self.qemu_args.extend(["-device", "e1000,netdev=dummy%s,mac=%s" % (str(i), gen_mac(0))])
-            self.qemu_args.extend(["-netdev", "tap,ifname=dummy%s,id=dummy%s,script=no,downscript=no" % (str(i), str(i))])
-
-        for i in range(1, self.num_nics):
-            self.qemu_args.append("-device")
-            self.qemu_args.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
-            self.qemu_args.append("-netdev")
-            self.qemu_args.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+        # generate mgmt NICs
+        self.qemu_args.extend(self.gen_mgmt())
+        # generate normal NICs
+        self.qemu_args.extend(self.gen_nics())
 
         self.logger.debug(self.qemu_args)
 
         self.p = subprocess.Popen(self.qemu_args, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE,
                                   universal_newlines=True)
 
         try:
@@ -115,7 +101,32 @@ class VM:
         except:
             pass
 
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
+        self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+
+
+    def gen_mgmt(self):
+        res = []
+        # mgmt interface is special - we use qemu user mode network
+        res.append("-device")
+        res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
+                              % { 'i': 0, 'mac': gen_mac(0) })
+        res.append("-netdev")
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830" % { 'i': 0 })
+
+        return res
+
+
+    def gen_nics(self):
+        res = []
+        for i in range(1, self.num_nics):
+            res.append("-device")
+            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
+                       % { 'i': i, 'mac': gen_mac(i) })
+            res.append("-netdev")
+            res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
+                       % { 'i': i })
+        return res
+
 
 
     def stop(self):

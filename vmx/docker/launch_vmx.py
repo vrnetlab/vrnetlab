@@ -33,234 +33,39 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
 logging.Logger.trace = trace
 
-def run_command(cmd, cwd=None, background=False):
-    res = None
-    try:
-        if background:
-            p = subprocess.Popen(cmd, cwd=cwd)
-        else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
-            res = p.communicate()
-    except:
-        pass
-    return res
-
-def gen_mac(last_octet=None):
-    """ Generate a random MAC address that is in the qemu OUI space and that
-        has the given last octet.
-    """
-    return "52:54:00:%02x:%02x:%02x" % (
-            random.randint(0x00, 0xff),
-            random.randint(0x00, 0xff),
-            last_octet
-        )
 
 
-class VMX(vrnetlab.VR):
-    def __init__(self, username, password):
-        self.logger = logging.getLogger()
-        self.vcp_started = False
-        self.vfpc_started = False
-        self.p_vcp = None
-        self.tn_vcp = None
-        self.tn_vfpc = None
-        self.spins = 0
+class VMX_vcp(vrnetlab.VM):
+    def __init__(self, username, password, image):
+        super(VMX_vcp, self).__init__(username, password)
+        self.num_nics = 0
+        self.disk_image = image
+        self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
+        self.smbios = ["type=0,vendor=Juniper",
+                       "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"]
+        # add metadata image if it exists
+        if os.path.exists("/vmx/metadata-usb-re.img"):
+            self.qemu_args.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-re.img"])
 
-        self.username = username
-        self.password = password
-
-        self.ram = 2048
-        self.num_nics = None
-
-        self.vcp_image = None
-        self.version = None
-        self.version_info = []
-
-
-    def read_version(self):
-        for e in os.listdir("/vmx/"):
-            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)\.([0-9]+))", e)
-            if m:
-                self.vcp_image = e
-                self.version = m.group(1)
-                self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(6))]
 
 
     def start(self):
-        """ Start the virtual router
-
-            This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port.
-        """
-        self.read_version()
-        self.logger.info("Starting vMX %s" % self.version)
-
-        # set up bridge for connecting VCP with vFPC
-        run_command(["brctl", "addbr", "int_cp"])
-        run_command(["ip", "link", "set", "int_cp", "up"])
-
-        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
-        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        while True:
-            self.check_qemu()
-            if not (self.vcp_started and self.vfpc_started):
-                self.bootstrap_spin()
-            else:
-                self.bootstrap_end()
-                self.update_health(0, "vMX running")
+        # use parent class start() function
+        super(VMX_vcp, self).start()
+        # add interface to internal control plane bridge
+        vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
+        vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
 
 
-
-    def check_qemu(self):
-        """ Check health of qemu. This is mostly just seeing if there's error
-            output on STDOUT from qemu which means we restart it.
-        """
-        if self.p_vcp is None:
-            self.start_vcp()
-
-        # check for output
-        try:
-            outs, errs = self.p_vcp.communicate(timeout=1)
-        except subprocess.TimeoutExpired:
-            return
-        self.logger.debug("STDOUT: %s" % outs)
-        self.logger.debug("STDERR: %s" % errs)
-
-        if errs != "":
-            self.logger.debug("KVM error, restarting VCP")
-            self.update_health(2, "KVM error, restarting VCP")
-            self.stop_vcp()
-            self.start_vcp()
-
-
-
-    def start_vcp(self):
-        """ Start the VCP
-        """
-        self.vcp_started = False
-        self.logger.info("Starting VCP VM")
-        self.update_health(2, "Starting VCP VM")
-        self.start_time = datetime.datetime.now()
-
-        # start VCP VM (RE)
-        cmd = ["qemu-system-x86_64", "-display", "none", "-m", str(self.ram),
-               "-serial", "telnet:0.0.0.0:5000,server,nowait",
-               "-drive", "if=ide,file=/vmx/%s" % self.vcp_image,
-               "-drive", "if=ide,file=/vmx/vmxhdd.img",
-               "-smbios", "type=0,vendor=Juniper", "-smbios",
-               "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"
-               ]
-        # enable hardware assist if KVM is available
-        if os.path.exists("/dev/kvm"):
-            cmd.insert(1, '-enable-kvm')
-
-        # add metadata image if it exists
-        if os.path.exists("/vmx/metadata-usb-re.img"):
-            cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-re.img"])
-
-        # mgmt interface is special - we use qemu user mode network
-        cmd.append("-device")
-        cmd.append("e1000,netdev=vcp0,mac=%s" % gen_mac(0))
-        cmd.append("-netdev")
-        cmd.append("user,id=vcp0,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
+    def gen_mgmt(self):
+        res = super(VMX_vcp, self).gen_mgmt()
         # internal control plane interface to vFPC
-        cmd.append("-device")
-        cmd.append("virtio-net-pci,netdev=vcp-int,mac=%s" % gen_mac(1))
-        cmd.append("-netdev")
-        cmd.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
+        res.append("-device")
+        res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
+        res.append("-netdev")
+        res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
+        return res
 
-        self.p_vcp = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE,
-                                      universal_newlines=True)
-        self.p_vcp.communicate('', 1)
-        try:
-            self.p_vcp.communicate('', 1)
-        except:
-            pass
-
-        run_command(["brctl", "addif", "int_cp", "vcp-int"])
-        run_command(["ip", "link", "set", "vcp-int", "up"])
-
-        self.tn_vcp = telnetlib.Telnet("127.0.0.1", 5000)
-
-
-
-    def start_vfpc(self):
-        """ Start the vFPC
-        """
-        self.vfpc_started = False
-        # start VFP VM
-        self.logger.info("Starting vFPC VM")
-
-        cmd = ["kvm", "-display", "none", "-m", "4096",
-               "-cpu", "SandyBridge", "-M", "pc", "-smp", "3",
-               "-serial", "telnet:0.0.0.0:5001,server,nowait",
-               "-drive", "if=ide,file=/vmx/vfpc.img",
-               ]
-        # add metadata image if it exists
-        if os.path.exists("/vmx/metadata-usb-fpc0.img"):
-            cmd.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-fpc0.img"])
-
-        # mgmt interface is special - we use qemu user mode network
-        cmd.extend(["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % gen_mac(0)])
-        cmd.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
-        # internal control plane interface to vFPC
-        cmd.extend(["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % gen_mac(0)])
-        cmd.extend(["-netdev", "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
-
-        if self.version == '15.1F6.9':
-            # dummy interface for vMX 15.1F6.9 - not sure why vFPC wants it.
-            # version 16 doesn't need it while this specific 15 version does.
-            # Other images, like 15.1F4.15 works without it.
-            cmd.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" % gen_mac(0)])
-            cmd.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
-
-        for i in range(1, self.num_nics):
-            cmd.extend(["-device", "virtio-net-pci,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) }])
-            cmd.extend(["-netdev", "socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i }])
-
-        self.p_vfpc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        try:
-            self.p_vfpc.communicate('', 1)
-        except:
-            pass
-
-        run_command(["brctl", "addif", "int_cp", "vfpc-int"])
-        run_command(["ip", "link", "set", "vfpc-int", "up"])
-
-        # setup telnet connection
-        self.tn_vfpc = telnetlib.Telnet("127.0.0.1", 5001)
-
-
-
-    def stop_vcp(self):
-        self.vcp_started = False
-        try:
-            self.p_vcp.terminate()
-        except ProcessLookupError:
-            return
-
-        try:
-            self.p_vcp.communicate(timeout=10)
-        except:
-            self.p_vcp.kill()
-            self.p_vcp.communicate(timeout=10)
-
-
-    def stop_vfpc(self):
-        self.vfpc_started = False
-        try:
-            self.p_vfpc.terminate()
-        except ProcessLookupError:
-            return
-
-        try:
-            self.p_vfpc.communicate(timeout=10)
-        except:
-            self.p_vfpc.kill()
-            self.p_vfpc.communicate(timeout=10)
 
 
     def bootstrap_spin(self):
@@ -271,27 +76,26 @@ class VMX(vrnetlab.VR):
 
         if self.spins > 300:
             # too many spins with no result -> restart
-            self.logger.warning("no output from serial console, restarting VM")
-            self.stop_vcp()
-            self.start_vcp()
+            self.logger.warning("no output from serial console, restarting VCP")
+            self.stop()
+            self.start()
             self.spins = 0
-            return False
+            return
 
-        (ridx, match, res) = self.tn_vcp.expect([b"login:", b"root@(%|:~ #)"], 1)
+        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
         if match: # got a match!
             if ridx == 0: # matched login prompt, so should login
                 self.logger.info("matched login prompt")
                 self.wait_write("root", wait=None)
-                self.start_vfpc()
             if ridx == 1:
                 # run main config!
                 self.bootstrap_config()
-                self.vcp_started = True
-                #self.tn_vcp.close()
+                self.running = True
+                self.tn.close()
                 # calc startup time
                 startup_time = datetime.datetime.now() - self.start_time
                 self.logger.info("Startup complete in: %s" % startup_time)
-                return True
+                return
 
         else:
             # no match, if we saw some output from the router it's probably
@@ -303,24 +107,8 @@ class VMX(vrnetlab.VR):
 
         self.spins += 1
 
-        if self.vcp_started and not self.vfpc_started:
-            self.logger.debug("tickling vFPC")
-            self.tn_vfpc.write(b"\r")
+        return
 
-        if self.tn_vfpc is not None:
-            (ridx, match, res) = self.tn_vfpc.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
-            if match:
-                if ridx == 0: # got login - vFPC start succeeded!
-                    self.logger.info("vFPC successfully started")
-                    self.vfpc_started = True
-                if ridx == 1: # vFPC start failed - restart it
-                    self.logger.info("vFPC start failed, restarting")
-                    self.stop_vfpc()
-                    self.start_vfpc()
-            if res != b'':
-                self.logger.trace("OUTPUT VFPC: %s" % res.decode())
-
-        return True
 
 
     def bootstrap_config(self):
@@ -343,10 +131,6 @@ class VMX(vrnetlab.VR):
         self.wait_write("exit")
 
 
-    def bootstrap_end(self):
-        self.tn_vcp.close()
-        self.tn_vfpc.close()
-
 
     def wait_write(self, cmd, wait='#', timeout=None):
         """ Wait for something and then send command
@@ -363,6 +147,103 @@ class VMX(vrnetlab.VR):
             self.logger.trace("Read: %s" % res.decode())
         self.logger.debug("writing to serial console: %s" % cmd)
         self.tn_vcp.write("{}\r".format(cmd).encode())
+
+
+
+
+
+class VMX_vfpc(vrnetlab.VM):
+    def __init__(self, version):
+        super(VMX_vfpc, self).__init__(None, None)
+        self.num = 1
+        self.version = version
+
+        self.nic_type = "virtio-net-pci"
+        self.qemu_args.extend(["-cpu", "SandyBridge", "-M", "pc", "-smp", "3"])
+        self.disk_image = "/vmx/vfpc.img"
+        # add metadata image if it exists
+        if os.path.exists("/vmx/metadata-usb-fpc0.img"):
+            self.qemu_args.extend(["-usb", "-usbdevice", "disk:format=raw:/vmx/metadata-usb-fpc0.img"])
+
+
+
+    def gen_mgmt(self):
+        res = []
+        # mgmt interface
+        res.extend(["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)])
+        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
+        # internal control plane interface to vFPC
+        res.extend(["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" %
+                    vrnetlab.gen_mac(0)])
+        res.extend(["-netdev",
+                    "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
+
+        if self.version == '15.1F6.9':
+            # dummy interface for vMX 15.1F6.9 - not sure why vFPC wants it.
+            # version 16 doesn't need it while this specific 15 version does.
+            # Other images, like 15.1F4.15 works without it.
+            res.extend(["-device",
+                                   "virtio-net-pci,netdev=dummy,mac=%s" %
+                                   vrnetlab.gen_mac(0)])
+            res.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
+
+        return res
+
+
+
+    def start(self):
+        # use parent class start() function
+        super(VMX_vfpc, self).start()
+        # add interface to internal control plane bridge
+        vrnetlab.run_command(["brctl", "addif", "int_cp", "vfpc-int"])
+        vrnetlab.run_command(["ip", "link", "set", "vfpc-int", "up"])
+
+
+
+    def bootstrap_spin(self):
+        (ridx, match, res) = self.tn.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
+        if match:
+            if ridx == 0: # got login - vFPC start succeeded!
+                self.logger.info("vFPC successfully started")
+                self.running = True
+            if ridx == 1: # vFPC start failed - restart it
+                self.logger.info("vFPC start failed, restarting")
+                self.stop()
+                self.start()
+        if res != b'':
+            pass
+            #self.logger.trace("OUTPUT VFPC: %s" % res.decode())
+
+        return
+
+
+
+class VMX(vrnetlab.VR):
+    def __init__(self, username, password):
+        self.version = None
+        self.version_info = []
+        self.read_version()
+
+        super(VMX, self).__init__(username, password)
+
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image), VMX_vfpc(self.version) ]
+
+        # set up bridge for connecting VCP with vFPC
+        vrnetlab.run_command(["brctl", "addbr", "int_cp"])
+        vrnetlab.run_command(["ip", "link", "set", "int_cp", "up"])
+
+
+    def read_version(self):
+        for e in os.listdir("/vmx/"):
+            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)\.([0-9]+))", e)
+            if m:
+                self.vcp_image = e
+                self.version = m.group(1)
+                self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(6))]
+
+
+
+
 
 
 
@@ -386,6 +267,3 @@ if __name__ == '__main__':
     vr = VMX(args.username, args.password)
     vr.num_nics = args.num_nics
     vr.start()
-    logger.info("Going into sleep mode")
-    while True:
-        time.sleep(1)

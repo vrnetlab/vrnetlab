@@ -14,8 +14,12 @@ RUN apt-get update -qy \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
-COPY . /
+COPY $IMAGE /
+COPY install_vmx.sh /
+COPY healthcheck.py /
 RUN /install_vmx.sh
+COPY vrnetlab.py /
+COPY launch_vmx.py /
 
 EXPOSE 22 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]

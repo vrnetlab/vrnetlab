@@ -56,7 +56,7 @@ class VM:
         self.fake_start_date = None
         self.ram = 4096
         self.nic_type = "e1000"
-        self.num_nics = 20
+        self.num_nics = 0
         self.disk_image = None
         self.smbios = []
         self.qemu_args = ["qemu-system-x86_64", "-display", "none" ]
@@ -97,7 +97,7 @@ class VM:
                                   universal_newlines=True)
 
         try:
-            self.p.communicate(timeout=1)
+            self.p.communicate(timeout=2)
         except:
             pass
 
@@ -179,7 +179,6 @@ class VM:
 
         if errs != "":
             self.logger.debug("KVM error, restarting")
-            self.update_health(2, "KVM error, restarting")
             self.stop()
             self.start()
 

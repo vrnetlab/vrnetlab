@@ -1,4 +1,4 @@
-VRS = tcpbridge sros vmx xrv
+VRS = vr-xcon sros vmx xrv
 VRS_PUSH = $(VRS:=-push)
 
 .PHONY: $(VRS) $(VRS_PUSH)

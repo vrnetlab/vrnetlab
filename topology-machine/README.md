@@ -35,7 +35,7 @@ will very likely result in changes to the majority of links in the topology as
 they will be re-assigned to new interfaces.
 
 topology machine is able to run the machines for you, i.e. execute docker run
-for the routers defined in the configuration file and start tcpbridge with the
+for the routers defined in the configuration file and start vr-xcon with the
 relevant arguments to complete the topology:
 ```
 topo --run lltopo.json
@@ -50,7 +50,7 @@ topology configurations. Note how
 Last but not least, there is a template mode which you can use to produce
 configuration for your mangement system, which in turn is provisioning the
 routers. Since the provisioned configuration of the virtual routers needs to
-align with the "physical" topology built by tcpbridge it makes sense to let
+align with the "physical" topology built by vr-xcon it makes sense to let
 topology machine assist you in producing this service config.
 
 Use `--template` to produce output based on the provided topology information

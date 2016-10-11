@@ -18,6 +18,7 @@ with the following images:
  * vmx-15.1F4.15.tgz  MD5:86c28d89d6db5497521ebbb2c7de4472
  * vmx-bundle-15.1F6.9.tgz  MD5:eb128cffde6ab29fdb27b2f52301c5f9
  * vmx-bundle-16.1R1.7.tgz  MD5:d96766848731c12c0492e3ae2349b426
+ * vmx-bundle-16.1R2.11.tgz  MD5:24bc389420bf02fb6ede36afa79a0a19
 
 It is NOT working with the following images:
 

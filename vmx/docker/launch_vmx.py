@@ -207,7 +207,7 @@ class VMX(vrnetlab.VR):
         cmd.extend(["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % gen_mac(0)])
         cmd.extend(["-netdev", "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
 
-        if self.version == '15.1F6.9':
+        if self.version in ('15.1F6.9', '16.1R2.11'):
             # dummy interface for vMX 15.1F6.9 - not sure why vFPC wants it.
             # version 16 doesn't need it while this specific 15 version does.
             # Other images, like 15.1F4.15 works without it.

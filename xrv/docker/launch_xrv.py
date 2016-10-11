@@ -66,7 +66,7 @@ class XRV:
         self.password = password
 
         self.ram = 4096
-        self.num_nics = 16
+        self.num_nics = 128
 
         self.xr_ready = False
 
@@ -98,6 +98,13 @@ class XRV:
         self.logger.info("Starting VM")
 
         cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
+               "-machine", "pc",
+               "-device", "pci-bridge,chassis_nr=1,id=pci.0",
+               "-device", "pci-bridge,chassis_nr=2,id=pci.1",
+               "-device", "pci-bridge,chassis_nr=3,id=pci.2",
+               "-device", "pci-bridge,chassis_nr=4,id=pci.3",
+               "-device", "pci-bridge,chassis_nr=5,id=pci.4",
+               "-device", "pci-bridge,chassis_nr=6,id=pci.5",
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
                "-hda", "/xrv.vmdk"
                ]
@@ -107,19 +114,22 @@ class XRV:
 
         # mgmt interface is special - we use qemu user mode network
         cmd.append("-device")
-        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                   % { 'i': 0, 'mac': gen_mac(0) })
+        cmd.append("e1000,netdev=mgmt,mac=%(mac)s"
+                   % { 'mac': gen_mac(0) })
         cmd.append("-netdev")
-        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
+        cmd.append("user,id=mgmt,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830")
 
-        for i in range(1, self.num_nics):
+        for i in range(self.num_nics):
+            import math
+            nics_per_pci_bus = 26
+            pci_bus = math.floor(i/nics_per_pci_bus)
+            addr = i % nics_per_pci_bus
             cmd.append("-device")
-            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
+            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)d,addr=0x%(addr)x"
+                       % { 'i': i, 'mac': gen_mac(i), 'pci_bus': pci_bus+1, 'addr': addr+1 })
             cmd.append("-netdev")
             cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+                       % { 'i': i+1 }) # offset by one if we want to mgmt on 0 later
 
         run_command(cmd)
 

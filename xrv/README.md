@@ -67,18 +67,15 @@ production traffic.
 ##### Q: Why not use XRv9000?
 A: It seems that all the forwarding plane features that I am looking for are
 available in XRv and so there is very little benefit to XRv9000. On the
-contrary, XRv supports up to 96 interfaces
+contrary, XRv supports up to 128 interfaces
 (http://www.cisco.com/c/en/us/td/docs/ios_xr_sw/ios_xrv/install_config/b-xrv/b-xrv_chapter_01.html)
 with a single VM whereas XRv9000 seems to support up to 11 NICs (see
 http://www.cisco.com/c/en/us/td/docs/routers/virtual-routers/configuration/guide/b-xrv9k-cg/b-xrv9k-cg_chapter_0111.html).
 
-##### Q: How come there are only 16 NICs?
-A: AFAICT, qemu has a limit of one PCI bus and each PCI bus can support 32
-devices. IDE controller and similar consume some devices so we should be left
-with ~28 available PCI devices that could be used for NICs, however I have seen
-issues with using more than 17 NICs (16+1 mgmt) and so the limit is currently
-set lower. I imagine it can be raised by careful testing - perhaps it's XRv
-version or qemu version dependent!?
+##### Q: How many NICs are supported?
+A: 128, which is the maximum as specified by Cisco. I use multiple PCI buses to
+reach this number and while the current setting is for 128 I have successfully
+started XRv with more although I have not done any thorough testing.
 
 ##### Q: Is a license required?
 A: Yes and no. XRv can run in a demo mode or a production mode, where the

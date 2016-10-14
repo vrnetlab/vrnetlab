@@ -72,10 +72,8 @@ class SROS_vm(vrnetlab.VM):
             if re.search("\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
             if re.search("\.license$", e):
-                os.mkdir("/tftpboot")
                 os.rename("/" + e, "/tftpboot/license.txt")
 
-        self.num_fake_nics = 1
         self.uuid = "00000000-0000-0000-0000-000000000000"
 
         self.read_license()

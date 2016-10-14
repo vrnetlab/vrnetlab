@@ -41,6 +41,8 @@ class VM:
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
 
+        os.mkdir("/tftpboot")
+
         # username / password to configure
         self.username = username
         self.password = password
@@ -112,7 +114,7 @@ class VM:
         res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
                               % { 'i': 0, 'mac': gen_mac(0) })
         res.append("-netdev")
-        res.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830" % { 'i': 0 })
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830" % { 'i': 0 })
 
         return res
 

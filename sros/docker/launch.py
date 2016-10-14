@@ -64,7 +64,8 @@ def uuid_rev_part(part):
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        super(SROS_vm, self).__init__(username, password)
+        super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2")
+        self.num_nics = 20
 
         # move files into place
         for e in os.listdir("/"):
@@ -74,12 +75,28 @@ class SROS_vm(vrnetlab.VM):
                 os.mkdir("/tftpboot")
                 os.rename("/" + e, "/tftpboot/license.txt")
 
-        self.disk_image = "/sros.qcow2"
         self.num_fake_nics = 1
         self.uuid = "00000000-0000-0000-0000-000000000000"
 
         self.read_license()
-        self.smbios = "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp"
+        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp mda/3=m20-1gb-xp-sfp mda/5=m20-1gb-xp-sfp"]
+
+
+
+    def gen_mgmt(self):
+        """ Generate mgmt interface(s)
+
+            We override the default function since we want a fake NIC in there
+        """
+        # call parent function to generate first mgmt interface (e1000)
+        res = super(SROS_vm, self).gen_mgmt()
+        # add virtio NIC for internal control plane interface to vFPC
+        res.append("-device")
+        res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
+        res.append("-netdev")
+        res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
+        return res
+
 
 
 

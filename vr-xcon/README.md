@@ -35,10 +35,12 @@ through `docker push`.
 
 Usage
 -----
-To connect the first interface of vr1 and vr2, run:
+To connect the first interface of vr1 and vr2 and the second interface of vr1
+with the first of vr3, run:
 ```
-docker run -d --privileged --name vr-xcon --link vr1 --link vr2 vr-xcon --p2p vr1/1--vr2/1
+docker run -d --privileged --name vr-xcon --link vr1 --link vr2 vr-xcon --p2p vr1/1--vr2/1 vr1/2--vr3/1
 ```
+Note how --p2p is not repeated and the arguments to it are simply appended.
 
 It's possible to use the `--debug` option to have a debug written out for every
 packet.

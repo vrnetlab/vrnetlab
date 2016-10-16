@@ -52,7 +52,8 @@ def received():
     c.execute("SELECT afi, prefix, attributes FROM received_routes")
     res = {}
     for row in c.fetchall():
-        res[row[0]] = {}
+        if row[0] not in res:
+            res[row[0]] = {}
         res[row[0]][row[1]] = json.loads(row[2])
 
     return json.dumps(res)

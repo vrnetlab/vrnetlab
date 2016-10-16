@@ -49,10 +49,11 @@ def received():
     import sqlite3
     conn = sqlite3.connect('/tmp/bgp.db')
     c = conn.cursor()
-    c.execute("SELECT prefix, attributes FROM received_routes")
+    c.execute("SELECT afi, prefix, attributes FROM received_routes")
     res = {}
     for row in c.fetchall():
-        res[row[0]] = json.loads(row[1])
+        res[row[0]] = {}
+        res[row[0]][row[1]] = json.loads(row[2])
 
     return json.dumps(res)
 

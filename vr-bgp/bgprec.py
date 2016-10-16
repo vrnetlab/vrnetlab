@@ -8,14 +8,19 @@ import sys
 # debug log file
 f = open("/tmp/bgp.log", "a")
 
+def log(msg):
+    f.write(msg)
+    f.write("\n")
+    f.flush()
+
 conn = sqlite3.connect('/tmp/bgp.db', detect_types=sqlite3.PARSE_DECLTYPES)
 c = conn.cursor()
 try:
     c.execute("SELECT * FROM received_routes")
 except sqlite3.OperationalError:
     # create table to store received routes
-    c.execute("CREATE TABLE received_routes (prefix string, attributes string)")
-    c.execute("CREATE UNIQUE INDEX received_routes__prefix ON received_routes(prefix)")
+    c.execute("CREATE TABLE received_routes (afi string, prefix string, attributes string)")
+    c.execute("CREATE UNIQUE INDEX received_routes__prefix ON received_routes(afi, prefix)")
 
     # create table to store neighbor state
     c.execute("CREATE TABLE neighbors (ip string, state string, ts timestamp)")
@@ -23,32 +28,35 @@ except sqlite3.OperationalError:
 
 
 def upsert_neighbor_state(ip, state, timestamp):
-    f.write("selecting %s from database\n" % ip)  
-    f.flush()
+    """ Insert or update the state of a neighbor in the database
+    """
     c.execute("SELECT * FROM neighbors WHERE ip=?", [ip])
     if c.fetchone() is None:
-        f.write("INSERTING to db\n")
-        f.flush()
+        log("INSERTING to db neighbor")
         c.execute("INSERT INTO neighbors (ip, state, ts) VALUES (?, ?, ?)", [ip, state, timestamp])
     else:
-        f.write("UPDATING db\n")
-        f.flush()
+        log("UPDATING db neighbor\n")
         c.execute("UPDATE neighbors SET state = ?, ts = ? WHERE ip = ?", [state, timestamp, ip])
     conn.commit()
 
 
-def upsert_prefix(prefix, attributes):
-    f.write("selecting %s from database\n" % prefix)  
-    f.flush()
-    c.execute("SELECT * FROM received_routes WHERE prefix=?", [prefix])
+def upsert_prefix(afi, prefix, attributes):
+    """ Insert or update a prefix in the database
+    """
+    c.execute("SELECT * FROM received_routes WHERE afi=? AND prefix=?", [afi, prefix])
     if c.fetchone() is None:
-        f.write("INSERTING to db\n")
-        f.flush()
-        c.execute("INSERT INTO received_routes (prefix, attributes) VALUES (?, ?)", [prefix, json.dumps(attributes)])
+        log("INSERTING to db prefix")
+        c.execute("INSERT INTO received_routes (afi, prefix, attributes) VALUES (?, ?, ?)", [afi, prefix, json.dumps(attributes)])
     else:
-        f.write("UPDATING db\n")
-        f.flush()
-        c.execute("UPDATE received_routes SET attributes = ? WHERE prefix = ?", [json.dumps(attributes), prefix])
+        log("UPDATING db prefix")
+        c.execute("UPDATE received_routes SET attributes = ? WHERE afi = ? AND prefix = ?", [json.dumps(attributes), afi, prefix])
+    conn.commit()
+
+
+def remove_prefix(afi, prefix):
+    """ Remove a prefix from the database
+    """
+    c.execute("DELETE FROM received_routes WHERE afi=? AND prefix=?", [afi, prefix])
     conn.commit()
 
 
@@ -65,14 +73,26 @@ def parse_message(line):
 
     if msg['type'] == 'update':
         update = msg['neighbor']['message']['update']
-        for afi, neighbors in update['announce'].items():
-            for neighbor, prefixes in neighbors.items():
-                for prefix in prefixes:
-                    attributes = update['attribute']
-                    upsert_prefix(prefix, attributes)
 
-# TODO: handle withdraw:
-# { "exabgp": "3.4.8", "time": 1471261200, "host" : "413d35cc0b6b", "pid" : "15", "ppid" : "1", "counter": 5, "type": "update", "neighbor": { "ip": "192.168.1.1", "address": { "local": "192.168.1.2", "peer": "192.168.1.1"}, "asn": { "local": "15169", "peer": "2792"}, "message": { "update": { "withdraw": { "ipv4 unicast": { "1.1.1.0/24": {  } } } } }} }
+        # handle announce
+        if 'announce' in update:
+            for afi, neighbors in update['announce'].items():
+                if 'null' in neighbors:
+                    log("Received EOR for {}".format(afi))
+                else:
+                    for neighbor, prefixes in neighbors.items():
+                        for prefix in prefixes:
+                            log("announce {}".format(prefix))
+                            attributes = update['attribute']
+                            upsert_prefix(afi, prefix, attributes)
+
+        # handle withdraws
+        if 'withdraw' in update:
+            for afi, prefixes in update['withdraw'].items():
+                for prefix in prefixes:
+                    log("Withdraw {}".format(prefix))
+                    remove_prefix(afi, prefix)
+
 
 blank = 0
 while True:

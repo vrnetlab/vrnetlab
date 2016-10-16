@@ -39,3 +39,8 @@ routes.
 vr-bgp only supports a single BGP neighbor at a time which might seem tedious
 at first but it also simplifies things a lot as we can key information merely
 on bgp speaker rather than on individual neighbors.
+
+Example
+-------
+See the example directory for a full blown example of vr-bgp in action to
+verify a network's BGP routing policy.

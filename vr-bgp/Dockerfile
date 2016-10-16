@@ -12,6 +12,8 @@ RUN apt-get update -qy \
     python-setuptools \
     python3-jinja2 \
     python3-flask \
+    tcpdump \
+    telnet \
     wget \
  && rm -rf /var/lib/apt/lists/* \
  && wget -O exabgp.tar.gz https://github.com/Exa-Networks/exabgp/archive/3.4.16.tar.gz \

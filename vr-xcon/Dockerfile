@@ -9,6 +9,8 @@ RUN apt-get update -qy \
     bridge-utils \
     iproute2 \
     python3-ipy \
+    tcpdump \
+    telnet \
  && rm -rf /var/lib/apt/lists/*
 
 ADD xcon.py /

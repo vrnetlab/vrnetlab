@@ -29,6 +29,10 @@ def announce():
         route = new_routes[prefix]
 
         command = "announce route %(prefix)s next-hop self" % route
+        if 'community' in route:
+            command += " community [" + " ".join(route['community']) + "]"
+        if 'med' in route:
+            command += " med " + str(route['med'])
         sys.stdout.write('%s\n' % command)
         sys.stdout.flush()
 

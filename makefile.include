@@ -30,7 +30,7 @@ docker-build: docker-pre-build
 	-rm -f docker/*.qcow2* docker/*.tgz* docker/*.vmdk* docker/*.iso
 	cp ../common/* docker/
 	cp $(IMAGE)* docker/
-	(cd docker; docker build --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg HTTPS_PROXY=$(HTTPS_PROXY) --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
+	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
 
 docker-push:
 	for IMAGE in $(IMAGES); do \

@@ -3,14 +3,18 @@ vrnetlab - VR Network Lab
 Run your favourite virtual routers in docker for convenient labbing,
 development and testing.
 
-vrnetlab been developed for the TeraStream project at Deutsche Telekom to
-automate CI test related to network provisioning.
+vrnetlab is being developed for the TeraStream project at Deutsche Telekom as
+part of an automated CI environment for testing our network provisioning
+system.
 
 It supports:
 
- * Cisco XRv (not XRv90000)
+ * Arista vEOS
+ * Cisco Nexus NX-OS (using Titanium emulator)
+ * Cisco XRv (not XRv9000)
  * Juniper vMX
  * Nokia VSR
+
 
 Usage
 -----
@@ -18,6 +22,10 @@ You have to build the virtual router docker images yourself since the license
 agreements of commercial virtual routers do not allow me to distribute the
 images. See the README files of the respective virtual router types for more
 details.
+
+You need KVM enabled in your kernel for hardware assisted virtualization. While
+it may be possible to run without it, it has not been tested. Make sure you
+load the kvm kernel module: `modprobe kvm`.
 
 Let's assume you've built the `xrv` router.
 
@@ -38,7 +46,7 @@ root@host# docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1
 Now SSH to that address and login with the default credentials of
 vrnetlab/VR-netlab9:
 ```
-root@host# ssh -l vrnetlab 172.17.0.98
+root@host# ssh -l vrnetlab $(docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1)
 The authenticity of host '172.17.0.98 (172.17.0.98)' can't be established.
 RSA key fingerprint is e0:61:28:ba:12:77:59:5e:96:cc:58:e2:36:55:00:fa.
 Are you sure you want to continue connecting (yes/no)? yes
@@ -78,7 +86,7 @@ Cisco IOS XR Software, Version 5.3.3.51U[Default]
 
 You can also login via NETCONF:
 ```
-root@kvm-infra:/home/kll/vrnetlab# ssh -l vrnetlab 172.17.0.98 -p 830 -s netconf
+root@host# ssh -l vrnetlab $(docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1) -p 830 -s netconf
 vrnetlab@172.17.0.98's password:
 <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
  <capabilities>
@@ -96,11 +104,20 @@ vrnetlab@172.17.0.98's password:
 ...
 ```
 
-To connect two virtual routers with each other we can use the `tcpbridge`
+The serial console of the devices are mapped to port 5000. Use telnet to connect:
+```
+root@host# telnet $(docker inspect --format '{{.NetworkSettings.IPAddress}}' vr1) 5000
+```
+Just like with any serial port, you can only have one connection at a time and
+while the router is booting the launch script will connect to the serial port
+to do the initialization of the router. As soon as it is done the port will be
+released and made available to the next connection.
+
+To connect two virtual routers with each other we can use the `vr-xcon`
 container. Let's say we want to connect Gi0/0/0/0 of vr1 and vr2 with each
 other, we would do:
 ```
-docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 tcpbridge --p2p vr1/1-vr2/1
+docker run -d --name vr-xcon --link vr1 --link vr2 vr-xcon --p2p vr1/1--vr2/1
 ```
 
 Configure a link network on vr1 and vr2 and you should be able to ping!
@@ -125,19 +142,54 @@ All of the NICs of the virtual routers are exposed via TCP ports by KVM. TCP
 port 10001 maps to the first NIC of the virtual router, which in the case of an
 XR router is GigabitEthernet 0/0/0/0. By simply connecting two of these TCP
 sockets together we can bridge the traffic between those two NICs and this is
-exactly what tcpbridge is for. Use the `--p2p` argument to specify the links.
-The format is X/Y-Z/N where X is the name of the first router and Y is the port
-on that router. Z is the second router and N is the port on the second router.
+exactly what vr-xcon is for. Use the `--p2p` argument to specify the links.
+The format is X/Y--Z/N where X is the name of the first router and Y is the
+port on that router. Z is the second router and N is the port on the second
+router.
 
 To set up more than one p2p link, simply add more mapping separated by space
 and don't forget to link the virtual routers:
 ```
-docker run -d --name tcpbridge --link vr1:vr1 --link vr2:vr2 --link vr3:vr3 tcpbridge --p2p vr1/1-vr2/1 vr1/2-vr3/1
+docker run -d --name vr-xcon --link vr1 --link vr2 --link vr3 vr-xcon --p2p vr1/1--vr2/1 vr1/2--vr3/1
 ```
+See topology-machine/README.md for details on topology machine which can help
+you with managing more complex topologies.
 
 The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
 mapped to the virtual serial device (use telnet). All the NICs of the virtual
 routers are exposed via TCP ports in the range 10001-10099.
+
+Use `docker rm -f vr1` to stop and remote a virtual router.
+
+There are some handy shell functions in vrnetlab.sh that provides shorthands
+for connecting to ssh and console.
+
+1. Load the functions into your shell
+```
+. vrnetlab.sh
+```
+2. Login via ssh to router vr1, you can optionally specify a username. If no
+username is provided, the default of vrnetlab will be used. If sshpass is
+installed, you will not be promted for password when you login with the default
+username.
+```
+vrssh vr1 myuser 
+```
+3. Connect console to router vr1
+```
+vrcons vr1
+```
+4. Create a bridge between two router interfaces, the below command bridges
+interface 1 of router vr1 with interface 1 of router 2.
+```
+vrbridge vr1 1 vr2 1
+```
+
+To load these aliases on login, copy it to ~/.vrnetlab_bashrc and add the
+following to your .bashrc
+```
+test -f ~/.vrnetlab_bashrc && . ~/.vrnetlab_bashrc
+``` 
 
 
 Virtual routers
@@ -169,6 +221,9 @@ The virtual machines are packaged up in docker container. Since we need to
 start KVM the docker containers have to be run with `--privileged` which
 effectively defeats the security features of docker. Our use of docker is
 essentially reduced to being a packaging format but a rather good one at that.
+Also note that since we still rely on KVM the same amount of resources, if not
+sightly more, will be consumed by vrnetlab. A container is no thinner than a VM
+if the container contains a VM!
 
 The assignment of a management IP address is handed over to docker, so you can
 use whatever docker IPAM plugin you want. Overall the network setup of the
@@ -198,30 +253,17 @@ The intention is to keep the arguments to each virtual router type as similar
 as possible so that a test orchestrator or similar need minimal knowledge about
 the different router types.
 
+
 System requirements
 -------------------
-CPU:
+See the README file of each virtual router type for system requirements.
 
- * sros: 1 core
- * vmx: 5 cores
- * xrv: 1 core
-
-RAM:
-
- * sros: 4GB
- * vmx: 8GB
- * xrv: 4GB
-
-Disk space depends on what image you are using but here are some rough numbers:
-
- * sros: ~600MB
- * vmx: ~5GB
- * xrv: ~1.5GB
 
 Docker healtcheck
 -----------------
 Docker v1.12 includes a healtcheck feature that would be really sweet to use to
 tell if the router has been bootstrapped or not.
+
 
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
@@ -236,6 +278,23 @@ A: I don't think Cisco, Juniper or Nokia would allow me to distribute their virt
 A: I don't like the concept as it means you have to ship around an extra file.
    If it's a self-contained image then all you have to do is push it to your
    docker registry and then ask a box in your swarm cluster to spin it up!
+
+##### Q: Using docker typically means no persistent storage. How is configuration persisted across restarts?
+A: It is not persisted. The state of the virtual routers is lost once they are
+stopped/removed. It's not possible to restart vrnetlab or at least it's not at
+all tested and I don't see how it would work really. Since the primary use case
+is lab / CI you should embrace the statelessness :)
+
+##### Q: Will this consume less resources than the normal way of running XRv, vmX etc?
+A: No. vrnetlab still runs KVM (in docker) to start the virtual router which
+means that we will consume just as much CPU and memory, if not slightly more,
+than running the router in KVM.
+
+##### Q: If it doesn't consume less resources than KVM, why use Docker?
+A: It's used primarily as a packaging format. All vrnetlab containers can be
+run with similar arguments. The differences between different platforms are
+effectively hidden to present a clean uniform interface. That's certainly not
+true for trying to run XRv or vMX directly with qemu / virsh.
 
 ##### Q: Do you plan to support classic IOS?
 A: Hell to the no! ;)
@@ -256,6 +315,7 @@ towards interactive labbing. You get a pretty UI and similar whereas vrnetlab
 is controlled in a completely programmatic fashion which makes them good at
 different things. vrnetlab is superb for CI and programmatic testing where the
 others probably target labs run by humans.
+
 
 Building with GitLab CI
 -----------------------

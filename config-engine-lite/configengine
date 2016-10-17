@@ -1,0 +1,208 @@
+#!/usr/bin/env python
+
+import json
+import sys
+import jinja2
+import pprint
+import napalm
+
+class RouterList:
+    def __init__(self):
+        self.routers = []
+
+    def append(self, router):
+        self.routers.append(router)
+
+    def get(self, name):
+        for router in self.routers:
+            if router.name == name:
+                return router
+
+    def list(self):
+        return self.routers
+
+class Router:
+    def __init__(self):
+        self.id = 0
+        self.name = ""
+        self.type = ""
+        self.template = None
+        self.config = None
+        self.links = []
+        self.attrs = {}
+        self.device = None
+        self.loaded = False
+
+    def connect(self):
+        if self.type == "xrv":
+            driver = napalm.get_network_driver("iosxr")
+        elif self.type == "vmx":
+            driver =  napalm.get_network_driver("junos")
+        else:
+            raise Exception("Unknown device type: {}".format(self.type))
+
+        self.device = driver(self.get_address(), "vrnetlab", "VR-netlab9")
+        self.device.open()
+        return self.device
+
+    def load_merge(self):
+        if not self.device:
+            self.connect()
+        self.loaded = True
+        return self.device.load_merge_candidate(config=self.config)
+
+    def commit_config(self):
+        if not self.loaded:
+            raise Exception("Please run load_merge first")
+
+        return self.device.commit_config()
+
+    def discard_config(self):
+        if not self.loaded:
+            raise Exception("Please run load_merge first")
+
+        return self.device.discard_config()
+
+    def compare_config(self):
+        if not self.loaded:
+            raise Exception("Please run load_merge first")
+
+        return self.device.compare_config()
+
+    def get_address(self):
+        import subprocess
+        import socket
+
+        try:
+            return socket.gethostbyname(self.name)
+        except socket.gaierror:
+            # Try docker inspect if gethostbyname fails
+            cmd = [ "docker", "inspect", "--format", 
+                    "'{{.NetworkSettings.IPAddress}}'", self.name ]
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=".")
+            return str(p.communicate()[0].strip().replace("'", ""))
+
+    def add_attr(self, key, value):
+        self.attrs[key] = value
+
+class ConfigBootstrap:
+    def __init__(self, config, xr, junos):
+        self.routers = RouterList()
+
+        i = 1
+        for name in config["routers"]:
+            elem = config["routers"][name]
+            router = Router()
+
+            if "id" not in elem:
+                router.id = i
+            else:
+                router.id = elem["id"]
+
+            for key in elem:
+                if key not in ["id", "type"]:
+                    router.add_attr(key, elem[key])
+
+            router.name = name
+            router.type = elem["type"]
+
+            if router.type == "xrv":
+                router.template = xr
+
+            if router.type == "vmx":
+                router.template = junos
+
+            self.routers.append(router)
+            i = i + 1
+
+        i = 1
+        for link in config["links"]:
+            left = self.routers.get(link["left"]["router"])
+            right = self.routers.get(link["right"]["router"])
+
+            left.links.append({
+                "interface": link["left"]["interface"],
+                "numeric": link["left"]["numeric"],
+                "id": max(left.id, right.id) + i,
+                "octet": 1,
+                "remote": {
+                    "router": link["right"]["router"],
+                    "interface": link["right"]["interface"],
+                    "numeric": link["right"]["numeric"]
+                }
+            })
+
+            right.links.append({
+                "interface": link["right"]["interface"],
+                "numeric": link["right"]["numeric"],
+                "id": max(left.id, right.id)+i,
+                "octet": 2,
+                "remote": {
+                    "router": link["left"]["router"],
+                    "interface": link["left"]["interface"],
+                    "numeric": link["left"]["numeric"]
+                }
+            })
+            i = i + 1
+
+    def render_config(self):
+        for router in self.routers.list():
+            config = {
+                "hostname": router.name, 
+                "links": router.links, 
+                "id": router.id
+            }
+
+            for key in router.attrs:
+                config[key] = router.attrs[key]
+
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(['./']))
+            template = env.get_template(router.template)
+            router.config = template.render(config)
+            router.load_merge()
+
+    def apply_config(self):
+        for router in self.routers.list():
+            router.commit_config()
+
+    def diff_config(self):
+        for router in self.routers.list():
+            print(router.compare_config())
+            router.discard_config()
+
+if __name__ == '__main__':
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--topo", help="Topology file from topomachine", required=True)
+    parser.add_argument("--xr", help="IOS-XR Template")
+    parser.add_argument("--junos", help="JunOS template")
+    parser.add_argument("--run", help="Apply configuration", default=False, action="store_true")
+    args = parser.parse_args()
+
+    if args.xr:
+        if not os.path.isfile(args.xr):
+            print("IOS-XR template does not exist")
+            sys.exit(1)
+
+    if args.junos:
+        if not os.path.isfile(args.junos):
+            print("JunOS template does not exist")
+            sys.exit(1)
+
+    if not os.path.isfile(args.topo):
+        print("Topology file does not exist")
+        sys.exit(1)
+
+    input_file = open(args.topo, "r")
+    config = json.loads(input_file.read())
+    input_file.close()
+
+    cb = ConfigBootstrap(config, args.xr, args.junos)
+    cb.render_config()
+
+    if args.run:
+        cb.apply_config()
+    else:
+        cb.diff_config()

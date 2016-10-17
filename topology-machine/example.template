@@ -1,0 +1,27 @@
+infrastructure {
+{%- for router, val in config.routers.items() %}
+    base-config {{router}} {
+        numeric-id {{val.id}};
+		ipv4-address 10.0.0.{{val.id}};
+		ipv6-address 2001:db8::{{val.id}};
+    }
+{%- endfor %}
+{%- for link in config.links %}
+    backbone-interface {{link.left.router}} {{link.left.interface}} {
+        ipv4-address 10.1.{{link.left.router[-1]}}.1/30;
+        ipv6-address 2001:db8::1:{{link.left.router[-1]}}:1/126;
+        remote {
+            neighbor {{link.right.router}};
+            interface {{link.right.interface}};
+        }
+    }
+    backbone-interface {{link.right.router}} {{link.right.interface}} {
+        ipv4-address 10.1.{{link.left.router[-1]}}.2/30;
+        ipv6-address 2001:db8::1:{{link.left.router[-1]}}:2/126;
+        remote {
+            neighbor {{link.left.router}};
+            interface {{link.left.interface}};
+        }
+    }
+{%- endfor %}
+}

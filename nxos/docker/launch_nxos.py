@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import datetime
+import logging
 import os
 import random
 import re
@@ -11,16 +13,22 @@ import time
 import IPy
 
 def handle_SIGCHLD(signal, frame):
-    print('Reaping child')
     os.waitpid(-1, os.WNOHANG)
 
 def handle_SIGTERM(signal, frame):
-    print('Shutting down...')
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
+
+TRACE_LEVEL_NUM = 9
+logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+def trace(self, message, *args, **kws):
+    # Yes, logger takes its '*args' as 'args'.
+    if self.isEnabledFor(TRACE_LEVEL_NUM):
+        self._log(TRACE_LEVEL_NUM, message, args, **kws)
+logging.Logger.trace = trace
 
 def run_command(cmd, cwd=None, background=False):
     import subprocess
@@ -46,50 +54,57 @@ def gen_mac(last_octet=None):
         )
 
 
-class XRV:
+class NXOS:
     def __init__(self, username, password):
+        self.logger = logging.getLogger()
+        self.credentials = [
+                ['admin', 'admin']
+            ]
         self.spins = 0
-        self.cycle = 0
 
         self.username = username
         self.password = password
 
-        self.ram = 4096
-        self.num_nics = 16
+        self.ram = 2048
+        self.num_nics = 20
 
-        self.state = 0
+        self.image = None
+        # control plane started?
+        self.cp_started = False
 
 
-    def start(self, blocking=True):
+    def start(self):
         """ Start the virtual router
 
             This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port. It is
-            possible to set blocking=False which means only the first parts of
-            the startup process are run. You are expected to call the
-            bootstrap_spin() function periodically (like once a second) after
-            this to complete the bootstrap process. Once bootstrap_spin()
-            returns True you are done!
+            and the do initial bootstraping of it over serial port.
         """
+        start_time = datetime.datetime.now()
         self.start_vm()
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         self.bootstrap_init()
-        if blocking:
-            while True:
-                done, res = self.bootstrap_spin()
-                if done:
-                    break
-            self.bootstrap_end()
+        while not (self.cp_started):
+            if not self.bootstrap_spin():
+                break
+        self.bootstrap_end()
+        stop_time = datetime.datetime.now()
+        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
+
 
 
     def start_vm(self):
         """ Start the VM
         """
+        for e in os.listdir("/"):
+            if re.search("\.qcow2$", e):
+                self.image = "/" + e
+
+        self.logger.info("Starting VM")
 
         cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
                "-serial", "telnet:0.0.0.0:5000,server,nowait",
-               "-hda", "/xrv.vmdk"
+               "-hda", self.image
                ]
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
@@ -122,94 +137,56 @@ class XRV:
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
-
-            It can be used when you don't want to block waiting for the router
-            to boot, like when you are booting multiple routers in parallel.
-
-            returns True, True      when it's done and succeeded
-            returns True, False     when it's done but failed
-            returns False, False    when there is still work to be done
         """
 
-        if self.spins > 180:
-            # too many spins with no result
-            if self.cycle == 0:
-                # but if it's our first cycle we try to tickle the device to get a prompt
-                self.wait_write("", wait=None)
+        if self.spins > 300:
+            # too many spins with no result ->  give up
+            self.logger.error("startup took too long - giving up")
+            return False
 
-                self.cycle += 1
-                self.spins = 0
-            else:
-                # give up
-                return True, False
-
-        print(".")
-
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started",
-            b"SYSTEM CONFIGURATION COMPLETE",
-            b"Enter root-system username",
-            b"Username:", b"^[^ ]+#"], 1)
+        (ridx, match, res) = self.tn.expect([b"login:"], 1)
         if match: # got a match!
-            print("match", match, res)
-            if ridx == 0: # press return to get started, so we press return!
-                self.wait_write("", wait=None)
-            if ridx == 1: # system configuration complete
-                self.wait_write("", wait=None)
-                self.state = 1
-            if ridx == 2: # initial user config
-                self.wait_write(self.username, wait=None)
-                self.wait_write(self.password, wait="Enter secret:")
-                self.wait_write(self.password, wait="Enter secret again:")
-            if ridx == 3: # matched login prompt, so should login
-                print("match login prompt")
-                self.wait_write("admin", wait=None)
-                self.wait_write("admin", wait="Password:")
-            if self.state > 0 and ridx == 4:
+            if ridx == 0: # login
+                self.logger.debug("matched login prompt")
+                try:
+                    username, password = self.credentials.pop(0)
+                except IndexError as exc:
+                    self.logger.error("no more credentials to try")
+                    return True, False
+                self.logger.debug("trying to log in with %s / %s" % (username, password))
+                self.wait_write(username, wait=None)
+                self.wait_write(password, wait="Password:")
+
                 # run main config!
                 self.bootstrap_config()
-                return True, True
+                self.cp_started = True
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b'':
-            print("OUTPUT:", res)
+            self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
 
         self.spins += 1
 
-        return False, False
+        return True
 
 
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
+        self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
-        self.wait_write("crypto key generate rsa\r")
-        if self.username and self.password:
-            self.wait_write("admin")
-            self.wait_write("configure")
-            self.wait_write("username %s group root-system" % (self.username))
-            self.wait_write("username %s group cisco-support" % (self.username))
-            self.wait_write("username %s secret %s" % (self.username, self.password))
-            self.wait_write("commit")
-            self.wait_write("exit")
-            self.wait_write("exit")
         self.wait_write("configure")
-        # configure netconf
-        self.wait_write("ssh server v2")
-        self.wait_write("ssh server netconf port 830") # for 5.1.1
-        self.wait_write("ssh server netconf vrf default") # for 5.3.3
-        self.wait_write("netconf agent ssh") # for 5.1.1
-        self.wait_write("netconf-yang agent ssh") # for 5.3.3
+        self.wait_write("username %s password 0 %s role network-admin" % (self.username, self.password))
 
         # configure mgmt interface
-        self.wait_write("interface MgmtEth 0/0/CPU0/0")
-        self.wait_write("no shutdown")
-        self.wait_write("ipv4 address 10.0.0.15/24")
+        self.wait_write("interface mgmt0")
+        self.wait_write("ip address 10.0.0.15/24")
         self.wait_write("exit")
-        self.wait_write("commit")
         self.wait_write("exit")
+        self.wait_write("copy running-config startup-config")
 
     def bootstrap_end(self):
         self.tn.close()
@@ -219,10 +196,10 @@ class XRV:
         """ Wait for something and then send command
         """
         if wait:
-            print("Waiting for %s" % wait)
+            self.logger.trace("waiting for '%s' on serial console" % wait)
             res = self.tn.read_until(wait.encode())
-            print("Read:", res)
-        print("Running command: %s" % cmd)
+            self.logger.trace("read from serial console: %s" % res.decode())
+        self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
 
@@ -230,12 +207,21 @@ class XRV:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     args = parser.parse_args()
 
-    vr = XRV(args.username, args.password)
+    LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
+    logging.basicConfig(format=LOG_FORMAT)
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.DEBUG)
+    if args.trace:
+        logger.setLevel(1)
+
+    vr = NXOS(args.username, args.password)
     vr.start()
-    print("Going into sleep mode")
+    logger.info("Going into sleep mode")
     while True:
         time.sleep(1)

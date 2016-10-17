@@ -1,0 +1,13 @@
+hostname {{ hostname }}
+
+interface Loopback0
+ ipv4 address 10.255.0.{{id}}/32
+ ipv6 address 2001:db8::{{id}}/112
+{%- for link in links %}
+interface {{ link.interface }}
+ description {{link.remote.router}}: {{link.remote.interface}}
+ ipv4 address 10.1.{{link.id}}.{{link.octet}}/30
+ ipv6 address 2001:db8::1:{{link.id}}:{{link.octet}}/126
+{%- endfor %}
+
+lldp

@@ -9,8 +9,10 @@ RUN apt-get update -qy \
     bridge-utils \
     iproute2 \
     python3-ipy \
+    tcpdump \
+    telnet \
  && rm -rf /var/lib/apt/lists/*
 
-ADD tcpbridge.py /
+ADD xcon.py /
 
-ENTRYPOINT ["/tcpbridge.py"]
+ENTRYPOINT ["/xcon.py"]

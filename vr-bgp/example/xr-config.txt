@@ -1,0 +1,138 @@
+interface GigabitEthernet0/0/0/0
+ description bgp-cust1
+ ipv4 address 10.101.1.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/1
+ description bgp-cust2
+ ipv4 address 10.101.1.6 255.255.255.252
+!
+interface GigabitEthernet0/0/0/2
+ description bgp-peer1
+ ipv4 address 10.101.2.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/3
+ description bgp-peer2
+ ipv4 address 10.101.2.6 255.255.255.252
+!
+interface GigabitEthernet0/0/0/4
+ description bgp-transit1
+ ipv4 address 10.101.3.2 255.255.255.252
+!
+interface GigabitEthernet0/0/0/5
+ description bgp-transit2
+ ipv4 address 10.101.3.6 255.255.255.252
+!
+
+prefix-set IPV4-BOGONS
+ 10.0.0.0/8 le 32
+end-set
+
+!
+! == INCOMING policies ==
+!
+# mark with peer community (2792:10200)
+route-policy IPV4-PEER-IN
+  set community (2792:10200)
+  set local-preference 250
+  done
+end-policy
+!
+# mark with transit community (2792:10201)
+route-policy IPV4-TRANSIT-IN
+  set community (2792:10201)
+  set local-preference 200
+  done
+end-policy
+!
+# mark with customer community (2792:10300)
+route-policy IPV4-CUSTOMER-IN
+  if (destination in IPV4-BOGONS) then
+    drop
+  endif
+  set community (2792:10300)
+  set local-preference 350
+  done
+end-policy
+!
+
+!
+! == OUTGOING policies ==
+!
+# announce customers (2792:10300) to peers
+route-policy IPV4-PEER-OUT
+  if (community matches-any (2792:10300)) then
+    done
+  endif
+  drop
+end-policy
+!
+# announce customers (2792:10300) to transit
+route-policy IPV4-TRANSIT-OUT
+  if (community matches-any (2792:10300)) then
+    done
+  endif
+  drop
+end-policy
+!
+# to customers we announce peers (10200), transits (10201) and other customers (10300)
+route-policy IPV4-CUSTOMER-OUT
+  if (community matches-any (2792:10200, 2792:10201, 2792:10300)) then
+    done
+  endif
+  drop
+end-policy
+!
+
+
+router bgp 2792
+ address-family ipv4 unicast
+ !
+ neighbor 10.101.1.1
+  remote-as 65011
+  description bgp-cust1
+  address-family ipv4 unicast
+   route-policy IPV4-CUSTOMER-IN in
+   route-policy IPV4-CUSTOMER-OUT out
+  !
+ !
+ neighbor 10.101.1.5
+  remote-as 65012
+  description bgp-cust2
+  address-family ipv4 unicast
+   route-policy IPV4-CUSTOMER-IN in
+   route-policy IPV4-CUSTOMER-OUT out
+  !
+ !
+ neighbor 10.101.2.1
+  remote-as 65021
+  description bgp-peer1
+  address-family ipv4 unicast
+   route-policy IPV4-PEER-IN in
+   route-policy IPV4-PEER-OUT out
+  !
+ !
+ neighbor 10.101.2.5
+  remote-as 65022
+  description bgp-peer2
+  address-family ipv4 unicast
+   route-policy IPV4-PEER-IN in
+   route-policy IPV4-PEER-OUT out
+  !
+ !
+ neighbor 10.101.3.1
+  remote-as 65031
+  description bgp-transit1
+  address-family ipv4 unicast
+   route-policy IPV4-TRANSIT-IN in
+   route-policy IPV4-TRANSIT-OUT out
+  !
+ !
+ neighbor 10.101.3.5
+  remote-as 65032
+  description bgp-transit2
+  address-family ipv4 unicast
+   route-policy IPV4-TRANSIT-IN in
+   route-policy IPV4-TRANSIT-OUT out
+  !
+ !
+!

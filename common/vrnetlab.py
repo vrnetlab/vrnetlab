@@ -41,7 +41,10 @@ class VM:
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
 
-        os.mkdir("/tftpboot")
+        try:
+            os.mkdir("/tftpboot")
+        except:
+            pass
 
         # username / password to configure
         self.username = username

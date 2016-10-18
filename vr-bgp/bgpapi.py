@@ -24,7 +24,7 @@ def announce():
         return "Incorrectly formed query (probably)"
 
     # announce new routes
-    to_announce = set(new_routes) - set(announced_routes)
+    to_announce = set(new_routes)
     for prefix in to_announce:
         route = new_routes[prefix]
 

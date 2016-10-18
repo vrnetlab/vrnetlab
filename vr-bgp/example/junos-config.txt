@@ -1,0 +1,273 @@
+## Last commit: 2016-10-18 08:50:29 UTC by root
+version 16.1R1.7;
+system {
+    root-authentication {
+        encrypted-password "$5$y1GgXR4r$Z5xvMJ1Qq7ENI3l0i.YPZtvobXNeVp/8Fm5JM/RYN/C"; ## SECRET-DATA
+    }
+    login {
+        user vrnetlab {
+            uid 2000;
+            class super-user;
+            authentication {
+                encrypted-password "$5$gnMDemJ9$9qSEMg/hZIdgIT8LFipKY8nNvhU3402O9UeVBDMNMs8"; ## SECRET-DATA
+            }
+        }
+    }
+    services {
+        ssh;
+        netconf {
+            ssh;
+            rfc-compliant;
+        }
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        description bgp-cust1;
+        unit 0 {
+            family inet {
+                address 10.101.1.2/30;
+            }
+            family inet6 {
+                address 2001:db8::1:2/126;
+            }
+        }
+    }
+    ge-0/0/1 {
+        description bgp-cust2;
+        unit 0 {
+            family inet {
+                address 10.101.1.6/30;
+            }
+            family inet6 {
+                address 2001:db8::1:6/126;
+            }
+        }
+    }
+    ge-0/0/2 {
+        description bgp-peer1;
+        unit 0 {
+            family inet {
+                address 10.101.2.2/30;
+            }
+            family inet6 {
+                address 2001:db8::2:2/126;
+            }
+        }
+    }
+    ge-0/0/3 {
+        description bgp-peer2;
+        unit 0 {
+            family inet {
+                address 10.101.2.6/30;
+            }
+            family inet6 {
+                address 2001:db8::2:6/126;
+            }
+        }
+    }
+    ge-0/0/4 {
+        description bgp-transit1;
+        unit 0 {
+            family inet {
+                address 10.101.3.2/30;
+            }
+            family inet6 {
+                address 2001:db8::3:2/126;
+            }
+        }
+    }
+    ge-0/0/5 {
+        description bgp-transit2;
+        unit 0 {
+            family inet {
+                address 10.101.3.6/30;
+            }
+            family inet6 {
+                address 2001:db8::3:6/126;
+            }
+        }
+    }
+    fxp0 {
+        unit 0 {
+            family inet {
+                address 10.0.0.15/24;
+            }
+        }
+    }
+}
+routing-options {
+    router-id 1.2.3.4;
+    autonomous-system 2792;
+}
+protocols {
+    bgp {
+        group IPV4-CUSTOMERS {
+            import IPV4-CUSTOMER-IN;
+            family inet {
+                unicast;
+            }
+            export IPV4-CUSTOMER-OUT;
+            neighbor 10.101.1.1 {
+                peer-as 65011;
+            }
+            neighbor 10.101.1.5 {
+                peer-as 65012;
+            }
+        }
+        group IPV4-PEERS {
+            import IPV4-PEER-IN;
+            family inet {
+                unicast;
+            }
+            export IPV4-PEER-OUT;
+            neighbor 10.101.2.1 {
+                peer-as 65021;
+            }
+            neighbor 10.101.2.5 {
+                peer-as 65022;
+            }
+        }
+        group IPV4-TRANSITS {
+            import IPV4-TRANSIT-IN;
+            family inet {
+                unicast;
+            }
+            export IPV4-TRANSIT-OUT;
+            neighbor 10.101.3.1 {
+                peer-as 65031;
+            }
+            neighbor 10.101.3.5 {
+                peer-as 65032;
+            }
+        }
+        group IPV6-CUSTOMERS {
+            family inet6 {
+                unicast;
+            }
+            neighbor 2001:db8::1:1 {
+                peer-as 65011;
+            }
+            neighbor 2001:db8::1:5 {
+                peer-as 65012;
+            }
+        }
+        group IPV6-PEERS {
+            family inet6 {
+                unicast;
+            }
+            neighbor 2001:db8::2:1 {
+                peer-as 65021;
+            }
+            neighbor 2001:db8::2:5 {
+                peer-as 65022;
+            }
+        }
+        group IPV6-TRANSITS {
+            family inet6 {
+                unicast;
+            }
+            neighbor 2001:db8::3:1 {
+                peer-as 65031;
+            }
+            neighbor 2001:db8::3:5 {
+                peer-as 65032;
+            }
+        }
+    }
+}
+policy-options {
+    prefix-list IPV4-BOGONS {
+        10.0.0.0/8;
+        192.168.0.0/16;
+    }
+    policy-statement IPV4-CUSTOMER-IN {
+        term BOGONS {
+            from {
+                prefix-list-filter IPV4-BOGONS orlonger;
+            }
+            then reject;
+        }
+        term MARK {
+            then {
+                community add FROM-CUSTOMER;
+            }
+        }
+    }
+    policy-statement IPV4-CUSTOMER-OUT {
+        term ANNOUNCE {
+            from community [ FROM-CUSTOMER FROM-TRANSIT FROM-PEER ];
+            then accept;
+        }
+        term REJECT {
+            then reject;
+        }
+    }
+    policy-statement IPV4-PEER-IN {
+        term CLEAN-COMMUNITY {
+            then {
+                community delete CLEAN-COMMUNITY;
+                next term;
+            }
+        }
+        term MARK {
+            then {
+                local-preference 250;
+                community add FROM-PEER;
+            }
+        }
+    }
+    policy-statement IPV4-PEER-OUT {
+        term DO-NOT-ANNOUNCE {
+            from community DO-NOT-ANNOUNCE;
+            then reject;
+        }
+        term ANNOUNCE {
+            from community FROM-CUSTOMER;
+            then accept;
+        }
+        term REJECT {
+            then reject;
+        }
+    }
+    policy-statement IPV4-TRANSIT-IN {
+        term CLEAN-COMMUNITY {
+            then {
+                community delete CLEAN-COMMUNITY;
+                next term;
+            }
+        }
+        term MARK {
+            then {
+                local-preference 150;
+                community add FROM-TRANSIT;
+            }
+        }
+    }
+    policy-statement IPV4-TRANSIT-OUT {
+        term ANNOUNCE {
+            from community FROM-CUSTOMER;
+            then accept;
+        }
+        term REJECT {
+            then reject;
+        }
+    }
+    community CLEAN-COMMUNITY members 2792:*;
+    community DO-NOT-ANNOUNCE members 65000:0;
+    community FROM-CUSTOMER members 2792:10300;
+    community FROM-PEER members 2792:10200;
+    community FROM-TRANSIT members 2792:10201;
+}

@@ -187,11 +187,12 @@ class BgpTest(unittest.TestCase):
         # tell vr-bgp speakers to announce routes
 
         # customer announcements
-        # 10.0.11.0/24 is BOGON and should be filtered
         cust1_announce = [
-                { 'prefix': '11.0.0.0/24' },
-                { 'prefix': '10.0.11.0/24' }
+                { 'prefix': '11.0.0.0/24' }, # normal
+                { 'prefix': '11.1.0.0/24', 'community': [ '65000:0' ] }, # do not announce to peers/transit
+                { 'prefix': '10.0.11.0/24' } # 10.0.11.0/24 is BOGON and should be filtered
             ]
+
         announce('bgp-cust1', cust1_announce)
         cust2_announce = [
                 { 'prefix': '12.0.0.0/24' },
@@ -201,7 +202,7 @@ class BgpTest(unittest.TestCase):
 
         # peer announcements
         peer1_announce = [
-                { 'prefix': '21.0.0.0/24' }
+                { 'prefix': '21.0.0.0/24', 'community': [ '2792:10300' ] } # fake we are customer - must be stripped
             ]
         announce('bgp-peer1', peer1_announce)
         peer2_announce = [
@@ -211,7 +212,7 @@ class BgpTest(unittest.TestCase):
 
         # transit announcements
         tran1_announce = [
-                { 'prefix': '31.0.0.0/24' }
+                { 'prefix': '31.0.0.0/24', 'community': [ '2792:10300'] } # fake we are customer - must be stripped
             ]
         announce('bgp-transit1', tran1_announce)
         tran2_announce = [
@@ -333,6 +334,13 @@ class BgpTest(unittest.TestCase):
         """
         rec = received('bgp-peer1')
         self.assertNotIn('10.0.11.0/24', rec)
+
+    @retry(AssertionError, tries=10)
+    def test_bgp206(self):
+        """ peer1 should not see cust1 prefix with control community
+        """
+        rec = received('bgp-peer1')
+        self.assertNotIn('11.1.0.0/24', rec)
 
 
 

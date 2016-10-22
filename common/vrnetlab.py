@@ -121,7 +121,7 @@ class VM:
         """ Generate qemu args for the normal traffic carrying interface(s)
         """
         res = []
-        for i in range(1, self.num_nics):
+        for i in range(1, self.num_nics+1):
             res.append("-device")
             res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
                        % { 'i': i, 'mac': gen_mac(i) })

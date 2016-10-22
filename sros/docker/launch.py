@@ -99,8 +99,8 @@ class SROS_vm(vrnetlab.VM):
             # too many spins with no result, probably means SROS hasn't started
             # successfully, so we restart it
             self.logger.warning("no output from serial console, restarting VM")
-            self.stop_vm()
-            self.start_vm()
+            self.stop()
+            self.start()
             self.spins = 0
             return
 

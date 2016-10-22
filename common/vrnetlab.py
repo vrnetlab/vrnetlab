@@ -41,11 +41,6 @@ class VM:
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
 
-        try:
-            os.mkdir("/tftpboot")
-        except:
-            pass
-
         # username / password to configure
         self.username = username
         self.password = password
@@ -198,6 +193,11 @@ class VM:
 class VR:
     def __init__(self, username, password):
         self.logger = logging.getLogger()
+
+        try:
+            os.mkdir("/tftpboot")
+        except:
+            pass
 
 
     def update_health(self, exit_status, message):

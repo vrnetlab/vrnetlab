@@ -65,14 +65,7 @@ def uuid_rev_part(part):
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password):
         super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2")
-        self.num_nics = 20
-
-        # move files into place
-        for e in os.listdir("/"):
-            if re.search("\.qcow2$", e):
-                os.rename("/" + e, "/sros.qcow2")
-            if re.search("\.license$", e):
-                os.rename("/" + e, "/tftpboot/license.txt")
+        self.num_nics = 16
 
         self.uuid = "00000000-0000-0000-0000-000000000000"
 
@@ -192,6 +185,13 @@ class SROS_vm(vrnetlab.VM):
 class SROS(vrnetlab.VR):
     def __init__(self, username, password):
         super(SROS, self).__init__(username, password)
+
+        # move files into place
+        for e in os.listdir("/"):
+            if re.search("\.qcow2$", e):
+                os.rename("/" + e, "/sros.qcow2")
+            if re.search("\.license$", e):
+                os.rename("/" + e, "/tftpboot/license.txt")
 
         self.vms = [ SROS_vm(username, password) ]
 

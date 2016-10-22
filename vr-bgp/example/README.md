@@ -3,11 +3,11 @@ vr-bgp example
 This is an example showing how vr-bgp can be used in your CI environment to
 verify your BGP routing policy.
 
-The example makes use of an Cisco XRv router so make sure you have built the
-vr-xrv container (we use version 6.0.1 but you should be able to use older ones
+The example makes use of a Juniper vMX router so make sure you have built the
+vr-vmx container (we use version 16.1R1.6 but you should be able to use older ones
 as well).
 
-`start.sh` runs the docker commands to start vr-xrv, which we call xr1, then
+`start.sh` runs the docker commands to start vr-vmx, which we call j1, then
 start up six vr-bgp instances which will simulate two customers (bgp-cust1 &
 bgp-cust2), two peers (bgp-peer1 & bgp-peer2) and two transits (bgp-transit1 &
 bgp-transit2). vr-xcon is then used to connect it all together.
@@ -59,50 +59,38 @@ And here are the link networks:
                 10.101.3.5      transit2
                 10.101.3.6      DUT
 
-You need to configure the XR router yourself. An example configuration is
-included in the file xr-config.txt
+You need to configure the vMX router yourself. An example configuration is
+included in the file junos-config.txt
 
 Start the whole thing by executing the `start.sh` script. If you are not using
-XR 6.0.1 you need to first edit the script and change the version of vr-xrv
-used. Wait for the XR router to start (check the serial console). Once up,
+vMX 16.1R1.7 you need to first edit the script and change the version of vr-vmx
+used. Wait for the vMX router to start (check the serial console). Once up,
 apply the configuration and you should be able to see that all BGP sessions
 become established;
 
 ```
-RP/0/0/CPU0:ios#sh bgp ipv4 un sum
-Sun Oct 16 13:02:20.671 UTC
-BGP router identifier 1.2.3.4, local AS number 2792
-BGP generic scan interval 60 secs
-Non-stop routing is enabled
-BGP table state: Active
-Table ID: 0xe0000000   RD version: 30
-BGP main routing table version 30
-BGP NSR Initial initsync version 3 (Reached)
-BGP NSR/ISSU Sync-Group versions 0/0
-BGP scan interval 60 secs
-
-BGP is operating in STANDALONE mode.
-
-
-Process       RcvTblVer   bRIB/RIB   LabelVer  ImportVer  SendTblVer  StandbyVer
-Speaker              30         30         30         30          30           0
-
-Neighbor        Spk    AS MsgRcvd MsgSent   TblVer  InQ OutQ  Up/Down  St/PfxRcd
-10.101.1.1        0 65011      45      66       30    0    0 00:24:54          1
-10.101.1.5        0 65012      46      65       30    0    0 00:24:25          1
-10.101.2.1        0 65021      39      44       30    0    0 00:24:19          1
-10.101.2.5        0 65022      43      47       30    0    0 00:24:25          1
-10.101.3.1        0 65031      43      63       30    0    0 00:24:03          1
-10.101.3.5        0 65032      38      60       30    0    0 00:23:57          1
-
-RP/0/0/CPU0:ios#
+root> show bgp summary
+Groups: 6 Peers: 12 Down peers: 6
+Table          Tot Paths  Act Paths Suppressed    History Damp State    Pending
+inet.0
+                       9          7          0          0          0          0
+inet6.0
+                       0          0          0          0          0          0
+Peer                     AS      InPkt     OutPkt    OutQ   Flaps Last Up/Dwn State|#Active/Received/Accepted/Damped...
+10.101.1.1            65011         25         27       0       8        9:17 2/3/2/0              0/0/0/0
+10.101.1.5            65012         23         29       0       8        9:18 1/2/1/0              0/0/0/0
+10.101.2.1            65021         22         25       0       8        9:17 1/1/1/0              0/0/0/0
+10.101.2.5            65022         22         25       0       9        9:17 1/1/1/0              0/0/0/0
+10.101.3.1            65031         22         24       0       9        9:16 1/1/1/0              0/0/0/0
+10.101.3.5            65032         22         24       0       8        9:12 1/1/1/0              0/0/0/0
 ```
 
 Now run `test.py` and you should get something like this:
 ```
 kll@htpc:~/vrnetlab/vr-bgp/example$ ./test.py
 test_bgp101 (__main__.BgpTest)
-bgp-cust1 should see bgp-cust2, bgp-peer1, bgp-peer2, bgp-transit1 and bgp-transit2 ... ok
+bgp-cust1 should see bgp-cust2, bgp-peer1, bgp-peer2, bgp-transit1 and bgp-transit2 ... '12.0.0.0/24' not found in {}, Retrying in 3 seconds...
+ok
 test_bgp102 (__main__.BgpTest)
 bgp-cust2 should see bgp-cust1, bgp-peer1, bgp-peer2, bgp-transit1 and bgp-transit2 ... ok
 test_bgp103 (__main__.BgpTest)
@@ -123,13 +111,20 @@ test_bgp204 (__main__.BgpTest)
 transit2 should not see peer1, peer2, transit1 ... ok
 test_bgp205 (__main__.BgpTest)
 customer bogon filtering, peer1 should not see customer1 bogon ... ok
+test_bgp206 (__main__.BgpTest)
+peer1 should not see cust1 prefix with control community ... ok
 
 ----------------------------------------------------------------------
-Ran 11 tests in 2.292s
+Ran 12 tests in 5.743s
 
 OK
+kll@htpc:~/vrnetlab/vr-bgp/example$
 ```
 
-It's common that it takes some time for BGP convergence to settle so the first
-test run might be retried (the test.py will automatically retry a test up to 10
-times with an exponential back-off timer).
+We can see that the first test fails which can be rather common as BGP has not
+converged yet. Each test is automatically retried up to 10 times with an
+exponential back off timer. The tests are ordered such that "positive" tests,
+that look for the presence of a prefix, come first while "negative" tests that
+look for lack of prefixes come after. The positive tests will be retried until
+BGP has converged and we can then be sure about the result of the negative
+tests too.

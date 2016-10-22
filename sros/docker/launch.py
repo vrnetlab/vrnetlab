@@ -147,6 +147,7 @@ class SROS_vm(vrnetlab.VM):
             self.wait_write("configure system security user \"%s\" access console netconf" % (self.username))
             self.wait_write("configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
         self.wait_write("configure system netconf no shutdown")
+        self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure card 1 mda 1 shutdown")
         self.wait_write("configure card 1 mda 1 no mda-type")
         self.wait_write("configure card 1 shutdown")

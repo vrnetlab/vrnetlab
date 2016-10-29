@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import math
 import logging
 import os
 import random
@@ -57,8 +58,9 @@ class VM:
         self.fake_start_date = None
         self.nic_type = "e1000"
         self.num_nics = 0
+        self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
-        self.qemu_args = ["qemu-system-x86_64", "-display", "none" ]
+        self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
                                "-drive", "if=ide,file=%s" % disk_image])
@@ -84,6 +86,10 @@ class VM:
         # smbios
         for e in self.smbios:
             self.qemu_args.extend(["-smbios", e])
+
+        # setup PCI buses
+        for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
+            self.qemu_args.extend(["-device", "pci-bridge,chassis_nr={},id=pci.{}".format(i, i)])
 
         # generate mgmt NICs
         self.qemu_args.extend(self.gen_mgmt())
@@ -122,9 +128,18 @@ class VM:
         """
         res = []
         for i in range(1, self.num_nics+1):
+            # calc which PCI bus we are on and the local add on that PCI bus
+            pci_bus = math.floor(i/self.nics_per_pci_bus) + 1
+            addr = (i % self.nics_per_pci_bus) + 1
+
             res.append("-device")
-            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
+            res.append("%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x" % {
+                       'nic_type': self.nic_type,
+                       'i': i,
+                       'pci_bus': pci_bus,
+                       'addr': addr,
+                       'mac': gen_mac(i)
+                    })
             res.append("-netdev")
             res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
                        % { 'i': i })

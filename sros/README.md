@@ -7,13 +7,6 @@ this directory and run `make docker-image` and you should be good to go. The
 resulting image is called `vr-sros`. You can tag it with something else if you
 want, like `my-repo.example.com/vr-sros` and then push it to your repo.
 
-This is currently using the "integrated" VSR mode which is single-VM approach.
-It works great for testing control plane type of things but the forwarding
-plane is lacking a lot of features, most notably CPM filters which means you
-can't protect the control plane through policers and whatnot.
-
-Yes, we probably should try to switch to a distributed VSR mode.
-
 It's been tested to at least boot with:
 
  * 12.0.R6

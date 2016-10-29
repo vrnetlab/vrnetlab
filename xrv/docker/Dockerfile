@@ -15,8 +15,7 @@ RUN apt-get update -qy \
 
 ARG IMAGE
 COPY $IMAGE /xrv.vmdk
-COPY vrnetlab.py /
-COPY launch.py /
+COPY *.py /
 
 EXPOSE 22 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]

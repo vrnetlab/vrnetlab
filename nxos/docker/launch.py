@@ -10,7 +10,7 @@ import sys
 import telnetlib
 import time
 
-import IPy
+import vrnetlab
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -54,86 +54,17 @@ def gen_mac(last_octet=None):
         )
 
 
-class NXOS:
+class NXOS_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        self.logger = logging.getLogger()
+        for e in os.listdir("/"):
+            if re.search(".qcow2$", e):
+                disk_image = "/" + e
+        super(NXOS_vm, self).__init__(username, password, disk_image=disk_image)
+        self.num_nics = 16
         self.credentials = [
                 ['admin', 'admin']
             ]
-        self.spins = 0
 
-        self.username = username
-        self.password = password
-
-        self.ram = 2048
-        self.num_nics = 20
-
-        self.image = None
-        # control plane started?
-        self.cp_started = False
-
-
-    def start(self):
-        """ Start the virtual router
-
-            This can take a long time as we are waiting for the router to start
-            and the do initial bootstraping of it over serial port.
-        """
-        start_time = datetime.datetime.now()
-        self.start_vm()
-        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
-        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        self.bootstrap_init()
-        while not (self.cp_started):
-            if not self.bootstrap_spin():
-                break
-        self.bootstrap_end()
-        stop_time = datetime.datetime.now()
-        self.logger.info("Startup complete in: %s" % (stop_time - start_time))
-
-
-
-    def start_vm(self):
-        """ Start the VM
-        """
-        for e in os.listdir("/"):
-            if re.search("\.qcow2$", e):
-                self.image = "/" + e
-
-        self.logger.info("Starting VM")
-
-        cmd = ["qemu-system-x86_64", "-display", "none", "-daemonize", "-m", str(self.ram),
-               "-serial", "telnet:0.0.0.0:5000,server,nowait",
-               "-hda", self.image
-               ]
-        # enable hardware assist if KVM is available
-        if os.path.exists("/dev/kvm"):
-            cmd.insert(1, '-enable-kvm')
-
-        # mgmt interface is special - we use qemu user mode network
-        cmd.append("-device")
-        cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                   % { 'i': 0, 'mac': gen_mac(0) })
-        cmd.append("-netdev")
-        cmd.append("user,id=p%(i)02d,net=10.0.0.0/24,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"
-                   % { 'i': 0 })
-
-        for i in range(1, self.num_nics):
-            cmd.append("-device")
-            cmd.append("e1000,netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': gen_mac(i) })
-            cmd.append("-netdev")
-            cmd.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
-
-        run_command(cmd)
-
-
-    def bootstrap_init(self):
-        """ Do the initial part of the bootstrap process
-        """
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000)
-        
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -141,8 +72,9 @@ class NXOS:
 
         if self.spins > 300:
             # too many spins with no result ->  give up
-            self.logger.error("startup took too long - giving up")
-            return False
+            self.stop()
+            self.start()
+            return
 
         (ridx, match, res) = self.tn.expect([b"login:"], 1)
         if match: # got a match!
@@ -152,14 +84,21 @@ class NXOS:
                     username, password = self.credentials.pop(0)
                 except IndexError as exc:
                     self.logger.error("no more credentials to try")
-                    return True, False
+                    return
                 self.logger.debug("trying to log in with %s / %s" % (username, password))
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
 
                 # run main config!
                 self.bootstrap_config()
-                self.cp_started = True
+                # close telnet connection
+                self.tn.close()
+                # startup time?
+                startup_time = datetime.datetime.now() - self.start_time
+                self.logger.info("Startup complete in: %s" % startup_time)
+                # mark as running
+                self.running = True
+                return
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -170,7 +109,7 @@ class NXOS:
 
         self.spins += 1
 
-        return True
+        return
 
 
     def bootstrap_config(self):
@@ -188,21 +127,11 @@ class NXOS:
         self.wait_write("exit")
         self.wait_write("copy running-config startup-config")
 
-    def bootstrap_end(self):
-        self.tn.close()
 
-
-    def wait_write(self, cmd, wait='#'):
-        """ Wait for something and then send command
-        """
-        if wait:
-            self.logger.trace("waiting for '%s' on serial console" % wait)
-            res = self.tn.read_until(wait.encode())
-            self.logger.trace("read from serial console: %s" % res.decode())
-        self.logger.debug("writing to serial console: %s" % cmd)
-        self.tn.write("{}\r".format(cmd).encode())
-
-
+class NXOS(vrnetlab.VR):
+    def __init__(self, username, password):
+        super(NXOS, self).__init__(username, password)
+        self.vms = [ NXOS_vm(username, password) ]
 
 if __name__ == '__main__':
     import argparse
@@ -222,6 +151,3 @@ if __name__ == '__main__':
 
     vr = NXOS(args.username, args.password)
     vr.start()
-    logger.info("Going into sleep mode")
-    while True:
-        time.sleep(1)

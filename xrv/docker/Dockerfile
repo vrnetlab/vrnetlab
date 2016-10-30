@@ -14,7 +14,7 @@ RUN apt-get update -qy \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
-COPY $IMAGE /xrv.vmdk
+COPY $IMAGE /
 COPY *.py /
 
 EXPOSE 22 830 5000 10000-10099

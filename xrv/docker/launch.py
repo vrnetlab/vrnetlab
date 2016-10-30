@@ -34,7 +34,10 @@ logging.Logger.trace = trace
 
 class XRV_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        super(XRV_vm, self).__init__(username, password, disk_image="/xrv.vmdk")
+        for e in os.listdir("/"):
+            if re.search(".vmdk", e):
+                disk_image = "/" + e
+        super(XRV_vm, self).__init__(username, password, disk_image=disk_image)
         self.num_nics = 128
         self.credentials = [
                 ['admin', 'admin']

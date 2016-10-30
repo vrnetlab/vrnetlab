@@ -30,8 +30,8 @@ The container must be `--privileged` to start KVM.
 ```
 docker run -d --privileged --name my-vmx-router vr-vmx
 ```
-It takes about TBD seconds for the virtual router to start and after this we can
-login over SSH / NETCONF with the specified credentials.
+It takes a couple of minutes for the virtual router to start and after this we
+can login over SSH / NETCONF with the specified credentials.
 
 If you want to look at the startup process you can specify `-i -t` to docker
 run and you'll get an interactive terminal, do note that docker will terminate
@@ -42,12 +42,12 @@ need to interact with it but I imagine it could be useful for some debugging.
 
 System requirements
 -------------------
-CPU: 5 cores - 4 for the vFPC (virtual FPC - the forwarding plane) and 1 for
+CPU: 4 cores - 3 for the vFPC (virtual FPC - the forwarding plane) and 1 for
 VCP (the RE / control plane).
 
-RAM: 8GB - 4 for VCP and 4 for vFPC
+RAM: 6GB - 2 for VCP and 4 for vFPC
 
-Disk: ~5GB for JUNOS 15.1
+Disk: ~5GB for JUNOS 15.1, ~7GB for JUNOS 16 (I know, it's huge!!)
 
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
@@ -64,10 +64,10 @@ correctly due to lack of multicast then.. well, that's no good.
 A: Older vMX in evaluation mode are limited to 30 days and with a throughput
 cap of 1Mbps. You can purchase bandwidth licenses to get rid of the time limit
 and have a higher throughput cap. vMX 15.1F4 introduced additive bandwidth
-licenses, before which only the bandwidth license with the highest capacity
-would be used. In 16.1 the evaluation period of 30 days was removed to the
-benefit of a perpetual evaluation license but still with a global throughput
-cap of 1Mbps.
+licenses which means bandwidth licenses are added together, before which only
+the bandwidth license with the highest capacity would be used. In 16.1 the
+evaluation period of 30 days was removed to the benefit of a perpetual
+evaluation license but still with a global throughput cap of 1Mbps.
 
 ##### Q: Why aren't you using config-drive to inject the config instead of serial?
 A: It is true that we could use a "config-drive" / the metadata-usb image on

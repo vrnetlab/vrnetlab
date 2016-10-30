@@ -17,4 +17,4 @@ ARG IMAGE
 ADD . /
 
 EXPOSE 22 830 5000 10000-10099
-ENTRYPOINT ["/launch_nxos.py"]
+ENTRYPOINT ["/launch.py"]

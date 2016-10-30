@@ -147,7 +147,7 @@ The format is X/Y--Z/N where X is the name of the first router and Y is the
 port on that router. Z is the second router and N is the port on the second
 router.
 
-To set up more than one p2p link, simply add more mapping separated by space
+To set up more than one p2p link, simply add more mappings separated by space
 and don't forget to link the virtual routers:
 ```
 docker run -d --name vr-xcon --link vr1 --link vr2 --link vr3 vr-xcon --p2p vr1/1--vr2/1 vr1/2--vr3/1
@@ -161,6 +161,8 @@ routers are exposed via TCP ports in the range 10001-10099.
 
 Use `docker rm -f vr1` to stop and remote a virtual router.
 
+Handy shell functions
+---------------------
 There are some handy shell functions in vrnetlab.sh that provides shorthands
 for connecting to ssh and console.
 

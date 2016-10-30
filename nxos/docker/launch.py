@@ -60,7 +60,7 @@ class NXOS_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(NXOS_vm, self).__init__(username, password, disk_image=disk_image)
-        self.num_nics = 16
+        self.num_nics = 144
         self.credentials = [
                 ['admin', 'admin']
             ]

@@ -119,7 +119,7 @@ class VMX_vcp(vrnetlab.VM):
         """
         self.wait_write("cli", None)
         self.wait_write("configure", '>', 10)
-        self.wait_write("set chassis fpc 0 pic 0 number-of-ports %d" % self.num_nics)
+        self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
         self.wait_write("set system services ssh")
         self.wait_write("set system services netconf ssh")
         self.wait_write("set system services netconf rfc-compliant")
@@ -159,7 +159,7 @@ class VMX_vfpc(vrnetlab.VM):
     def __init__(self, version):
         super(VMX_vfpc, self).__init__(None, None, disk_image = "/vmx/vfpc.img", num=1)
         self.version = version
-        self.num_nics = 20
+        self.num_nics = 96
 
         self.nic_type = "virtio-net-pci"
         self.qemu_args.extend(["-cpu", "SandyBridge", "-M", "pc", "-smp", "3"])

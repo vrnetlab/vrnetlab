@@ -30,28 +30,6 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
 logging.Logger.trace = trace
 
-def run_command(cmd, cwd=None, background=False):
-    import subprocess
-    res = None
-    try:
-        if background:
-            p = subprocess.Popen(cmd, cwd=cwd)
-        else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
-            res = p.communicate()
-    except:
-        pass
-    return res
-
-def gen_mac(last_octet=None):
-    """ Generate a random MAC address that is in the qemu OUI space and that
-        has the given last octet.
-    """
-    return "52:54:00:%02x:%02x:%02x" % (
-            random.randint(0x00, 0xff),
-            random.randint(0x00, 0xff),
-            last_octet
-        )
 
 
 class NXOS_vm(vrnetlab.VM):

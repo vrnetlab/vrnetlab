@@ -321,6 +321,7 @@ class SROS(vrnetlab.VR):
             if re.search("\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.txt")
 
+        self.license = False
         if os.path.isfile("/tftpboot/license.txt"):
             self.logger.info("License found")
             self.license = True

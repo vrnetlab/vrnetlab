@@ -178,7 +178,7 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure card 1 no card-type")
         self.wait_write("configure card 1 card-type iom-xp-b")
         self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
-        self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
+        self.wait_write("configure card 1 mda 1 mda-type m5-1gb-sfp-b")
         self.wait_write("configure card 1 no shutdown")
         self.wait_write("admin save")
         self.wait_write("logout")

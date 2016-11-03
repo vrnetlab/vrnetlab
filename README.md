@@ -258,7 +258,19 @@ the different router types.
 
 System requirements
 -------------------
-See the README file of each virtual router type for system requirements.
+You need to run these docker images on a machine that has a docker engine and
+that supports KVM, i.e. you need a Linux kernel.
+
+Docker is available for OS X and it works by spinning up a Linux VM on top of
+the xhyve hypervisor. While this means that we do have a docker engine and a
+Linux kernel, we are unable to use this for vrnetlab as xhyve does not offer
+nested virtualization and thus we cannot run KVM in the VM running in xhyve.
+
+VirtualBox does not offer nested virtualization either. Parallels and VMWare
+supposedely do but I don't have access to those and can't test with.
+
+See the README file of each virtual router type for CPU, RAM and disk
+requirements.
 
 
 Docker healtcheck

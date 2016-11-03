@@ -74,31 +74,32 @@ class VM:
         self.logger.info("Starting %s" % self.__class__.__name__)
         self.start_time = datetime.datetime.now()
 
+        cmd = list(self.qemu_args)
 
         # uuid
         if self.uuid:
-            self.qemu_args.extend(["-uuid", self.uuid])
+            cmd.extend(["-uuid", self.uuid])
 
         # do we have a fake start date?
         if self.fake_start_date:
-            self.qemu_args.extend(["-rtc", "base=" + self.fake_start_date])
+            cmd.extend(["-rtc", "base=" + self.fake_start_date])
 
         # smbios
         for e in self.smbios:
-            self.qemu_args.extend(["-smbios", e])
+            cmd.extend(["-smbios", e])
 
         # setup PCI buses
         for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
-            self.qemu_args.extend(["-device", "pci-bridge,chassis_nr={},id=pci.{}".format(i, i)])
+            cmd.extend(["-device", "pci-bridge,chassis_nr={},id=pci.{}".format(i, i)])
 
         # generate mgmt NICs
-        self.qemu_args.extend(self.gen_mgmt())
+        cmd.extend(self.gen_mgmt())
         # generate normal NICs
-        self.qemu_args.extend(self.gen_nics())
+        cmd.extend(self.gen_nics())
 
-        self.logger.debug(self.qemu_args)
+        self.logger.debug(cmd)
 
-        self.p = subprocess.Popen(self.qemu_args, stdout=subprocess.PIPE,
+        self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                   universal_newlines=True)
 
         try:

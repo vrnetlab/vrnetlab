@@ -326,7 +326,7 @@ class SROS(vrnetlab.VR):
             self.logger.info("License found")
             self.license = True
 
-        self.logger.error("Number of NICS: " + str(num_nics))
+        self.logger.info("Number of NICS: " + str(num_nics))
         # if we have more than 5 NICs we use distributed VSR-SIM
         if num_nics > 5:
             if not self.license:

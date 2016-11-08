@@ -100,7 +100,7 @@ class VM:
         self.logger.debug(cmd)
 
         self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                  universal_newlines=True)
+                        stderr=subprocess.PIPE, universal_newlines=True)
 
         try:
             self.p.communicate(timeout=2)

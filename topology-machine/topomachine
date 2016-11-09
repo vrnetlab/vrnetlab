@@ -20,7 +20,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('xrv', 'vmx', 'sros'):
+            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # expand p2p links
@@ -97,10 +97,12 @@ class VrTopo:
         r = self.routers[router]
         if r['type'] == 'xrv':
             return "GigabitEthernet0/0/0/%d" % (interface-1)
-        if r['type'] == 'vmx':
+        elif r['type'] == 'vmx':
             return "ge-0/0/%d" % (interface-1)
-        if r['type'] == 'sros':
+        elif r['type'] == 'sros':
             return "1/1/%d" % (interface)
+        elif r['type'] == 'bgp':
+            return "tap%d" % (interface-1)
 
         return None
 
@@ -164,7 +166,7 @@ def run_topology(config, dry_run):
         name = "%s%s" % (args.prefix, router)
         cmd = ["docker", "run", "--privileged", "-d",
                "--name", name,
-               "%svr-%s:%s" % (docker_registry, val["type"], val["version"])
+               "%svr-%s:%s %s" % (docker_registry, val["type"], val["version"], val.get('run_args', ''))
           ]
 
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])

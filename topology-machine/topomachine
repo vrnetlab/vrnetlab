@@ -181,7 +181,7 @@ def run_topology(config, dry_run):
         cmd = ["docker", "run", "--privileged", "-d", "--name", name]
 
         cmd.extend(["--link %s%s:%s" % (args.prefix, vr, vr) for vr in sorted(config['routers'])])
-        cmd.append(name)
+        cmd.append(docker_registry + "vr-xcon")
         cmd.append("--p2p")
         cmd.extend([" %s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
                                            link["left"]["numeric"],

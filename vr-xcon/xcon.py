@@ -104,7 +104,10 @@ class Tcp2Tap:
                     self.logger.warning("received packet from tap interface but TCP not connected, discarding packet")
                 else:
                     self.logger.debug("received packet from tap interface and sending to TCP")
-                    self.tcp.send(buf)
+                    try:
+                        self.tcp.send(buf)
+                    except:
+                        self.logger.warning("could not send packet to TCP session")
 
 
 

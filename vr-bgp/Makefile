@@ -8,7 +8,7 @@ else
 endif
 
 all:
-	docker build -t $(REGISTRY)vr-bgp .
+	docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) -t $(REGISTRY)vr-bgp .
 
 docker-push:
 	docker push $(REGISTRY)vr-bgp

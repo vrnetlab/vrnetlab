@@ -252,7 +252,6 @@ if __name__ == '__main__':
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--num-nics', default=20, help='Number of interfaces')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -264,5 +263,4 @@ if __name__ == '__main__':
         logger.setLevel(1)
 
     vr = VMX(args.username, args.password)
-    vr.num_nics = args.num_nics
     vr.start()

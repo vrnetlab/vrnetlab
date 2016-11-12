@@ -14,6 +14,18 @@ receive some error messages about files that do not exist, like;
 
 This is because different versions of JUNOS use different filenames.
 
+The build of vMX is excruciatingly slow, often taking 10-20 minutes. This is
+because the first time the VCP (control plane) starts up, it reads a config
+file that controls whether it should run as a VRR of VCP in a vMX.  Previously
+this start was performed during docker run but it meant that the VCP would
+always restart once before the virtual router became available, thus leading to
+long bootup times (like 5 minutes). This first start of the VCP is now done
+during the build of the docker image and as docker build can't be run with
+--privileged it means that qemu is running without hardware KVM acceleration
+and thus taking a very long time. You will get a lot of trace output during
+this process so at least you can see what's going on. I think it's worth the
+longer build time since we build images few times but run them many.
+
 If you want, you can tag the resulting docker image with something else, like
 `my-repo.example.com/vr-vmx` and then push it to your repo.  The tag is the
 same as the version of the JUNOS image, so if you have vmx-15.1F4.15.tgz your

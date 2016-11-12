@@ -36,8 +36,9 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image):
+    def __init__(self, username, password, image, install_mode=False):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
+        self.install_mode = install_mode
         self.num_nics = 0
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
         self.smbios = ["type=0,vendor=Juniper",
@@ -52,8 +53,9 @@ class VMX_vcp(vrnetlab.VM):
         # use parent class start() function
         super(VMX_vcp, self).start()
         # add interface to internal control plane bridge
-        vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
-        vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
+        if not self.install_mode:
+            vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
+            vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
 
 
     def gen_mgmt(self):
@@ -64,11 +66,12 @@ class VMX_vcp(vrnetlab.VM):
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(VMX_vcp, self).gen_mgmt()
-        # add virtio NIC for internal control plane interface to vFPC
-        res.append("-device")
-        res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
-        res.append("-netdev")
-        res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
+        if not self.install_mode:
+            # add virtio NIC for internal control plane interface to vFPC
+            res.append("-device")
+            res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
+            res.append("-netdev")
+            res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
         return res
 
 
@@ -93,6 +96,13 @@ class VMX_vcp(vrnetlab.VM):
                 self.logger.info("matched login prompt")
                 self.wait_write("root", wait=None)
             if ridx == 1:
+                if self.install_mode:
+                    self.logger.info("requesting power-off")
+                    self.wait_write("cli", None)
+                    self.wait_write("request system power-off", '>')
+                    self.wait_write("yes", 'Power Off the system')
+                    self.running = True
+                    return
                 # run main config!
                 self.bootstrap_config()
                 self.running = True
@@ -132,7 +142,6 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24")
         self.wait_write("commit")
         self.wait_write("exit")
-
 
 
     def wait_write(self, cmd, wait='#', timeout=None):
@@ -245,6 +254,34 @@ class VMX(vrnetlab.VR):
                 self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(6))]
 
 
+class VMX_installer(VMX):
+    """ VMX installer
+
+        Will start the VMX VCP and then shut it down. Booting the VCP for the
+        first time requires the VCP itself to load some config and then it will
+        restart. Subsequent boots will not require this restart. By running
+        this "install" when building the docker image we can decrease the
+        normal startup time of the vMX.
+    """
+    def __init__(self, username, password):
+        self.version = None
+        self.version_info = []
+        self.read_version()
+
+        super(VMX, self).__init__(username, password)
+
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, install_mode=True) ]
+
+    def install(self):
+        self.logger.info("Installing VMX")
+        vcp = self.vms[0]
+        while not vcp.running:
+            vcp.work()
+        time.sleep(30)
+        vcp.stop()
+        self.logger.info("Installation complete")
+
+
 
 if __name__ == '__main__':
     import argparse
@@ -252,6 +289,7 @@ if __name__ == '__main__':
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
+    parser.add_argument('--install', action='store_true', help='Install vMX')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -262,5 +300,9 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = VMX(args.username, args.password)
-    vr.start()
+    if args.install:
+        vr = VMX_installer(args.username, args.password)
+        vr.install()
+    else:
+        vr = VMX(args.username, args.password)
+        vr.start()

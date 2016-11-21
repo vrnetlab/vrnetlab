@@ -103,7 +103,9 @@ class VM:
                         stderr=subprocess.PIPE, universal_newlines=True)
 
         try:
-            self.p.communicate(timeout=2)
+            outs, errs = self.p.communicate(timeout=2)
+            self.logger.info("STDOUT: %s" % outs)
+            self.logger.info("STDERR: %s" % errs)
         except:
             pass
 
@@ -196,8 +198,8 @@ class VM:
             outs, errs = self.p.communicate(timeout=1)
         except subprocess.TimeoutExpired:
             return
-        self.logger.debug("STDOUT: %s" % outs)
-        self.logger.debug("STDERR: %s" % errs)
+        self.logger.info("STDOUT: %s" % outs)
+        self.logger.info("STDERR: %s" % errs)
 
         if errs != "":
             self.logger.debug("KVM error, restarting")

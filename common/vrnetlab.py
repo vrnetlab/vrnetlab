@@ -167,6 +167,15 @@ class VM:
             self.p.communicate(timeout=10)
 
 
+
+    def restart(self):
+        """ Restart this VM
+        """
+        self.stop()
+        self.start()
+
+
+
     def wait_write(self, cmd, wait='#'):
         """ Wait for something on the serial port and then send command
         """
@@ -181,7 +190,11 @@ class VM:
     def work(self):
         self.check_qemu()
         if not self.running:
-            self.bootstrap_spin()
+            try:
+                self.bootstrap_spin()
+            except EOFError:
+                self.logger.error("Telnet session was disconncted, restarting")
+                self.restart()
 
 
 

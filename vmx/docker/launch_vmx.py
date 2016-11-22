@@ -90,7 +90,14 @@ class VMX_vcp(vrnetlab.VM):
             self.spins = 0
             return
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
+        try:
+            (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
+        except EOFError:
+            self.logger.error("Telnet session disconnected, restarting VCP")
+            self.stop()
+            self.start()
+            return
+
         if match: # got a match!
             if ridx == 0: # matched login prompt, so should login
                 self.logger.info("matched login prompt")

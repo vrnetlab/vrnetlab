@@ -153,10 +153,14 @@ def run_command(cmd, dry_run=False):
     return p.communicate()
 
 
-def run_topology(config, dry_run):
+def run_topology(config, dry_run, with_trace=False):
     if 'routers' not in config:
         print("No routers in config")
         sys.exit(1)
+
+    trace = ''
+    if with_trace:
+        trace = '--trace'
 
     docker_registry = ""
     if os.getenv("DOCKER_REGISTRY"):
@@ -166,7 +170,7 @@ def run_topology(config, dry_run):
         name = "%s%s" % (args.prefix, router)
         cmd = ["docker", "run", "--privileged", "-d",
                "--name", name,
-               "%svr-%s:%s %s" % (docker_registry, val["type"], val["version"], val.get('run_args', ''))
+               "%svr-%s:%s %s %s" % (docker_registry, val["type"], val["version"], trace, val.get('run_args', ''))
           ]
 
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
@@ -205,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument("--dry-run", action="store_true", default=False, help="Only print what would be performed during --run")
     parser.add_argument("--prefix", default='', help="docker container name prefix")
     parser.add_argument("--template", nargs=2, help="produce output based on topology information and a template")
+    parser.add_argument("--with-trace", action='store_true', help="run virtual routers with --trace")
     args = parser.parse_args()
 
     if args.dry_run and not args.run:
@@ -232,7 +237,7 @@ if __name__ == '__main__':
         input_file.close()
         if args.dry_run:
             print("The following commands would be executed:")
-        run_topology(config, args.dry_run)
+        run_topology(config, args.dry_run, args.with_trace)
 
     if args.template:
         input_file = open(args.template[0], "r")

@@ -117,7 +117,7 @@ class XRV_vm(vrnetlab.VM):
 
         self.wait_write("terminal length 0")
 
-        self.wait_write("crypto key generate rsa\r")
+        self.wait_write("crypto key generate rsa")
         # check if we are prompted to overwrite current keys
         (ridx, match, res) = self.tn.expect([b"How many bits in the modulus",
             b"Do you really want to replace them",
@@ -129,7 +129,6 @@ class XRV_vm(vrnetlab.VM):
                 self.wait_write("no", None)
 
         # make sure we get our prompt back
-        self.wait_write("", None)
         self.wait_write("")
 
         if self.username and self.password:

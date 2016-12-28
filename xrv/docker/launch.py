@@ -114,7 +114,18 @@ class XRV_vm(vrnetlab.VM):
         """
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
+
         self.wait_write("crypto key generate rsa\r")
+        # check if we are prompted to overwrite current keys
+        (ridx, match, res) = self.tn.expect([b"How many bits in the modulus",
+            b"Do you really want to replace them",
+            b"^[^ ]+#"], 10)
+        if match: # got a match!
+            if ridx == 0:
+                self.wait_write("2048", None)
+            elif ridx == 1: # press return to get started, so we press return!
+                self.wait_write("no", None)
+
         if self.username and self.password:
             self.wait_write("admin")
             self.wait_write("configure")

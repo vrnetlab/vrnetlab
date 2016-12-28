@@ -135,6 +135,8 @@ class XRV_vm(vrnetlab.VM):
             self.wait_write("commit")
             self.wait_write("exit")
             self.wait_write("exit")
+
+        self.wait_write("show interface description")
         self.wait_write("configure")
         # configure netconf
         self.wait_write("ssh server v2")

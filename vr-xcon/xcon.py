@@ -67,8 +67,14 @@ class Tcp2Tap:
                     self.logger.warning("connection dropped")
                     continue
 
+                if len(buf) == 0: # TCP connection closed
+                    self.logger.warning("TCP connection closed")
+                    self.tcp = None
+                    continue
+
                 self.tcp_buf += buf
                 self.logger.debug("read %d bytes from tcp, tcp_buf length %d" % (len(buf), len(self.tcp_buf)))
+
                 while True:
                     if self.tcp_state == 0:
                         # we want to read the size, which is 4 bytes, if we

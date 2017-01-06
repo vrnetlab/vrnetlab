@@ -154,7 +154,26 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("xml agent tty")
 
         # configure mgmt interface
-        self.wait_write("interface MgmtEth 0/0/CPU0/0")
+        # loop until successful. sometimes XR refuses to enter the interface
+        # sub config level. I don't really know why as every time I've seen
+        # this happen I can later go in and manually configure the interface so
+        # I assume it is some form of race condition, e.g. we are trying to
+        # configure the interface before it's actually ready.
+        while True:
+            self.wait_write("interface MgmtEth 0/0/CPU0/0")
+            (ridx, match, res) = self.tn.expect([b"Invalid input detected at '^' marker.",
+                b"config-if"], 10)
+            if match: # got a match!
+                if ridx == 0:
+                    self.logger.debug("failed to enter config-if sub mode, retrying")
+                    self.wait_write("", None)
+                    continue
+                elif ridx == 1:
+                    self.logger.debug("successfully entered config-if sub mode")
+                    # we are in config-if sub config mode, let's
+                    # continue with configuration
+                    break
+
         self.wait_write("no shutdown")
         self.wait_write("ipv4 address 10.0.0.15/24")
         self.wait_write("exit")

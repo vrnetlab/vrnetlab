@@ -135,7 +135,7 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("transport input all")
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
-        self.wait_write("\r",None)
+        self.wait_write("\r", None)
 
 
 class CSR(vrnetlab.VR):
@@ -152,7 +152,6 @@ class CSR_installer(CSR):
     """
     def __init__(self, username, password):
         super(CSR, self).__init__(username, password)
-
         self.vms = [ CSR_vm(username, password, install_mode=True)  ]
 
     def install(self):

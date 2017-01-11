@@ -10,6 +10,7 @@ system.
 It supports:
 
  * Arista vEOS
+ * Cisco CSR1000v
  * Cisco Nexus NX-OS (using Titanium emulator)
  * Cisco XRv (not XRv9000)
  * Juniper vMX

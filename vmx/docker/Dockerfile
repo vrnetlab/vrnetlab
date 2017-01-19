@@ -18,7 +18,6 @@ COPY $IMAGE /
 COPY install_vmx.sh /
 RUN /install_vmx.sh
 COPY *.py /
-RUN /launch_vmx.py --install --trace
 
 EXPOSE 22 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]

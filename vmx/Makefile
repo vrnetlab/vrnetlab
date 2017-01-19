@@ -7,3 +7,8 @@ usage:
 
 no-image:
 	@echo "ERROR: you have no .tgz file"
+
+docker-build: docker-build-common
+	docker run --privileged --name vr-temp $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install
+	docker commit --change='ENTRYPOINT ["/launch_vmx.py"]' vr-temp $(REGISTRY)vr-$(VR_NAME):$(VERSION)
+	docker rm vr-temp

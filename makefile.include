@@ -26,13 +26,15 @@ docker-clean-build:
 
 docker-pre-build: ;
 
-docker-build: docker-clean-build docker-pre-build
+docker-build-common: docker-clean-build docker-pre-build
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
 	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
 	cp ../common/* docker/
 	cp $(IMAGE)* docker/
 	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
+
+docker-build: docker-build-common
 
 docker-push:
 	for IMAGE in $(IMAGES); do \

@@ -15,6 +15,9 @@ It supports:
  * Cisco XRv (not XRv9000)
  * Juniper vMX
  * Nokia VSR
+ 
+I talk a little about it during my presentation about TeraStream testing at
+the NetNod autum meetin 2016 - https://youtu.be/R_vCdGkGeSk?t=9m25s
 
 
 Usage

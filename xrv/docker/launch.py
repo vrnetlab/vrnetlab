@@ -37,7 +37,7 @@ class XRV_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".vmdk", e):
                 disk_image = "/" + e
-        super(XRV_vm, self).__init__(username, password, disk_image=disk_image)
+        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=3072)
         self.num_nics = 128
         self.credentials = [
                 ['admin', 'admin']

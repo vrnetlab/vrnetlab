@@ -37,7 +37,7 @@ class Router:
         if self.type == "xrv":
             driver = napalm.get_network_driver("iosxr")
         elif self.type == "vmx":
-            driver =  napalm.get_network_driver("junos")
+            driver = napalm.get_network_driver("junos")
         elif self.type == "csr":
             driver = napalm.get_network_driver("ios")
         else:

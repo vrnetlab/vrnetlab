@@ -104,14 +104,9 @@ class VrTopo:
         elif r['type'] == 'bgp':
             return "tap%d" % (interface-1)
         elif r['type'] == 'csr':
-            # lookup table for weird interface mapping
-            # see issue #91, can probably be prettier
-            iface_map = { 1: 'Gi3', 2: 'Gi4', 3: 'Gi5', 4: 'Gi6', 5: 'Gi7',
-                          6: 'Gi8', 7: 'Gi9', 8: 'Gi10', 9: 'Gi11', 10: 'Gi2' }
-            if interface in iface_map:
-                return iface_map[interface]
-            else:
-                raise ValueError("Invalid interface id %d for csr" % interface)
+            # Controuary to fred's documentation, interfaces are in order
+            # tested with vr-csr:03.17.02 and vr-xrv:5.3.3
+            return "GigabitEthernet%d" % (interface+1)
 
         return None
 

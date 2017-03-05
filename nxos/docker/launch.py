@@ -37,8 +37,16 @@ class NXOS_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(NXOS_vm, self).__init__(username, password, disk_image=disk_image)
-        self.num_nics = 144
+        if re.search("final", disk_image):
+            ram=8192
+        else:
+            ram = 4096
+        super(NXOS_vm, self).__init__(username, password, disk_image=disk_image, ram=ram)
+        if re.search("final", disk_image):
+            self.num_nics = 20
+            self.qemu_args.extend(["-bios", "/bios.bin"])
+        else:
+            self.num_nics = 144
         self.credentials = [
                 ['admin', 'admin']
             ]
@@ -54,9 +62,15 @@ class NXOS_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"login:"], 1)
+        (ridx, match, res) = self.tn.expect([b"Abort Auto Provisioning and continue with normal setup", b"login:"], 1)
         if match: # got a match!
-            if ridx == 0: # login
+            if ridx == 0:
+                self.wait_write("yes", wait=None)
+                self.wait_write("no", wait="Do you want to enforce secure password standard")
+                self.wait_write("admin", wait="Enter the password for \"admin\"")
+                self.wait_write("admin", wait="Confirm the password for \"admin\"")
+                self.wait_write("no", wait="Would you like to enter the basic configuration dialog")
+            elif ridx == 1: # login
                 self.logger.debug("matched login prompt")
                 try:
                     username, password = self.credentials.pop(0)

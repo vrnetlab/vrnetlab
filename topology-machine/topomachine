@@ -20,7 +20,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros'):
+            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros', 'csr'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # expand p2p links
@@ -103,6 +103,10 @@ class VrTopo:
             return "1/1/%d" % (interface)
         elif r['type'] == 'bgp':
             return "tap%d" % (interface-1)
+        elif r['type'] == 'csr':
+            # Controuary to fred's documentation, interfaces are in order
+            # tested with vr-csr:03.17.02 and vr-xrv:5.3.3
+            return "GigabitEthernet%d" % (interface+1)
 
         return None
 

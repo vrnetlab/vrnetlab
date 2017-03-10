@@ -315,7 +315,8 @@ effectively hidden to present a clean uniform interface. That's certainly not
 true for trying to run XRv or vMX directly with qemu / virsh.
 
 ##### Q: Do you plan to support classic IOS?
-A: Hell to the no! ;)
+A: IOS XE is available through the CSR1000v image which should satisfy all
+your oldskool needs.
 
 ##### Q: How do I connect a vrnetlab router with a normal docker container?
 A: I'm not entirely sure. For now you have to live with only communicating

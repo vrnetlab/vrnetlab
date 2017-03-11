@@ -213,6 +213,7 @@ if __name__ == '__main__':
     parser.add_argument("--dry-run", action="store_true", default=False, help="Only print what would be performed during --run")
     parser.add_argument("--prefix", default='', help="docker container name prefix")
     parser.add_argument("--template", nargs=2, help="produce output based on topology information and a template")
+    parser.add_argument("--variable", nargs="+", help="store variables")
     parser.add_argument("--with-trace", action='store_true', help="run virtual routers with --trace")
     args = parser.parse_args()
 
@@ -248,7 +249,14 @@ if __name__ == '__main__':
         config = json.loads(input_file.read())
         input_file.close()
 
+        import sys
+        vs = {}
+        if args.variable:
+            for var in args.variable:
+                key,value = var.split("=", 2)
+                vs[key] = value
+
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(['./']))
         template = env.get_template(args.template[1])
-        print(template.render(config=config))
+        print(template.render(config=config, vars=vs))
 

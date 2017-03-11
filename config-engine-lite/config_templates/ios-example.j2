@@ -1,0 +1,16 @@
+hostname {{ hostname }}
+
+interface Loopback0
+ ip address 10.255.0.{{id}} 255.255.255.255
+ ipv6 address 2001:db8::{{ id }}/128
+ ipv6 enable
+
+{%- for link in links %}
+interface {{ link.interface }}
+ description {{ link.remote.router }}: {{ link.remote.interface }}
+ ip address 10.1.{{ link.id }}.{{ link.octet }} 255.255.255.252
+ ipv6 address 2001:db8::1:{{ link.id }}:{{ link.octet }}/126
+ ipv6 enable
+ no shut
+{%- endfor %}
+lldp run

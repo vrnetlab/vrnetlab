@@ -29,6 +29,7 @@ docker run -v $(pwd)/templates:/templates -v $(pwd)/topology:/topology --link ro
  * -v $(pwd)/topology/topology - Mount a directory containing your topology files inside the container
  * --link router1 --link router2 - Link all routers specified in your topology, enabling config-engine-lite to configure them
  * --topo /topology/lltopo.json - The low level topology built by topology-machine, This references to the /topology mountpoint
+ * --ios /templates/ios.j2 - Configuration template for IOS (CSR 1000v), this references to the /templates mountpoint
  * --xr /templates/xr.j2 - Configuration template for ios-xr, this references to the /templates mountpoint
  * --junos /templates/junos.j2 - Configuration template for JunOS, this refrences to the /templates mountpoint
  * --run - Actually deploy the configuration. If this is not specified, the configuration changes will not be committed and config diff will be printed.

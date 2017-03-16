@@ -28,6 +28,10 @@ push it to your repo. The tag is the same as the version of the CSR image, so
 if you have csr1000v-universalk9.16.04.01.qcow2 your final docker image will be called
 vr-csr:16.04.01
 
+Please note that you will always need to specify version when starting your
+router as the "latest" tag is not added to any images since it has no meaning
+in this context.
+
 It's been tested to boot and respond to SSH with:
 
  * 16.03.01a (csr1000v-universalk9.16.03.01a.qcow2)

@@ -41,7 +41,7 @@ class VQFX_vcp(vrnetlab.VM):
             if re.search("-re-.*.vmdk", e):
                 vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vcp.qcow2"])
         super(VQFX_vcp, self).__init__(username, password, disk_image="/vcp.qcow2", ram=1024)
-        self.num_nics = 0
+        self.num_nics = 12
 
 
     def start(self):
@@ -65,6 +65,13 @@ class VQFX_vcp(vrnetlab.VM):
         res.append("e1000,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
         res.append("-netdev")
         res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
+
+        # dummy
+        for i in range(1):
+            res.append("-device")
+            res.append("e1000,netdev=dummy%d,mac=%s" % (i, vrnetlab.gen_mac(1)))
+            res.append("-netdev")
+            res.append("tap,ifname=dummy%d,id=dummy%d,script=no,downscript=no" % (i, i))
 
         return res
 
@@ -126,8 +133,9 @@ class VQFX_vcp(vrnetlab.VM):
         self.wait_write("set system root-authentication plain-text-password")
         self.wait_write(self.password, 'New password:')
         self.wait_write(self.password, 'Retype new password:')
-        self.wait_write("delete interfaces em0")
+        self.wait_write("delete interfaces")
         self.wait_write("set interfaces em0 unit 0 family inet address 10.0.0.15/24")
+        self.wait_write("set interfaces em1 unit 0 family inet address 169.254.0.2/24")
         self.wait_write("commit")
         self.wait_write("exit")
 
@@ -158,7 +166,7 @@ class VQFX_vpfe(vrnetlab.VM):
             if re.search("-pfe-.*.vmdk", e):
                 vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vpfe.qcow2"])
         super(VQFX_vpfe, self).__init__(None, None, disk_image="/vpfe.qcow2", num=1, ram=2048)
-        self.num_nics = 8
+        self.num_nics = 0
 
 
     def gen_mgmt(self):
@@ -186,19 +194,8 @@ class VQFX_vpfe(vrnetlab.VM):
 
 
     def bootstrap_spin(self):
-        (ridx, match, res) = self.tn.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
-        if match:
-            if ridx == 0: # got login - vFPC start succeeded!
-                self.logger.info("vFPC successfully started")
-                self.running = True
-            if ridx == 1: # vFPC start failed - restart it
-                self.logger.info("vFPC start failed, restarting")
-                self.stop()
-                self.start()
-        if res != b'':
-            pass
-            #self.logger.trace("OUTPUT VFPC: %s" % res.decode())
-
+        self.running = True
+        self.tn.close()
         return
 
 

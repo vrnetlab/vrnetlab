@@ -31,6 +31,10 @@ If you want, you can tag the resulting docker image with something else, like
 same as the version of the JUNOS image, so if you have vmx-15.1F4.15.tgz your
 final docker image will be called vr-vmx:15.1F4.15.
 
+Please note that you will always need to specify version when starting your
+router as the "latest" tag is not added to any images since it has no meaning
+in this context.
+
 It's been tested to boot, respond to SSH and have correct interface mapping
 with the following images:
 

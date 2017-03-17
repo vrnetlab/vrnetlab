@@ -7,6 +7,10 @@ this directory and run `make docker-image` and you should be good to go. The
 resulting image is called `vr-sros`. You can tag it with something else if you
 want, like `my-repo.example.com/vr-sros` and then push it to your repo.
 
+Please note that you will always need to specify version when starting your
+router as the "latest" tag is not added to any images since it has no meaning
+in this context.
+
 It's been tested to at least boot with:
 
  * 12.0.R6

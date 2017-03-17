@@ -17,7 +17,7 @@ It supports:
  * Nokia VSR
  
 I talk a little about it during my presentation about TeraStream testing at
-the NetNod autum meetin 2016 - https://youtu.be/R_vCdGkGeSk?t=9m25s
+the NetNod autum meeting 2016 - https://youtu.be/R_vCdGkGeSk?t=9m25s
 
 
 Usage
@@ -39,7 +39,8 @@ docker run -d --name vr1 --privileged vr-xrv:5.3.3.51U
 docker run -d --name vr2 --privileged vr-xrv:5.3.3.51U
 ```
 I'm calling them vr1 and vr2. Note that I'm using XRv 5.3.3.51U - you should
-fill in your XRv version in the image tag.
+fill in your XRv version in the image tag as the "latest" tag is not added to
+any images.
 
 It takes a few minutes for XRv to start but once up you should be able to SSH
 into each virtual router. You can get the IP address using docker inspect:

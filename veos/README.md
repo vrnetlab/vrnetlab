@@ -16,6 +16,10 @@ then push it to your repo. The tag is the same as the version of the vEOS
 image, so if you have vEOS-lab-4.16.6M.vmdk your final docker image will be
 called vr-veos:4.16.6M
 
+Please note that you will always need to specify version when starting your
+router as the "latest" tag is not added to any images since it has no meaning
+in this context.
+
 It's been tested to boot, respond to SSH and have correct interface mapping
 with the following images:
 

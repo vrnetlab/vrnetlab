@@ -8,5 +8,6 @@ build:
   script:
     - apt-get update && apt-get install -y docker.io make
     - make
-    - if [ -n "$DOCKER_REGISTRY" ]; then docker login -u $DOCKER_USER -p=$DOCKER_PASSWORD -e foobar $DOCKER_REGISTRY; fi
-    - if [ -n "$DOCKER_REGISTRY" ]; then make docker-push; fi
+    - if [ -z "${DOCKER_USER}" ]; then export DOCKER_USER=gitlab-ci-token; export DOCKER_PASSWORD=${CI_BUILD_TOKEN}; fi
+    - if [ -n "${DOCKER_REGISTRY}" ]; then docker login -u $DOCKER_USER -p=$DOCKER_PASSWORD $DOCKER_REGISTRY; fi
+    - if [ -n "${DOCKER_REGISTRY}" ]; then make docker-push; fi

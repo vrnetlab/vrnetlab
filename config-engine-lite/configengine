@@ -5,7 +5,7 @@ import sys
 import jinja2
 import pprint
 import napalm
-import paramiko.ssh_excepion
+import paramiko.ssh_exception
 import time
 
 class RouterList:
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     parser.add_argument("--junos", help="JunOS template")
     parser.add_argument("--ios", help="IOS template")
     parser.add_argument("--run", help="Apply configuration", default=False, action="store_true")
-    parser.add_argument("--wait-for-boot", help="Retry connection until sucessful", default=False, action="store_true")
+    parser.add_argument("--wait-for-boot", help="Retry connection until successful", default=False, action="store_true")
     args = parser.parse_args()
 
     if args.xr:

@@ -5,6 +5,8 @@ import sys
 import jinja2
 import pprint
 import napalm
+import paramiko.ssh_excepion
+import time
 
 class RouterList:
     def __init__(self):
@@ -33,7 +35,7 @@ class Router:
         self.device = None
         self.loaded = False
 
-    def connect(self):
+    def connect(self, wait_for_boot=False):
         if self.type == "xrv":
             driver = napalm.get_network_driver("iosxr")
         elif self.type == "vmx":
@@ -44,8 +46,19 @@ class Router:
             raise Exception("Unknown device type: {}".format(self.type))
 
         self.device = driver(self.get_address(), "vrnetlab", "VR-netlab9")
-        self.device.open()
-        return self.device
+
+        if wait_for_boot:
+            while True:
+                try:
+                    self.device.open()
+                    return self.device
+                except paramiko.ssh_exception.SSHException:
+                    # xrv and csr throws this exception when connection
+                    # failed, wait a bit and retry.
+                    time.sleep(2)
+        else:
+            self.device.open()
+            return self.device
 
     def load_merge(self):
         if not self.device:
@@ -88,8 +101,9 @@ class Router:
         self.attrs[key] = value
 
 class ConfigBootstrap:
-    def __init__(self, config, xr, junos, ios):
+    def __init__(self, config, xr, junos, ios, wait_for_boot):
         self.routers = RouterList()
+        self.wait_for_boot = wait_for_boot
 
         i = 1
         for name in config["routers"]:
@@ -161,6 +175,8 @@ class ConfigBootstrap:
             for key in router.attrs:
                 config[key] = router.attrs[key]
 
+            router.connect(self.wait_for_boot)
+
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(['./']))
             template = env.get_template(router.template)
             router.config = template.render(config)
@@ -185,6 +201,7 @@ if __name__ == '__main__':
     parser.add_argument("--junos", help="JunOS template")
     parser.add_argument("--ios", help="IOS template")
     parser.add_argument("--run", help="Apply configuration", default=False, action="store_true")
+    parser.add_argument("--wait-for-boot", help="Retry connection until sucessful", default=False, action="store_true")
     args = parser.parse_args()
 
     if args.xr:
@@ -210,7 +227,7 @@ if __name__ == '__main__':
     config = json.loads(input_file.read())
     input_file.close()
 
-    cb = ConfigBootstrap(config, args.xr, args.junos, args.ios)
+    cb = ConfigBootstrap(config, args.xr, args.junos, args.ios, args.wait_for_boot)
     cb.render_config()
 
     if args.run:

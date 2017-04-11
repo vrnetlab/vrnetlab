@@ -72,26 +72,33 @@ def parse_message(line):
         upsert_neighbor_state(neighbor_ip, state, timestamp)
 
     if msg['type'] == 'update':
-        update = msg['neighbor']['message']['update']
+        if 'update' in msg['neighbor']['message']:
+            update = msg['neighbor']['message']['update']
 
-        # handle announce
-        if 'announce' in update:
-            for afi, neighbors in update['announce'].items():
-                if 'null' in neighbors:
-                    log("Received EOR for {}".format(afi))
-                else:
-                    for neighbor, prefixes in neighbors.items():
-                        for prefix in prefixes:
-                            log("announce {}".format(prefix))
-                            attributes = update['attribute']
-                            upsert_prefix(afi, prefix, attributes)
+            # handle announce
+            if 'announce' in update:
+                for afi, neighbors in update['announce'].items():
+                    if 'null' in neighbors:
+                        log("Received EOR for {}".format(afi))
+                    else:
+                        for neighbor, prefixes in neighbors.items():
+                            for prefix in prefixes:
+                                log("announce {}".format(prefix))
+                                attributes = update['attribute']
+                                upsert_prefix(afi, prefix, attributes)
 
-        # handle withdraws
-        if 'withdraw' in update:
-            for afi, prefixes in update['withdraw'].items():
-                for prefix in prefixes:
-                    log("Withdraw {}".format(prefix))
-                    remove_prefix(afi, prefix)
+            # handle withdraws
+            if 'withdraw' in update:
+                for afi, prefixes in update['withdraw'].items():
+                    for prefix in prefixes:
+                        log("Withdraw {}".format(prefix))
+                        remove_prefix(afi, prefix)
+        elif 'eor' in msg['neighbor']['message']:
+            eor = msg['neighbor']['message']['eor']
+            log("Received EOR for {} {}".format(eor['afi'], eor['safi']))
+        else:
+            log("Unknown message")
+            raise Exception("Unknown message")
 
 
 blank = 0

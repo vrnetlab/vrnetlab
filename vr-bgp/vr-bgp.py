@@ -31,6 +31,8 @@ if __name__ == '__main__':
     parser.add_argument('--ipv6-local-address', help='local address or route table will be used')
     parser.add_argument('--ipv6-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--listen', choices=['ipv4', 'ipv6'], help='listen on <ipv4> or <ipv6> local-address')
+    parser.add_argument('--limit-announce-to-afi', action='store_true', help='limit announced prefixes to neighbor AFI')
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
@@ -61,6 +63,7 @@ if __name__ == '__main__':
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',
+        'LIMIT_AFI': args.limit_announce_to_afi
     }
 
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])
@@ -137,6 +140,21 @@ if __name__ == '__main__':
             print("--ipv6-local-address requires --ipv6-prefix to be specified", file=sys.stderr)
             sys.exit(1)
 
+    bind_config = []
+    if args.listen == 'ipv4':
+        if config['IPV4_LOCAL_ADDRESS']:
+            bind_config = ['env', 'exabgp.tcp.bind={}'.format(config['IPV4_LOCAL_ADDRESS'])]
+        else:
+            print("--listen ipv4 requires --ipv4-local-address")
+            sys.exit(1)
+
+    if args.listen == 'ipv6':
+        if config['IPV6_LOCAL_ADDRESS']:
+            bind_config = ['env', 'exabgp.tcp.bind={}'.format(config['IPV6_LOCAL_ADDRESS'])]
+        else:
+            print("--listen ipv6 requires --ipv6-local-address")
+            sys.exit(1)
+
 
     # generate exabgp config using Jinja2 template
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(['/']))
@@ -145,6 +163,10 @@ if __name__ == '__main__':
     exa_config.write(template.render(config=config))
     exa_config.close()
     # start exabgp
-    exap = subprocess.Popen(["exabgp", "/exabgp.conf"])
+    exap = subprocess.Popen(bind_config + ["exabgp", "/exabgp.conf"])
     while True:
+        if exap.poll() == 0:
+            print("exabgp stopped, restarting in 2s")
+            time.sleep(2)
+            exap = subprocess.Popen(bind_config + ["exabgp", "/exabgp.conf"])
         time.sleep(1)

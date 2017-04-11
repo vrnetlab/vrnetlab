@@ -32,6 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--ipv6-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
     parser.add_argument('--listen', choices=['ipv4', 'ipv6'], help='listen on <ipv4> or <ipv6> local-address')
+    parser.add_argument('--limit-announce-to-afi', action='store_true', help='limit announced prefixes to neighbor AFI')
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
@@ -61,7 +62,8 @@ if __name__ == '__main__':
         'IPV6_LOCAL_ADDRESS': None,
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
-        'ROUTER_ID': args.router_id or '192.0.2.255'
+        'ROUTER_ID': args.router_id or '192.0.2.255',
+        'LIMIT_AFI': args.limit_announce_to_afi
     }
 
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])

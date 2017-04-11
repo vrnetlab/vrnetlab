@@ -168,4 +168,8 @@ if __name__ == '__main__':
     # start exabgp
     exap = subprocess.Popen(["exabgp", "/exabgp.conf"])
     while True:
+        if exap.poll() == 0:
+            print("exabgp stopped, restarting in 2s")
+            time.sleep(2)
+            exap = subprocess.Popen(["exabgp", "/exabgp.conf"])
         time.sleep(1)

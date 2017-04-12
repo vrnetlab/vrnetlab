@@ -28,6 +28,7 @@ group test {
         {%- if config.MD5 %}
         md5 "{{config.MD5}}";
         {%- endif %}
+        listen 179;
     }
 {%- endif %}
 {%- if config.IPV6_NEIGHBOR %}
@@ -42,6 +43,7 @@ group test {
         {%- if config.MD5 %}
         md5 "{{config.MD5}}";
         {%- endif %}
+        listen 179;
     }
 {%- endif %}
 }

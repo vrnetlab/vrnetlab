@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--ipv6-local-address', help='local address or route table will be used')
     parser.add_argument('--ipv6-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--allow-mixed-afi-transport', action='store_true', help='do not limit announced prefixes to neighbor AFI')
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
@@ -61,6 +62,7 @@ if __name__ == '__main__':
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',
+        'ALLOW_MIXED_AFI_TRANSPORT': args.allow_mixed_afi_transport
     }
 
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])

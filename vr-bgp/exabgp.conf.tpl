@@ -20,12 +20,22 @@ group test {
     neighbor {{config.IPV4_NEIGHBOR}} {
         peer-as {{config.PEER_AS}};
         local-address {{config.IPV4_LOCAL_ADDRESS}};
+        {% if not config.ALLOW_MIXED_AFI_TRANSPORT %}
+        family {
+            ipv4 unicast;
+        }
+        {% endif %}
     }
 {% endif %}
 {% if config.IPV6_NEIGHBOR %}
     neighbor {{config.IPV6_NEIGHBOR}} {
         peer-as {{config.PEER_AS}};
         local-address {{config.IPV6_LOCAL_ADDRESS}};
+        {% if not config.ALLOW_MIXED_AFI_TRANSPORT %}
+        family {
+            ipv6 unicast;
+        }
+        {% endif %}
     }
 {% endif %}
 }

@@ -21,7 +21,7 @@ signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 
-def config_ip(config, input_net, man_address):
+def config_ip(config, input_net, man_address, man_next_hop):
     """ Configure IP address on the tap0 interface and set default route
 
         This function is AFI agnostic, just feed it ipaddress objects
@@ -30,15 +30,29 @@ def config_ip(config, input_net, man_address):
     if net.prefixlen == (net.max_prefixlen-1):
         address = net[0]
         neighbor = net[1]
+        next_hop = net[1]
     else:
         address = net[1]
         neighbor = net[2]
+        next_hop = net[2]
 
+    # override default options
     if man_address:
         if ipaddress.ip_address(man_address) not in net:
-            print("Address {} not in network {}".format(man_address, net), file=sys.stderr)
+            print("local address {} not in network {}".format(man_address, net), file=sys.stderr)
             sys.exit(1)
-        address = man_address
+        address = ipaddress.ip_address(man_address)
+
+    if man_next_hop:
+        if ipaddress.ip_address(man_next_hop) not in net:
+            print("next-hop address {} not in network {}".format(man_next_hop, net), file=sys.stderr)
+            sys.exit(1)
+        next_hop = ipaddress.ip_address(man_next_hop)
+
+    # sanity checks
+    if next_hop == address:
+        print("default route next-hop address ({}) can not be the same as the local address ({})".format(next_hop, address), file=sys.stderr)
+        sys.exit(1)
 
     print("network: {}  using address: {}".format(net, address))
 
@@ -46,6 +60,8 @@ def config_ip(config, input_net, man_address):
     config['IPV{}_NEIGHBOR'.format(net.version)] = neighbor
 
     subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(address) + "/" + str(net.prefixlen), "dev", "tap0"])
+    subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
+    subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", "tap0", "via", str(next_hop)])
 
 
 
@@ -56,9 +72,11 @@ if __name__ == '__main__':
     parser.add_argument('--ipv4-local-address', help='local address or route table will be used')
     parser.add_argument('--ipv4-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv4-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--ipv4-next-hop', help='next-hop address for IPv4 default route')
     parser.add_argument('--ipv6-local-address', help='local address or route table will be used')
     parser.add_argument('--ipv6-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--ipv6-next-hop', help='next-hop address for IPv6 default route')
     parser.add_argument('--allow-mixed-afi-transport', action='store_true', help='do not limit announced prefixes to neighbor AFI')
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
@@ -96,7 +114,8 @@ if __name__ == '__main__':
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])
     if args.ipv4_prefix:
         config_ip(config, args.ipv4_prefix,
-            args.ipv4_local_address)
+            args.ipv4_local_address,
+            args.ipv4_next_hop)
 
         if args.ipv4_neighbor:
             config['IPV4_NEIGHBOR'] = args.ipv4_neighbor
@@ -106,6 +125,10 @@ if __name__ == '__main__':
             print("--ipv4-neighbor requires --ipv4-prefix to be specified", file=sys.stderr)
             sys.exit(1)
 
+        if args.ipv4_next_hop:
+            print("--ipv4-next-hop requires --ipv4-prefix to be specified", file=sys.stderr)
+            sys.exit(1)
+
         if args.ipv4_local_address:
             print("--ipv4-local-address requires --ipv4-prefix to be specified", file=sys.stderr)
             sys.exit(1)
@@ -113,7 +136,8 @@ if __name__ == '__main__':
 
     if args.ipv6_prefix:
         config_ip(config, args.ipv6_prefix,
-            args.ipv6_local_address)
+            args.ipv6_local_address,
+            args.ipv6_next_hop)
 
         if args.ipv6_neighbor:
             config['IPV6_NEIGHBOR'] = args.ipv6_neighbor
@@ -121,6 +145,10 @@ if __name__ == '__main__':
     else:
         if args.ipv6_neighbor:
             print("--ipv6-neighbor requires --ipv6-prefix to be specified", file=sys.stderr)
+            sys.exit(1)
+
+        if args.ipv6_next_hop:
+            print("--ipv6-next-hop requires --ipv6-prefix to be specified", file=sys.stderr)
             sys.exit(1)
 
         if args.ipv6_local_address:

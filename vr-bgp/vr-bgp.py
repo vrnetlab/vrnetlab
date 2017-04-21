@@ -98,6 +98,9 @@ if __name__ == '__main__':
         config_ip(config, args.ipv4_prefix,
             args.ipv4_local_address)
 
+        if args.ipv4_neighbor:
+            config['IPV4_NEIGHBOR'] = args.ipv4_neighbor
+
     else:
         if args.ipv4_neighbor:
             print("--ipv4-neighbor requires --ipv4-prefix to be specified", file=sys.stderr)
@@ -111,6 +114,9 @@ if __name__ == '__main__':
     if args.ipv6_prefix:
         config_ip(config, args.ipv6_prefix,
             args.ipv6_local_address)
+
+        if args.ipv6_neighbor:
+            config['IPV6_NEIGHBOR'] = args.ipv6_neighbor
 
     else:
         if args.ipv6_neighbor:

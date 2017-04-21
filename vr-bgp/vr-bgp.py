@@ -99,6 +99,10 @@ if __name__ == '__main__':
             args.ipv4_local_address)
 
     else:
+        if args.ipv4_neighbor:
+            print("--ipv4-neighbor requires --ipv4-prefix to be specified", file=sys.stderr)
+            sys.exit(1)
+
         if args.ipv4_local_address:
             print("--ipv4-local-address requires --ipv4-prefix to be specified", file=sys.stderr)
             sys.exit(1)
@@ -109,6 +113,10 @@ if __name__ == '__main__':
             args.ipv6_local_address)
 
     else:
+        if args.ipv6_neighbor:
+            print("--ipv6-neighbor requires --ipv6-prefix to be specified", file=sys.stderr)
+            sys.exit(1)
+
         if args.ipv6_local_address:
             print("--ipv6-local-address requires --ipv6-prefix to be specified", file=sys.stderr)
             sys.exit(1)

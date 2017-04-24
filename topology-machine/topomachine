@@ -100,7 +100,7 @@ class VrTopo:
         elif r['type'] == 'vmx':
             return "ge-0/0/%d" % (interface-1)
         elif r['type'] == 'sros':
-            return "1/1/%d" % (interface)
+            return "{}/1/{}".format(1+int((interface-1)/6), 1+(interface-1)%6)
         elif r['type'] == 'bgp':
             return "tap%d" % (interface-1)
         elif r['type'] == 'csr':

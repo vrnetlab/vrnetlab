@@ -81,6 +81,7 @@ if __name__ == '__main__':
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
+    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

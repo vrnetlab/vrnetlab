@@ -81,6 +81,7 @@ if __name__ == '__main__':
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
+    parser.add_argument('--md5', help='MD5')
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     args = parser.parse_args()
 
@@ -109,6 +110,7 @@ if __name__ == '__main__':
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',
+        'MD5': args.md5,
         'ALLOW_MIXED_AFI_TRANSPORT': args.allow_mixed_afi_transport
     }
 

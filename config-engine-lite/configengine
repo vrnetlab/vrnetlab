@@ -46,15 +46,21 @@ class Router:
             raise Exception("Unknown device type: {}".format(self.type))
 
         self.device = driver(self.get_address(), "vrnetlab", "VR-netlab9")
+        TIMEOUT = 60*15
+        TIMER = 0
 
         if wait_for_boot:
             while True:
                 try:
+                    if TIMER >= TIMEOUT:
+                        # Timeout if router hasn't started in 15 minutes.
+                        raise TimeoutError("Timed out wating for router {} to start".format(self.name))
                     self.device.open()
                     return self.device
                 except paramiko.ssh_exception.SSHException:
                     # xrv and csr throws this exception when connection
                     # failed, wait a bit and retry.
+                    TIMER += 2
                     time.sleep(2)
         else:
             self.device.open()

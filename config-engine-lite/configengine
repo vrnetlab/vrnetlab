@@ -6,6 +6,7 @@ import jinja2
 import pprint
 import napalm
 import paramiko.ssh_exception
+import jnpr.junos.exception
 import time
 
 class RouterList:
@@ -60,6 +61,11 @@ class Router:
                 except paramiko.ssh_exception.SSHException:
                     # xrv and csr throws this exception when connection
                     # failed, wait a bit and retry.
+                    TIMER += 2
+                    time.sleep(2)
+                except jnpr.junos.exception.ConnectError:
+                    # vmx throws this exception when connection failed
+                    # wait a bit and retry
                     TIMER += 2
                     time.sleep(2)
         else:
@@ -170,7 +176,7 @@ class ConfigBootstrap:
             })
             i = i + 1
 
-    def render_config(self):
+    def render_config(self, noop=False):
         for router in self.routers.list():
             config = {
                 "hostname": router.name, 
@@ -182,6 +188,9 @@ class ConfigBootstrap:
                 config[key] = router.attrs[key]
 
             router.connect(self.wait_for_boot)
+
+            if noop:
+                continue
 
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(['./']))
             template = env.get_template(router.template)
@@ -208,6 +217,7 @@ if __name__ == '__main__':
     parser.add_argument("--ios", help="IOS template")
     parser.add_argument("--run", help="Apply configuration", default=False, action="store_true")
     parser.add_argument("--wait-for-boot", help="Retry connection until successful", default=False, action="store_true")
+    parser.add_argument("--noop", help="Only connect to routers, don't attempt to load any configuration", default=False, action="store_true")
     args = parser.parse_args()
 
     if args.xr:
@@ -229,14 +239,18 @@ if __name__ == '__main__':
         print("Topology file does not exist")
         sys.exit(1)
 
+    if args.run and args.noop:
+        print("Don't use --run and --noop at the same time, please")
+        sys.exit(1)
+
     input_file = open(args.topo, "r")
     config = json.loads(input_file.read())
     input_file.close()
 
     cb = ConfigBootstrap(config, args.xr, args.junos, args.ios, args.wait_for_boot)
-    cb.render_config()
+    cb.render_config(args.noop)
 
     if args.run:
         cb.apply_config()
-    else:
+    if not args.run and not args.noop:
         cb.diff_config()

@@ -30,15 +30,16 @@ want!). Since the testing happens over a standard interface (BGP) it is simple
 to replace the virtual router with another vendor's and thus verify that the
 routing policy of all your vendors ultimately do the same thing.
 
-Configuring the virtual router it outside the scope of vrnetlab - you are
+Configuring the virtual router is outside the scope of vrnetlab - you are
 supposed to use your normal provisioning system for this.
 
 vr-bgp exposes a super simple HTTP API to announce routes and collect received
 routes.
 
-vr-bgp only supports a single BGP neighbor at a time which might seem tedious
-at first but it also simplifies things a lot as we can key information merely
-on bgp speaker rather than on individual neighbors.
+vr-bgp only supports a single BGP neighbor (well, one per AFI - IPv4 / IPv6) at
+a time which might seem tedious at first but it also simplifies things a lot as
+we can key information merely on bgp speaker rather than on individual
+neighbors.
 
 Example
 -------

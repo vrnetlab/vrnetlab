@@ -21,6 +21,50 @@ signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 
+def config_ip(config, input_net, man_address, man_next_hop):
+    """ Configure IP address on the tap0 interface and set default route
+
+        This function is AFI agnostic, just feed it ipaddress objects
+    """
+    net = ipaddress.ip_network(input_net)
+    if net.prefixlen == (net.max_prefixlen-1):
+        address = net[0]
+        neighbor = net[1]
+        next_hop = net[1]
+    else:
+        address = net[1]
+        neighbor = net[2]
+        next_hop = net[2]
+
+    # override default options
+    if man_address:
+        if ipaddress.ip_address(man_address) not in net:
+            print("local address {} not in network {}".format(man_address, net), file=sys.stderr)
+            sys.exit(1)
+        address = ipaddress.ip_address(man_address)
+
+    if man_next_hop:
+        if ipaddress.ip_address(man_next_hop) not in net:
+            print("next-hop address {} not in network {}".format(man_next_hop, net), file=sys.stderr)
+            sys.exit(1)
+        next_hop = ipaddress.ip_address(man_next_hop)
+
+    # sanity checks
+    if next_hop == address:
+        print("default route next-hop address ({}) can not be the same as the local address ({})".format(next_hop, address), file=sys.stderr)
+        sys.exit(1)
+
+    print("network: {}  using address: {}".format(net, address))
+
+    config['IPV{}_LOCAL_ADDRESS'.format(net.version)] = address
+    config['IPV{}_NEIGHBOR'.format(net.version)] = neighbor
+
+    subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(address) + "/" + str(net.prefixlen), "dev", "tap0"])
+    subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
+    subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", "tap0", "via", str(next_hop)])
+
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
@@ -28,12 +72,17 @@ if __name__ == '__main__':
     parser.add_argument('--ipv4-local-address', help='local address or route table will be used')
     parser.add_argument('--ipv4-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv4-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--ipv4-next-hop', help='next-hop address for IPv4 default route')
     parser.add_argument('--ipv6-local-address', help='local address or route table will be used')
     parser.add_argument('--ipv6-neighbor', help='IP address of the neighbor')
     parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
+    parser.add_argument('--ipv6-next-hop', help='next-hop address for IPv6 default route')
+    parser.add_argument('--allow-mixed-afi-transport', action='store_true', help='do not limit announced prefixes to neighbor AFI')
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
+    parser.add_argument('--md5', help='MD5')
+    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -61,78 +110,50 @@ if __name__ == '__main__':
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',
+        'MD5': args.md5,
+        'ALLOW_MIXED_AFI_TRANSPORT': args.allow_mixed_afi_transport
     }
 
     subprocess.check_call(["ip", "link", "set", "tap0", "up"])
     if args.ipv4_prefix:
-        ipv4_net = ipaddress.IPv4Network(args.ipv4_prefix)
-        if ipv4_net.prefixlen == 31:
-            ipv4_address = ipv4_net[0]
-            ipv4_neighbor = ipv4_net[1]
-        else:
-            ipv4_address = ipv4_net[1]
-            ipv4_neighbor = ipv4_net[2]
-
-        if args.ipv4_local_address:
-            if ipaddress.IPv4Address(args.ipv4_local_address) not in ipv4_net:
-                print("--ipv4-local-address {} is not in --ipv4-prefix {}".format(args.ipv4_local_address, args.ipv4_prefix), file=sys.stderr)
-                sys.exit(1)
-            ipv4_address = ipaddress.IPv4Address(args.ipv4_local_address)
+        config_ip(config, args.ipv4_prefix,
+            args.ipv4_local_address,
+            args.ipv4_next_hop)
 
         if args.ipv4_neighbor:
-            if ipaddress.IPv4Address(args.ipv4_neighbor) not in ipv4_net:
-                print("--ipv4-neighbor {} is not in --ipv4-prefix {}".format(args.ipv4_neighbor, args.ipv4_prefix), file=sys.stderr)
-                sys.exit(1)
-            ipv4_neighbor = ipaddress.IPv4Address(args.ipv4_neighbor)
+            config['IPV4_NEIGHBOR'] = args.ipv4_neighbor
 
-        if args.ipv4_neighbor is not None and args.ipv4_local_address == args.ipv4_neighbor:
-            print("--ipv4-neighbor {} cannot be the same as --ipv4-local-address".format(args.ipv4_neighbor, args.ipv4_local_address), file=sys.stderr)
+    else:
+        if args.ipv4_neighbor:
+            print("--ipv4-neighbor requires --ipv4-prefix to be specified", file=sys.stderr)
             sys.exit(1)
 
-        print("IPv4 network: {}  using IPv4 address: {} and IPv4 neighbor: {}".format(ipv4_net, ipv4_address, ipv4_neighbor))
+        if args.ipv4_next_hop:
+            print("--ipv4-next-hop requires --ipv4-prefix to be specified", file=sys.stderr)
+            sys.exit(1)
 
-        config['IPV4_LOCAL_ADDRESS'] = ipv4_address
-        config['IPV4_NEIGHBOR'] = ipv4_neighbor
-
-        subprocess.check_call(["ip", "address", "add", str(ipv4_address) + "/" + str(ipv4_net.prefixlen), "dev", "tap0"])
-    else:
         if args.ipv4_local_address:
             print("--ipv4-local-address requires --ipv4-prefix to be specified", file=sys.stderr)
             sys.exit(1)
 
 
     if args.ipv6_prefix:
-        ipv6_net = ipaddress.IPv6Network(args.ipv6_prefix)
-        if ipv6_net.prefixlen == 127:
-            ipv6_address = ipv6_net[0]
-            ipv6_neighbor = ipv6_net[1]
-        else:
-            ipv6_address = ipv6_net[1]
-            ipv6_neighbor = ipv6_net[2]
-
-        if args.ipv6_local_address:
-            if ipaddress.IPv6Address(args.ipv6_local_address) not in ipv6_net:
-                print("--ipv6-local-address {} is not in --ipv6-prefix {}".format(args.ipv6_local_address, args.ipv6_prefix), file=sys.stderr)
-                sys.exit(1)
-            ipv6_address = ipaddress.IPv6Address(args.ipv6_local_address)
+        config_ip(config, args.ipv6_prefix,
+            args.ipv6_local_address,
+            args.ipv6_next_hop)
 
         if args.ipv6_neighbor:
-            if ipaddress.IPv6Address(args.ipv6_neighbor) not in ipv6_net:
-                print("--ipv6-neighbor {} is not in --ipv6-prefix {}".format(args.ipv6_neighbor, args.ipv6_prefix), file=sys.stderr)
-                sys.exit(1)
-            ipv6_neighbor = ipaddress.IPv6Address(args.ipv6_neighbor)
+            config['IPV6_NEIGHBOR'] = args.ipv6_neighbor
 
-        if args.ipv6_neighbor is not None and args.ipv6_local_address == args.ipv6_neighbor:
-            print("--ipv6-neighbor {} cannot be the same as --ipv6-local-address".format(args.ipv6_neighbor, args.ipv6_local_address), file=sys.stderr)
+    else:
+        if args.ipv6_neighbor:
+            print("--ipv6-neighbor requires --ipv6-prefix to be specified", file=sys.stderr)
             sys.exit(1)
 
-        print("IPv6 network: {}  using IPv6 address: {} and IPv6 neighbor: {}".format(ipv6_net, ipv6_address, ipv6_neighbor))
+        if args.ipv6_next_hop:
+            print("--ipv6-next-hop requires --ipv6-prefix to be specified", file=sys.stderr)
+            sys.exit(1)
 
-        config['IPV6_LOCAL_ADDRESS'] = ipv6_address
-        config['IPV6_NEIGHBOR'] = ipv6_neighbor
-
-        subprocess.check_call(["ip", "address", "add", str(ipv6_address) + "/" + str(ipv6_net.prefixlen), "dev", "tap0"])
-    else:
         if args.ipv6_local_address:
             print("--ipv6-local-address requires --ipv6-prefix to be specified", file=sys.stderr)
             sys.exit(1)

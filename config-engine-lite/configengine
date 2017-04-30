@@ -134,7 +134,7 @@ class ConfigBootstrap:
             if router.type == "vmx":
                 router.template = junos
 
-            if router.type == "crs":
+            if router.type == "csr":
                 router.template = ios
 
             self.routers.append(router)

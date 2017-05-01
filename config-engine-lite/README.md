@@ -40,11 +40,12 @@ docker run -v $(pwd)/templates:/templates -v $(pwd)/topology:/topology --link ro
 ### Single-router mode
 Apply a configuration template to a single router, useful for bootstrapping a router for use with vr-bgp for instance.
 ```
-docker run -v $(pwd)/templates:/templates --link router1 vr-configengine --router router1 --config /templates/router1.j2 --attrs "key1=value1,key2=value2"
+docker run -v $(pwd)/templates:/templates --link router1 vr-configengine --type xrv --router router1 --config /templates/router1.j2 --attrs "key1=value1,key2=value2"
 ```
  * -v $(pwd)/templates:/templates - Mount a directory containing your templates inside the container
  * --link router1 - Link the router you want to configure
  * --config /templates/router1.j2 - Your router configuration, references /templates moutpoint
+ * --type vmx - Type of router to configure (valid values are vmx, xrv and csr)
  * --attrs "key1=value1,key2=value2" - A list of key/value pairs available in the template.
 
 ### Common parameters

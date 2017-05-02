@@ -19,8 +19,11 @@ vrnetlab itself.
 
 Usage
 -----
-After building the docker image, you run it like this.
+After building the docker image, you run it like this. There are two modes of operation, topology mode and single-router-mode. 
 
+
+### Topology mode
+Use config-engine-lite and jinja2 templates to configure your topomachine topology.
 ```
 docker run -v $(pwd)/templates:/templates -v $(pwd)/topology:/topology --link router1 --link router2 vr-configengine --topo /topology/lltopo.json --xr /templates/xr.j2 --junos /templates/junos.j2 --run
 ```
@@ -33,3 +36,20 @@ docker run -v $(pwd)/templates:/templates -v $(pwd)/topology:/topology --link ro
  * --xr /templates/xr.j2 - Configuration template for ios-xr, this references to the /templates mountpoint
  * --junos /templates/junos.j2 - Configuration template for JunOS, this refrences to the /templates mountpoint
  * --run - Actually deploy the configuration. If this is not specified, the configuration changes will not be committed and config diff will be printed.
+
+### Single-router mode
+Apply a configuration template to a single router, useful for bootstrapping a router for use with vr-bgp for instance.
+```
+docker run -v $(pwd)/templates:/templates --link router1 vr-configengine --type xrv --router router1 --config /templates/router1.j2 --attrs "key1=value1,key2=value2"
+```
+ * -v $(pwd)/templates:/templates - Mount a directory containing your templates inside the container
+ * --link router1 - Link the router you want to configure
+ * --config /templates/router1.j2 - Your router configuration, references /templates moutpoint
+ * --type vmx - Type of router to configure (valid values are vmx, xrv and csr)
+ * --attrs "key1=value1,key2=value2" - A list of key/value pairs available in the template.
+
+### Common parameters
+These parameters are available in both modes
+ * --wait-for-boot - Block until we can connect to the router via SSH. If neither --diff or --run is used this option will simply block until all your routers are started
+ * --diff - Print configuration diff and discard the configuration
+ * --run - Commit the configuration to the router

@@ -46,7 +46,7 @@ docker run -v $(pwd)/templates:/templates --link router1 vr-configengine --type 
  * --link router1 - Link the router you want to configure
  * --config /templates/router1.j2 - Your router configuration, references /templates moutpoint
  * --type vmx - Type of router to configure (valid values are vmx, xrv and csr)
- * --attrs "key1=value1,key2=value2" - A list of key/value pairs available in the template.
+ * --attr "key=value" - A key/value pair available in the template, can be specified multiple times.
 
 ### Common parameters
 These parameters are available in both modes

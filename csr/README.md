@@ -84,8 +84,9 @@ same as your .qcow2 file but append ".license", e.g. if you have
 "csr1000v-universalk9.16.04.01.qcow2.license".
 
 The license is bound to a specific UDI and usually expires within a given time.
-To make sure that everything works out smoothly we are configure the clock to
-a specific date during the installation process.
+To make sure that everything works out smoothly we configure the clock to
+a specific date during the installation process. This is because the license
+only has an expiration date not a start date.
 
 The license unlocks feature and throughput, the default throughput
 for CSR is 100Kbit/s and is totally useless if you want to configure the device

@@ -17,6 +17,7 @@ RUN apt-get update -qy \
 ARG IMAGE
 COPY $IMAGE* /
 COPY *.py /
+COPY *.lic /
 
 EXPOSE 22 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]

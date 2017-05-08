@@ -75,6 +75,21 @@ RAM: 4GB
 
 Disk: <500MB
 
+License handling
+----------------
+You can feed a license file into CSR1000V by putting a text file containing the
+license in this directory next to your .qcow2 image. Name the license file the
+same as your .qcow2 file but append ".license", e.g. if you have
+"csr1000v-universalk9.16.04.01.qcow2" you would name the license file
+"csr1000v-universalk9.16.04.01.qcow2.license".
+
+The license is bound to a specific UDI and usually expires within a given time.
+To make sure that everything works out smoothly we are configure the clock to
+a specific date during the installation process.
+
+The license unlocks feature and throughput, the default throughput
+for CSR is 100Kbit/s and is totally useless if you want to configure the device
+with a fairly large configuration.
 
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------

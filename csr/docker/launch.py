@@ -41,7 +41,7 @@ class CSR_vm(vrnetlab.VM):
         super(CSR_vm, self).__init__(username, password, disk_image=disk_image)
 
         self.install_mode = install_mode
-        self.num_nics = 10
+        self.num_nics = 9
 
         if self.install_mode:
             logger.trace("install mode")

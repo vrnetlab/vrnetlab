@@ -45,14 +45,13 @@ docker run -d --privileged --name my-csr-router vr-csr
 
 Interface mapping
 -----------------
-Some versions of the CSR 1000v has weird interface mapping as shown in the table below.
+IOS XE 16.03.01 and 16.04.01 does only support 10 interfaces, GigabitEthernet1 is always configured
+as a management interface and then we can only use 9 interfaces for traffic. If you configure vrnetlab
+to use more then 10 the interfaces will be mapped like the table below. 
 
 The following images have been verified to NOT exhibit this behavior
 - csr1000v-universalk9.03.16.02.S.155-3.S2-ext.qcow2
 - csr1000v-universalk9.03.17.02.S.156-1.S2-std.qcow2
-
-And the following images have been verified to exhibit this behavior
-- csr1000v-universalk9.16.04.01.qcow2
 
 | vr-csr | vr-xcon |
 | :---:  |  :---:  |

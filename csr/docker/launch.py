@@ -3,7 +3,6 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import subprocess
@@ -38,10 +37,18 @@ class CSR_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
+            if re.search("\.license$", e):
+                os.rename("/" + e, "/tftpboot/license.lic")
+
+        self.license = False
+        if os.path.isfile("/tftpboot/license.lic"):
+            logger.info("License found")
+            self.license = True
+
         super(CSR_vm, self).__init__(username, password, disk_image=disk_image)
 
         self.install_mode = install_mode
-        self.num_nics = 10
+        self.num_nics = 9
 
         if self.install_mode:
             logger.trace("install mode")
@@ -56,6 +63,16 @@ class CSR_vm(vrnetlab.VM):
         """
 
         cfg_file = open('/iosxe_config.txt', 'w')
+        if self.license:
+            cfg_file.write("do clock set 13:33:37 1 Jan 2010\r\n")
+            cfg_file.write("interface GigabitEthernet1\r\n")
+            cfg_file.write("ip address 10.0.0.15 255.255.255.0\r\n")
+            cfg_file.write("no shut\r\n")
+            cfg_file.write("exit\r\n")
+            cfg_file.write("license accept end user agreement\r\n")
+            cfg_file.write("yes\r\n")
+            cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
+
         cfg_file.write("platform console serial\r\n\r\n")
         cfg_file.write("do wr\r\n")
         cfg_file.write("do reload\r\n")

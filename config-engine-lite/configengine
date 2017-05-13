@@ -286,8 +286,8 @@ if __name__ == '__main__':
             print("Invalid router type {}".format(args.type))
             sys.exit(1)
 
-        if args.attrs:
-            attrs = {}
+        attrs = {}
+        if args.attr:
             try:
                 for entry in args.attr:
                     pcs = entry.split("=")

@@ -1,4 +1,6 @@
 VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9]\.[0-9]\.[0-9]\(\.[0-9A-Z]\+\)\?\)\([^0-9].*\|$$\)/\1/')
+
+-include ../makefile-sanity.include
 -include ../makefile.include
 
 usage:

@@ -2,8 +2,6 @@ VR_NAME=$(shell basename $$(pwd))
 IMAGES=$(shell ls *.tgz *.vmdk* *.qcow2 *.iso 2>/dev/null)
 NUM_IMAGES=$(shell ls $(IMAGES) | wc -l)
 
--include makefile-sanity.include
-
 ifeq ($(NUM_IMAGES), 0)
 docker-image: no-image usage
 else

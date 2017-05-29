@@ -1,5 +1,7 @@
 # vqfx10k-re-15.1X53-D60.vmdk
 VERSION=$(shell echo $(IMAGE) | sed -e 's/^vqfx10k-re-\([0-9][0-9]\.[0-9][A-Z][0-9]\+\(\.[0-9]\+\)\?\(-D[0-9]\+\)\)[^0-9].*$$/\1/')
+
+-include ../makefile-sanity.include
 -include ../makefile.include
 
 usage:

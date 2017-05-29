@@ -3,6 +3,7 @@
 # csr1000v-universalk9.16.04.01.qcow2
 VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9]\+\.[0-9]\+\.[0-9]\+[sb]\?\?\)\([^0-9].*\|$$\)/\1/')
 
+-include ../makefile-sanity.include
 -include ../makefile.include
 
 

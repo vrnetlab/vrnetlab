@@ -341,9 +341,15 @@ Building with GitLab CI
 -----------------------
 vrnetlab ships with a .gitlab-ci.yml config file so if you happen to be using
 GitLab CI you can use this file to let your CI infrastructure build the docker
-images and push them to your registry. The CI config and makefiles are written
-in a generic manner and the specifics are controlled through environment
-variables so to use with GitLab CI you simply need to add three env vars:
+images and push them to your registry. 
+
+GitLab features a built-in Docker registry which will be used per default - all
+you need to do is enable the registry for your vrnetlab project. The necessary
+information will be exposed as env vars in GitLab CI which is picked up by the
+build config.
+
+If you want, you can use an external docker registry by explicitly configuring
+the following environment variables:
 
  * DOCKER_USER - the username to authenticate to the docker registry with
  * DOCKER_PASSWORD - the password to authenticate to the docker registry with
@@ -351,14 +357,16 @@ variables so to use with GitLab CI you simply need to add three env vars:
 
 Next you need to add the actual virtual router images to the git repository.
 You can create a separate branch where you add the images as to avoid potential
-git merge issues.
+git merge issues. I recommend using LFS:
 ```
 git checkout -b images
-git add xrv/iosxrv-k9-demo-6.0.0.vmdk
+git lfs track "*.vmdk"
+git add xrv/iosxrv-k9-demo-6.0.0.vmdk .gitattributes
 git commit -a -m "Added Cisco XRv 6.0.0 image"
 git push your-git-repo images
 ```
-Now CI should build the images and push to wherever $DOCKER_REGISTRY points.
+Now CI should build the images and push to wherever $DOCKER_REGISTRY points. If
+you don't want to use LFS then just skip that command.
 
 When new changes are commited to the upstream repo/master you can just rebase
 your branch on top of that:
@@ -370,3 +378,12 @@ git rebase master
 git push --force your-git-repo images
 ```
 Note that you have to force push since you've rewritten git history.
+
+LFS is a way to store large files with git but keeping them out of git. It's
+great for the virtual router images as they never change (version is in the
+filename) and so we don't really need git's version tracking for them. LFS is
+considerably faster than plain git. For very large files it is possible to run
+into LFS timeouts, try setting:
+```
+git config lfs.dialtimeout 60
+```

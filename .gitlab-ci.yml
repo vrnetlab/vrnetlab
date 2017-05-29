@@ -15,4 +15,4 @@ build:
     # if DOCKER_REGISTRY set, either explicitly by user or implicitly by GitLab
     # (see above) we login to repo, build images and push them
     - if [ -n "${DOCKER_REGISTRY}" ]; then docker login -u ${DOCKER_USER} -p=${DOCKER_PASSWORD} ${DOCKER_REGISTRY}; fi
-    - if [ -n "${DOCKER_REGISTRY}" ]; then make -j && make docker-push; fi
+    - if [ -n "${DOCKER_REGISTRY}" ]; then make && make docker-push; fi

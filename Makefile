@@ -1,7 +1,7 @@
 VRS = vr-xcon vr-bgp csr nxos sros veos vmx vqfx xrv
 VRS_PUSH = $(VRS:=-push)
 
-.PHONY: $(VRS) $(VRS_PUSH)
+.PHONY: all $(VRS) $(VRS_PUSH)
 
 all: $(VRS)
 

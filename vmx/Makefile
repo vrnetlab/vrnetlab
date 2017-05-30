@@ -10,6 +10,10 @@ usage:
 no-image:
 	@echo "ERROR: you have no .tgz file"
 
+docker-pre-build:
+	-cat cidfile | xargs --no-run-if-empty docker rm -f
+	-rm cidfile
+
 docker-build: docker-build-common
 	docker run --cidfile cidfile --privileged $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install
 	docker commit --change='ENTRYPOINT ["/launch_vmx.py"]' $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION)

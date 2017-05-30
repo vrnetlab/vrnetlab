@@ -6,7 +6,7 @@ stages:
 build:
   stage: build
   script:
-    - apt-get update && apt-get install -y curl docker.io make && ./git-lfs-repo.sh && apt-get install -y git-lfs
+    # make sure we pulled LFS files
     - git lfs pull
     # We allow the user to control which Docker registry is used through the
     # env var DOCKER_REGISTRY. If it is not set then we assume we should use

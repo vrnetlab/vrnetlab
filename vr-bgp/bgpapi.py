@@ -33,6 +33,8 @@ def announce():
             command += " community [" + " ".join(route['community']) + "]"
         if 'med' in route:
             command += " med " + str(route['med'])
+        if 'as-path' in route:
+            command += " as-path [" + " ".join([str(x) for x in route['as-path']]) + "]"
         sys.stdout.write('%s\n' % command)
         sys.stdout.flush()
 

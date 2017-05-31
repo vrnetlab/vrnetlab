@@ -20,7 +20,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros', 'csr'):
+            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros', 'csr', 'xrv9k'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # expand p2p links

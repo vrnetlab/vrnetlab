@@ -31,6 +31,8 @@ def announce():
         command = "announce route %(prefix)s next-hop self" % route
         if 'community' in route:
             command += " community [" + " ".join(route['community']) + "]"
+        if 'large-community' in route:
+            command += " large-community [" + " ".join(route['large-community']) + "]"
         if 'med' in route:
             command += " med " + str(route['med'])
         if 'as-path' in route:

@@ -38,7 +38,7 @@ class VSR_vm(vrnetlab.VM):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=4096)
         self.num_nics = 20
-        #self.qemu_args.extend(["-boot", "d"])
+        self.qemu_args.extend(["-serial", "con0"])
 
 
     def bootstrap_spin(self):

@@ -37,12 +37,9 @@ class VEOS_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        for e in os.listdir("/"):
-            if re.search(".iso$", e):
-                boot_iso = "/" + e
         super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
         self.num_nics = 20
-        self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
+        self.qemu_args.extend(["-boot", "d"])
 
 
     def bootstrap_spin(self):

@@ -6,9 +6,6 @@ VERSION=R0326
 -include ../makefile-sanity.include
 -include ../makefile.include
 
-docker-pre-build:
-	cp *.qcow2 docker/
-
 usage:
 	@echo "Usage: put the HP VSR1000 qcow2 image in this directory and run:"
 	@echo "  make"

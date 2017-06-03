@@ -31,13 +31,12 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 
-
-class VEOS_vm(vrnetlab.VM):
+class VSR_vm(vrnetlab.VM):
     def __init__(self, username, password):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
+        super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
         self.num_nics = 20
         self.qemu_args.extend(["-boot", "d"])
 
@@ -101,10 +100,10 @@ class VEOS_vm(vrnetlab.VM):
 
 
 
-class VEOS(vrnetlab.VR):
+class VSR(vrnetlab.VR):
     def __init__(self, username, password):
-        super(VEOS, self).__init__(username, password)
-        self.vms = [ VEOS_vm(username, password) ]
+        super(VSR, self).__init__(username, password)
+        self.vms = [ VSR_vm(username, password) ]
 
 
 if __name__ == '__main__':
@@ -123,5 +122,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = VEOS(args.username, args.password)
+    vr = VSR(args.username, args.password)
     vr.start()

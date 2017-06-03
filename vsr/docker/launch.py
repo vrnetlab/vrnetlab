@@ -36,7 +36,7 @@ class VSR_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
+        super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
         self.num_nics = 20
         self.qemu_args.extend(["-boot", "d"])
 

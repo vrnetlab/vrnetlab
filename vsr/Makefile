@@ -1,7 +1,7 @@
 # match versions like:
 # VSR1000_HPE-CMW710-R0326-X64.qcow
 #VERSION=$(shell echo $(IMAGE) | sed -e 's/.*-\([0-9]\.\([0-9]\+\.\)\{1,2\}[0-9][A-Z]\)\.vmdk$$/\1/')
-VERSION=latest
+VERSION=R0326
 
 -include ../makefile-sanity.include
 -include ../makefile.include

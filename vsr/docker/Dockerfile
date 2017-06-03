@@ -15,7 +15,6 @@ RUN apt-get update -qy \
 
 ARG IMAGE
 COPY $IMAGE* /
-COPY *.iso /
 COPY *.py /
 
 EXPOSE 22 830 5000 10000-10099

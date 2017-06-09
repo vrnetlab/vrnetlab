@@ -54,7 +54,7 @@ class VSR_vm(vrnetlab.VM):
         if match: # got a match!
             if ridx == 0: # login
                 self.logger.debug("matched login prompt")
-                self.wait_write("", wait=None)
+                self.wait_write("", wait=">")
 
                 # run main config!
                 self.bootstrap_config()

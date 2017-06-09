@@ -53,19 +53,10 @@ class VSR_vm(vrnetlab.VM):
         (ridx, match, res) = self.tn.expect([b"Performing automatic"], 1)
         if match: # got a match!
             if ridx == 0: # login
-                self.logger.debug("VM started")
-                self.logger.debug("Abort automatic configuration")
-                self.wait_write("\x04", wait=None)
-                self.logger.debug("Sleeping for 2 seconds")
-                time.sleep(2)
-                self.logger.debug("Press ENTER")
-                self.wait_write("\x0D", wait="Press ENTER to get started.")
-                time.sleep(2)
-                self.logger.debug("Press carriage return")
-                self.wait_write("\r", wait=None)
-                time.sleep(2)
-                self.logger.debug("Waiting for shell")
-                self.wait_write("", wait=">")
+                self.logger.debug("Take qemu screendump")
+                self.wait_write("screendump fixed.ppm", wait="(qemu)")
+                self.logger.debug("Exiting")
+                exit
 
                 # run main config!
                 self.bootstrap_config()

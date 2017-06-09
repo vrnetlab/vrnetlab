@@ -109,7 +109,10 @@ class VM:
         except:
             pass
 
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+        if self.__class__.__name__ is "VSR":
+            self.tn = telnetlib.Telnet("127.0.0.1", 5001 + self.num)
+        else:
+            self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
 
     def gen_mgmt(self):
@@ -262,5 +265,3 @@ class VR:
                     self.update_health(1, "VM failed - restarting")
                 else:
                     self.update_health(1, "starting")
-
-

@@ -36,8 +36,8 @@ class VSR_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=4096)
-        self.num_nics = 20
+        super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
+        self.num_nics = 4
         #self.qemu_args.extend(["-serial", "con0"])
 
 
@@ -51,7 +51,7 @@ class VSR_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"login:"], 1)
+        (ridx, match, res) = self.tn.expect([b"Performing automatic"], 1)
         if match: # got a match!
             if ridx == 0: # login
                 self.logger.debug("matched login prompt")

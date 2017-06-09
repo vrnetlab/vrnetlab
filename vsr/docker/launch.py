@@ -60,13 +60,13 @@ class VSR_vm(vrnetlab.VM):
                 self.wait_write("", wait=")")
 
                 self.logger.debug("Writing to QEMU Monitor")
-                with open("send-commands.txt", "r+") as file:
+                with open("qemu.txt", "r+") as file:
                     for line in file.readlines():
                         self.wait_write("%s", wait=")" % line)
                         time.sleep(0.1)
                 self.logger.debug("Done writing to QEMU Monitor")
                 exit
-                
+
                 # run main config!
                 self.bootstrap_config()
                 # close telnet connection

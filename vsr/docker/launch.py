@@ -58,8 +58,10 @@ class VSR_vm(vrnetlab.VM):
                 self.wait_write("\x04", wait=None)
                 self.logger.debug("Press ENTER")
                 self.wait_write("\x0D", wait=None)
+                self.logger.debug("Press carriage return")
+                self.wait_write("\r", wait=None)
                 self.logger.debug("Waiting for shell")
-                self.wait_write("", wait=None)
+                self.wait_write("", wait=">")
 
                 # run main config!
                 self.bootstrap_config()

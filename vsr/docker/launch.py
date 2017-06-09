@@ -54,7 +54,8 @@ class VSR_vm(vrnetlab.VM):
         if match: # got a match!
             if ridx == 0: # login
                 self.logger.debug("Take qemu screendump")
-                self.wait_write("screendump fixed.ppm", wait="(qemu)")
+                self.wait_write("screendump fixed.ppm", wait=")")
+                self.wait_write("quit")
                 self.logger.debug("Exiting")
                 exit
 

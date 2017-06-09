@@ -56,9 +56,12 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("VM started")
                 #ctrl+d
                 #enter
+                self.logger.debug("Abort automatic configuration")
                 self.wait_write("\x04", wait=None)
-                self.wait_write("", wait=None)
-                self.wait_write("", wait=">")
+                self.logger.debug("Press ENTER")
+                self.wait_write("\r", wait=None)
+                self.logger.debug("Waiting for shell")
+                self.wait_write("", wait="<HPE>")
 
                 # run main config!
                 self.bootstrap_config()

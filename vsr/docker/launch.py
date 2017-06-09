@@ -37,7 +37,7 @@ class VSR_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
-        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:127.0.0.1:5001,server,nowait"])
+        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:0.0.0.0:5001,server,nowait"])
         self.num_nics = 4
 
     def bootstrap_spin(self):
@@ -53,7 +53,10 @@ class VSR_vm(vrnetlab.VM):
         (ridx, match, res) = self.tn.expect([b"Performing automatic"], 1)
         if match: # got a match!
             if ridx == 0: # login
-                self.logger.debug("matched login prompt")
+                self.logger.debug("VM started")
+                #ctrl+d
+                #enter
+                self.wait_write("\x04", wait=None)
                 self.wait_write("", wait=">")
 
                 # run main config!

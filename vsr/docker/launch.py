@@ -57,6 +57,7 @@ class VSR_vm(vrnetlab.VM):
                 # self.wait_write("screendump fixed.ppm", wait=")")
                 self.tn = None
                 self.tn = telnetlib.Telnet("127.0.0.1", 5001 + self.num)
+                self.wait_write("screendump fixed.ppm", wait=")")
                 # run main config!
                 self.bootstrap_config()
                 # close telnet connection

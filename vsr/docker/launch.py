@@ -57,6 +57,7 @@ class VSR_vm(vrnetlab.VM):
                 #ctrl+d
                 #enter
                 self.wait_write("\x04", wait=None)
+                self.wait_write("", wait=None)
                 self.wait_write("", wait=">")
 
                 # run main config!

@@ -38,8 +38,6 @@ class VSR_vm(vrnetlab.VM):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
         self.num_nics = 4
-        #self.qemu_args.extend(["-serial", "con0"])
-
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -80,25 +78,16 @@ class VSR_vm(vrnetlab.VM):
 
         return
 
-
-
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
-        self.wait_write("enable", ">")
-        self.wait_write("configure")
-        self.wait_write("username %s secret 0 %s role network-admin" % (self.username, self.password))
-
-        # configure mgmt interface
-        self.wait_write("interface Management 1")
-        self.wait_write("ip address 10.0.0.15/24")
-        self.wait_write("exit")
-        self.wait_write("exit")
-        self.wait_write("copy running-config startup-config")
-
-
+        self.wait_write("user-interface aux 0")
+        self.wait_write("authentication-mode none")
+        self.wait_write("user-role network-admin")
+        self.wait_write("quit")
+        self.logger.info("completed bootstrap configuration")
 
 class VSR(vrnetlab.VR):
     def __init__(self, username, password):

@@ -62,12 +62,14 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("Writing to QEMU Monitor")
                 with open("qemu.txt", "r+") as file:
                     for line in file.readlines():
-                        self.wait_write(line, wait=")")
+                        self.wait_write(line)
                         time.sleep(0.1)
                 file.close()
 
                 self.logger.debug("Done writing to QEMU Monitor")
-                exit
+
+                self.logger.debug("Connecting to line aux0")
+                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
                 # run main config!
                 self.bootstrap_config()
@@ -96,9 +98,16 @@ class VSR_vm(vrnetlab.VM):
         """
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
-        self.wait_write("user-interface aux 0")
-        self.wait_write("authentication-mode none")
-        self.wait_write("user-role network-admin")
+        self.wait_write("system-view")
+        self.wait_write("ssh server enable")
+        self.wait_write("user-interface class vty")
+        self.wait_write("authentication-mode scheme")
+        self.wait_write("protocol inbound ssh")
+        self.wait_write("quit")
+        self.wait_write("local-user admin")
+        self.wait_write("password simple admin")
+        self.wait_write("service-type ssh")
+        self.wait_write("authorization-attribute user-role network-admin")
         self.wait_write("quit")
         self.logger.info("completed bootstrap configuration")
 

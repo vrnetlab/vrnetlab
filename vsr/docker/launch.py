@@ -56,6 +56,8 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("VM started")
                 self.logger.debug("Abort automatic configuration")
                 self.wait_write("\x04", wait=None)
+                self.logger.debug("Sleeping for 2 seconds")
+                time.sleep(2)
                 self.logger.debug("Press ENTER")
                 self.wait_write("\x0D", wait=None)
                 self.logger.debug("Press carriage return")

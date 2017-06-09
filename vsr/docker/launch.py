@@ -3,7 +3,6 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import sys
@@ -37,9 +36,8 @@ class VSR_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
+        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:0.0.0.0:5001,server,nowait"])
         self.num_nics = 4
-        #self.qemu_args.extend(["-serial", "con0"])
-
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -54,9 +52,27 @@ class VSR_vm(vrnetlab.VM):
         (ridx, match, res) = self.tn.expect([b"Performing automatic"], 1)
         if match: # got a match!
             if ridx == 0: # login
-                self.logger.debug("matched login prompt")
-                self.logger.debug("trying to log in with 'admin'")
-                self.wait_write("admin", wait=None)
+                self.logger.debug("VM started")
+                # self.wait_write("screendump fixed.ppm", wait=")")
+                self.logger.debug("Connecting to QEMU Monitor")
+                self.tn = telnetlib.Telnet("127.0.0.1", 5001 + self.num)
+                self.wait_write("", wait=")")
+
+                self.logger.debug("Writing to QEMU Monitor")
+                with open("qemu.txt", "r+") as file:
+                    for line in file.readlines():
+                        self.wait_write(line, wait=")")
+                        # self.logger.debug("Wrote line:" + line)
+                        time.sleep(0.1)
+                file.close()
+
+                self.wait_write("", wait=")")
+                self.logger.debug("Done writing to QEMU Monitor")
+
+                self.logger.debug("Switching to line aux0")
+                self.tn.close()
+                # time.sleep(120)
+                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
                 # run main config!
                 self.bootstrap_config()
@@ -80,25 +96,43 @@ class VSR_vm(vrnetlab.VM):
 
         return
 
-
-
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("", None)
-        self.wait_write("enable", ">")
-        self.wait_write("configure")
-        self.wait_write("username %s secret 0 %s role network-admin" % (self.username, self.password))
-
-        # configure mgmt interface
-        self.wait_write("interface Management 1")
-        self.wait_write("ip address 10.0.0.15/24")
-        self.wait_write("exit")
-        self.wait_write("exit")
-        self.wait_write("copy running-config startup-config")
-
-
+        self.wait_write("\x0D", None)
+        self.wait_write("\x0D", "<HPE>")
+        self.logger.debug("Entering system view")
+        self.wait_write("system-view", "<HPE>")
+        time.sleep(0.2)
+        self.wait_write("ssh server enable", None)
+        time.sleep(0.2)
+        self.wait_write("user-interface class vty", None)
+        time.sleep(0.2)
+        self.wait_write("authentication-mode scheme", None)
+        time.sleep(0.2)
+        self.wait_write("protocol inbound ssh", None)
+        time.sleep(0.2)
+        self.wait_write("quit", None)
+        time.sleep(0.2)
+        self.wait_write("local-user admin", None)
+        time.sleep(0.2)
+        self.wait_write("password simple admin", None)
+        time.sleep(0.2)
+        self.wait_write("service-type ssh", None)
+        time.sleep(0.2)
+        self.wait_write("authorization-attribute user-role network-admin", None)
+        time.sleep(0.2)
+        self.wait_write("quit", None)
+        time.sleep(0.2)
+        self.wait_write("interface GigabitEthernet5/0", None)
+        time.sleep(0.2)
+        self.wait_write("ip address 10.0.0.15 255.255.255.0", None)
+        time.sleep(0.2)
+        self.wait_write("quit", None)
+        time.sleep(0.2)
+        # self.wait_write("end", "<HPE>")
+        self.logger.info("completed bootstrap configuration")
 
 class VSR(vrnetlab.VR):
     def __init__(self, username, password):

@@ -262,5 +262,3 @@ class VR:
                     self.update_health(1, "VM failed - restarting")
                 else:
                     self.update_health(1, "starting")
-
-

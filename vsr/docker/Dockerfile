@@ -16,7 +16,8 @@ RUN apt-get update -qy \
 ARG IMAGE
 COPY $IMAGE* /
 COPY *.py /
+COPY qemu.txt /
 
-EXPOSE 22 830 5000 10000-10099
+EXPOSE 22 23 830 5000 5001 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]
 ENTRYPOINT ["/launch.py"]

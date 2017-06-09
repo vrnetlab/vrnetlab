@@ -37,6 +37,7 @@ class VSR_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
+        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:127.0.0.1:5001,server,nowait"])
         self.num_nics = 4
 
     def bootstrap_spin(self):

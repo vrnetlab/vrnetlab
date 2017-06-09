@@ -62,8 +62,10 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("Writing to QEMU Monitor")
                 with open("qemu.txt", "r+") as file:
                     for line in file.readlines():
-                        self.wait_write("%s", wait=")" % line)
+                        self.wait_write(line, wait=")")
                         time.sleep(0.1)
+                file.close()
+
                 self.logger.debug("Done writing to QEMU Monitor")
                 exit
 

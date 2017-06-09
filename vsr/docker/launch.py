@@ -53,8 +53,7 @@ class VSR_vm(vrnetlab.VM):
         if match: # got a match!
             if ridx == 0: # login
                 self.logger.debug("matched login prompt")
-                self.logger.debug("trying to log in with 'admin'")
-                self.wait_write("admin", wait=None)
+                self.wait_write("", wait=None)
 
                 # run main config!
                 self.bootstrap_config()

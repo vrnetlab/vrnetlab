@@ -109,7 +109,7 @@ class VM:
         except:
             pass
 
-        self.tn = telnetlib.Telnet("127.0.0.1", 5001 + self.num)
+        self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
 
     def gen_mgmt(self):

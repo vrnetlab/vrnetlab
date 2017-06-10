@@ -73,6 +73,7 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("Switching to line aux0")
                 self.tn.close()
                 self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+                time.sleep(0.5)
 
                 # run main config!
                 self.bootstrap_config()
@@ -100,7 +101,7 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("", wait=None)
+        self.wait_write("\x0D", wait="Line aux0")
         self.wait_write("system-view")
         self.wait_write("ssh server enable")
         self.wait_write("user-interface class vty")

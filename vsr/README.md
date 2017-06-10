@@ -2,13 +2,24 @@ vrnetlab / HP VSR1000
 ======================
 This is the vrnetlab docker image for HP VSR1000.
 
+Building the docker image
+-------------------------
+Download the HPE VSR1001 image here https://h10145.www1.hpe.com/downloads/SoftwareReleases.aspx?ProductNumber=JG811AAE&lang=&cc=&prodSeriesId= . The current release is "VSR1000_7.10.R0326-X64".
 
-Need to figure out a way to send these commands through QEMU:
+Usage
+-----
+```
+make docker-image
+docker run -d --privileged --name my-vsr-router vr-vsr:R0326
+```
 
-<HP>system-view
-[HP]user-interface aux 0
-[HP-line-aux0]authentication-mode none
-[HP-line-aux0]user-role network-admin
-[HP-line-aux0]quit
+System requirements
+-------------------
+CPU: 1 core
+RAM: 2GB
+Disk: <1GB
 
-Prereq to be able to access the box after startup.
+FUAQ - Frequently or Unfrequently Asked Questions
+-------------------------------------------------
+##### Q: Has this been extensively tested?
+A: Nope. It starts and you can connect to it. Please do try it out and let me know if it works.

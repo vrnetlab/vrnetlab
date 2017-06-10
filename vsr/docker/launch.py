@@ -73,7 +73,7 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("Switching to line aux0")
                 self.tn.close()
                 self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
-                time.sleep(0.5)
+                time.sleep(120)
 
                 # run main config!
                 self.bootstrap_config()

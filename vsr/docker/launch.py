@@ -63,6 +63,7 @@ class VSR_vm(vrnetlab.VM):
                 with open("qemu.txt", "r+") as file:
                     for line in file.readlines():
                         self.wait_write(line, wait=")")
+                        self.logger.debug("Wrote line:" + line)
                         time.sleep(0.1)
                 file.close()
 

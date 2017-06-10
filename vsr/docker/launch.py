@@ -100,6 +100,7 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
+        self.wait_write("\x0D", None)
         self.wait_write("\x0D", "<HPE>")
         self.logger.debug("Entering system view")
         self.wait_write("system-view", "<HPE>")

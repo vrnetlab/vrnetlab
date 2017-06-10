@@ -1,5 +1,5 @@
 FROM debian:stable
-MAINTAINER Fredrik Holmberg <fredrik@equanic.com>
+MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive
 

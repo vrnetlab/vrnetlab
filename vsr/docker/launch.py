@@ -53,11 +53,12 @@ class VSR_vm(vrnetlab.VM):
         if match: # got a match!
             if ridx == 0: # login
                 self.logger.debug("VM started")
-                # self.wait_write("screendump fixed.ppm", wait=")")
+
                 self.logger.debug("Connecting to QEMU Monitor")
                 self.tn = telnetlib.Telnet("127.0.0.1", 5001 + self.num)
                 self.wait_write("", wait=")")
 
+                # To allow access to aux0 serial console
                 self.logger.debug("Writing to QEMU Monitor")
                 with open("qemu.txt", "r+") as file:
                     for line in file.readlines():

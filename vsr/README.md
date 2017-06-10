@@ -25,4 +25,4 @@ Disk: <1GB
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
 ##### Q: Has this been extensively tested?
-A: Nope. It starts and you can connect to it. Please do try it out and let me know if it works.
+A: Nope. It starts and you can connect to it. Take it for a spin and provide some feedback :-)

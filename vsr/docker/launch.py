@@ -63,7 +63,7 @@ class VSR_vm(vrnetlab.VM):
                 with open("qemu.txt", "r+") as file:
                     for line in file.readlines():
                         self.wait_write(line, wait=")")
-                        self.logger.debug("Wrote line:" + line)
+                        # self.logger.debug("Wrote line:" + line)
                         time.sleep(0.1)
                 file.close()
 
@@ -72,8 +72,9 @@ class VSR_vm(vrnetlab.VM):
 
                 self.logger.debug("Switching to line aux0")
                 self.tn.close()
-                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
                 time.sleep(120)
+                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+
 
                 # run main config!
                 self.bootstrap_config()

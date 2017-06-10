@@ -117,8 +117,8 @@ class VSR_vm(vrnetlab.VM):
         self.wait_write("interface GigabitEthernet5/0", None)
         self.wait_write("ip address 10.0.0.15 255.255.255.0", None)
         self.wait_write("quit", None)
-        self.wait_write("end", "<HPE>")
-        self.logger.info("completed bootstrap configuration", None)
+        # self.wait_write("end", "<HPE>")
+        self.logger.info("completed bootstrap configuration")
 
 class VSR(vrnetlab.VR):
     def __init__(self, username, password):

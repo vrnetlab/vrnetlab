@@ -70,7 +70,8 @@ class VSR_vm(vrnetlab.VM):
                 self.wait_write("", wait=")")
                 self.logger.debug("Done writing to QEMU Monitor")
 
-                self.logger.debug("Connecting to line aux0")
+                self.logger.debug("Switching to line aux0")
+                self.tn.close()
                 self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
                 # run main config!

@@ -99,7 +99,7 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("", None)
+        self.wait_write("", wait=">")
         self.wait_write("system-view")
         self.wait_write("ssh server enable")
         self.wait_write("user-interface class vty")
@@ -111,6 +111,7 @@ class VSR_vm(vrnetlab.VM):
         self.wait_write("service-type ssh")
         self.wait_write("authorization-attribute user-role network-admin")
         self.wait_write("quit")
+        self.wait_write("", wait=">")
         self.logger.info("completed bootstrap configuration")
 
 class VSR(vrnetlab.VR):

@@ -101,7 +101,7 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("\x0D", wait="Line aux0")
+        self.wait_write("\x0D", wait="ENTER")
         self.wait_write("system-view")
         self.wait_write("ssh server enable")
         self.wait_write("user-interface class vty")

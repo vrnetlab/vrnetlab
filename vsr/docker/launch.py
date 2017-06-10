@@ -66,6 +66,7 @@ class VSR_vm(vrnetlab.VM):
                         time.sleep(0.1)
                 file.close()
 
+                self.wait_write("", wait=")")
                 self.logger.debug("Done writing to QEMU Monitor")
 
                 self.logger.debug("Connecting to line aux0")

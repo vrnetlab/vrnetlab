@@ -102,7 +102,9 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("\x0D", wait="ENTER")
+        self.wait_write("", wait=None)
+        self.wait_write("\x0D", wait=None)
+        self.wait_write("\x0D", wait="<HPE>")
         self.wait_write("system-view")
         self.wait_write("ssh server enable")
         self.wait_write("user-interface class vty")
@@ -113,6 +115,9 @@ class VSR_vm(vrnetlab.VM):
         self.wait_write("password simple admin")
         self.wait_write("service-type ssh")
         self.wait_write("authorization-attribute user-role network-admin")
+        self.wait_write("quit")
+        self.wait_write("interface GigabitEthernet5/0")
+        self.wait_write("ip address 10.0.0.15 255.255.255.0")
         self.wait_write("quit")
         self.logger.info("completed bootstrap configuration")
 

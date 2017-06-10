@@ -88,6 +88,3 @@ sendkey m
 sendkey i
 sendkey n
 sendkey kp_enter
-
-screendump con0-dump.ppm
-

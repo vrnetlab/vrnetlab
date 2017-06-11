@@ -115,10 +115,10 @@ class VSR_vm(vrnetlab.VM):
         """
         self.logger.info("applying bootstrap configuration")
         self.wait_write("\r", None)
+        # Timing to get a proper prompt
         time.sleep(0.25)
         self.wait_write("\r", None)
         time.sleep(0.25)
-        # self.wait_write("\r", "<HPE>")
         self.wait_write("system-view", "<HPE>")
         self.wait_write("ssh server enable", "[HPE]")
         self.wait_write("user-interface class vty", "[HPE]")

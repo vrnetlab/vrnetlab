@@ -29,14 +29,13 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
 logging.Logger.trace = trace
 
-
 class VSR_vm(vrnetlab.VM):
     def __init__(self, username, password):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
-        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:0.0.0.0:5001,server,nowait"])
+        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:0.0.0.0:6000,server,nowait"])
         self.num_nics = 4
 
     def bootstrap_spin(self):
@@ -55,19 +54,33 @@ class VSR_vm(vrnetlab.VM):
                 self.logger.debug("VM started")
 
                 self.logger.debug("Connecting to QEMU Monitor")
-                self.tn = telnetlib.Telnet("127.0.0.1", 5001 + self.num)
+                self.tn = telnetlib.Telnet("127.0.0.1", 6000 + self.num)
                 self.wait_write("", wait=")")
 
                 # To allow access to aux0 serial console
                 self.logger.debug("Writing to QEMU Monitor")
-                with open("qemu.txt", "r+") as file:
-                    for line in file.readlines():
-                        self.wait_write(line, wait=")")
-                        # self.logger.debug("Wrote line:" + line)
-                        time.sleep(0.1)
-                file.close()
 
-                self.wait_write("", wait=")")
+                # Cred to @plajjan for this one
+                commands = """\x04
+
+                system-view
+                user-interface aux 0
+                authentication-mode none
+                user-role network-admin
+                """
+
+                key_map = {
+                    '\x04': 'ctrl-d',
+                    ' ': 'spc',
+                    '-': 'minus',
+                    '\n': 'kp_enter'
+                }
+
+                qemu_commands = [ "sendkey {}".format(key_map.get(c) or c) for c in commands ]
+
+                for c in qemu_commands:
+                    self.wait_write(c, wait=")")
+
                 self.logger.debug("Done writing to QEMU Monitor")
 
                 self.logger.debug("Switching to line aux0")
@@ -101,45 +114,33 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("\x0D", None)
-        self.wait_write("\x0D", "<HPE>")
-        self.logger.debug("Entering system view")
+        self.wait_write("\r", None)
+        time.sleep(0.25)
+        self.wait_write("\r", None)
+        time.sleep(0.25)
+        # self.wait_write("\r", "<HPE>")
         self.wait_write("system-view", "<HPE>")
-        time.sleep(0.2)
-        self.wait_write("ssh server enable", None)
-        time.sleep(0.2)
-        self.wait_write("user-interface class vty", None)
-        time.sleep(0.2)
-        self.wait_write("authentication-mode scheme", None)
-        time.sleep(0.2)
-        self.wait_write("protocol inbound ssh", None)
-        time.sleep(0.2)
-        self.wait_write("quit", None)
-        time.sleep(0.2)
-        self.wait_write("local-user admin", None)
-        time.sleep(0.2)
-        self.wait_write("password simple admin", None)
-        time.sleep(0.2)
-        self.wait_write("service-type ssh", None)
-        time.sleep(0.2)
-        self.wait_write("authorization-attribute user-role network-admin", None)
-        time.sleep(0.2)
-        self.wait_write("quit", None)
-        time.sleep(0.2)
-        self.wait_write("interface GigabitEthernet5/0", None)
-        time.sleep(0.2)
-        self.wait_write("ip address 10.0.0.15 255.255.255.0", None)
-        time.sleep(0.2)
-        self.wait_write("quit", None)
-        time.sleep(0.2)
-        # self.wait_write("end", "<HPE>")
+        self.wait_write("ssh server enable", "[HPE]")
+        self.wait_write("user-interface class vty", "[HPE]")
+        self.wait_write("authentication-mode scheme", "[HPE-line-class-vty]")
+        self.wait_write("protocol inbound ssh", "[HPE-line-class-vty]")
+        self.wait_write("quit", "[HPE-line-class-vty]")
+        self.wait_write("local-user %s" % (self.username), "[HPE]")
+        self.wait_write("password simple %s" % (self.password), "[HPE-luser-manage-%s]" % (self.username))
+        self.wait_write("service-type ssh", "[HPE-luser-manage-%s]" % (self.username))
+        self.wait_write("authorization-attribute user-role network-admin", "[HPE-luser-manage-%s]" % (self.username))
+        self.wait_write("quit", "[HPE-luser-manage-%s]" % (self.username))
+        self.wait_write("interface GigabitEthernet5/0", "[HPE]")
+        self.wait_write("ip address 10.0.0.15 255.255.255.0", "[HPE-GigabitEthernet5/0]")
+        self.wait_write("quit", "[HPE-GigabitEthernet5/0]")
+        self.wait_write("quit", "[HPE]")
+        self.wait_write("quit", "<HPE>")
         self.logger.info("completed bootstrap configuration")
 
 class VSR(vrnetlab.VR):
     def __init__(self, username, password):
         super(VSR, self).__init__(username, password)
         self.vms = [ VSR_vm(username, password) ]
-
 
 if __name__ == '__main__':
     import argparse

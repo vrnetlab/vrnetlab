@@ -14,6 +14,7 @@ It supports:
  * Cisco Nexus NX-OS (using Titanium emulator)
  * Cisco XRv (not XRv9000)
  * Juniper vMX
+ * Juniper vQFX
  * Nokia VSR
  
 I talk a little about it during my presentation about TeraStream testing at

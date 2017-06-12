@@ -35,8 +35,8 @@ class ROS_vm(vrnetlab.VM):
                 disk_image = "/" + e
         super(ROS_vm, self).__init__(username, password, disk_image=disk_image, ram=256)
         self.qemu_args.extend(["-boot", "n"])
-        # Starting off with 8 nics
-        self.num_nics = 7
+
+        self.num_nics = 31
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.

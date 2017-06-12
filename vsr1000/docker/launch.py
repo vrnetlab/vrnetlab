@@ -36,7 +36,9 @@ class VSR_vm(vrnetlab.VM):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
         self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:0.0.0.0:6000,server,nowait"])
-        self.num_nics = 4
+
+        # The VSR supports up to 15 user nics
+        self.num_nics = 7
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -55,7 +57,7 @@ class VSR_vm(vrnetlab.VM):
 
                 self.logger.debug("Connecting to QEMU Monitor")
                 self.tn = telnetlib.Telnet("127.0.0.1", 6000 + self.num)
-                self.wait_write("", wait=")")
+                self.wait_write("", wait="(qemu)")
 
                 # To allow access to aux0 serial console
                 self.logger.debug("Writing to QEMU Monitor")
@@ -63,11 +65,14 @@ class VSR_vm(vrnetlab.VM):
                 # Cred to @plajjan for this one
                 commands = """\x04
 
-                system-view
-                user-interface aux 0
-                authentication-mode none
-                user-role network-admin
-                """
+
+system-view
+user-interface aux 0
+authentication-mode none
+user-role network-admin
+quit
+
+"""
 
                 key_map = {
                     '\x04': 'ctrl-d',
@@ -79,13 +84,15 @@ class VSR_vm(vrnetlab.VM):
                 qemu_commands = [ "sendkey {}".format(key_map.get(c) or c) for c in commands ]
 
                 for c in qemu_commands:
-                    self.wait_write(c, wait=")")
+                    self.wait_write(c, wait="(qemu)")
+                    # Pace the characters sent via QEMU Monitor
+                    time.sleep(0.1)
+
+                self.tn.close()
 
                 self.logger.debug("Done writing to QEMU Monitor")
-
                 self.logger.debug("Switching to line aux0")
-                self.tn.close()
-                # time.sleep(120)
+
                 self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
                 # run main config!
@@ -114,9 +121,9 @@ class VSR_vm(vrnetlab.VM):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("\r\r\r", None)
-        # Timing to get a proper prompt
-        time.sleep(0.5)
+        self.wait_write("\r", None)
+        # Wait for the prompt
+        time.sleep(1)
         self.wait_write("system-view", "<HPE>")
         self.wait_write("ssh server enable", "[HPE]")
         self.wait_write("user-interface class vty", "[HPE]")
@@ -128,9 +135,9 @@ class VSR_vm(vrnetlab.VM):
         self.wait_write("service-type ssh", "[HPE-luser-manage-%s]" % (self.username))
         self.wait_write("authorization-attribute user-role network-admin", "[HPE-luser-manage-%s]" % (self.username))
         self.wait_write("quit", "[HPE-luser-manage-%s]" % (self.username))
-        self.wait_write("interface GigabitEthernet5/0", "[HPE]")
-        self.wait_write("ip address 10.0.0.15 255.255.255.0", "[HPE-GigabitEthernet5/0]")
-        self.wait_write("quit", "[HPE-GigabitEthernet5/0]")
+        self.wait_write("interface GigabitEthernet%s/0" % (self.num_nics + 1), "[HPE]")
+        self.wait_write("ip address 10.0.0.15 255.255.255.0", "[HPE-GigabitEthernet%s/0]" % (self.num_nics + 1))
+        self.wait_write("quit", "[HPE-GigabitEthernet%s/0]" % (self.num_nics + 1))
         self.wait_write("quit", "[HPE]")
         self.wait_write("quit", "<HPE>")
         self.logger.info("completed bootstrap configuration")

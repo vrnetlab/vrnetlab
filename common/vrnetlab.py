@@ -61,6 +61,7 @@ class VM:
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
+        self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
                                "-drive", "if=ide,file=%s" % disk_image])
@@ -109,6 +110,7 @@ class VM:
         except:
             pass
 
+        self.qm = telnetlib.Telnet("127.0.0.1", 4000 + self.num)
         self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
 

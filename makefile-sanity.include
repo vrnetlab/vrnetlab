@@ -1,5 +1,5 @@
 ifdef DOCKER_REGISTRY
-ifneq ($(DOCKER_REGISTRY), $(shell echo $(DOCKER_REGISTRY) | sed -ne '/^[A-Za-z0-9.\/]\+:[0-9]\+\([A-Za-z0-9.\/]\+\)\?$$/p'))
+ifneq ($(DOCKER_REGISTRY), $(shell echo $(DOCKER_REGISTRY) | sed -ne '/^[A-Za-z0-9.\/]\+:[0-9]\+\([A-Za-z0-9.\/-]\+\)\?$$/p'))
 $(error Bad docker registry URL. Should follow format registry.example.com:1234 or registry.example.com:1234/foo)
 endif
     REGISTRY=$(DOCKER_REGISTRY)/

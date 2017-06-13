@@ -176,15 +176,27 @@ class VM:
 
 
 
-    def wait_write(self, cmd, wait='#'):
+    def wait_write(self, cmd, wait='#', con=None):
         """ Wait for something on the serial port and then send command
+
+            Defaults to using self.tn as connection but this can be overridden
+            by passing a telnetlib.Telnet object in the con argument.
         """
+        con_name = 'custom con'
+        if con is None:
+            con = self.tn
+
+        if con == self.tn:
+            con_name = 'serial console'
+        if con == self.qm:
+            con_name = 'qemu monitor'
+
         if wait:
-            self.logger.trace("waiting for '%s' on serial console" % wait)
-            res = self.tn.read_until(wait.encode())
-            self.logger.trace("read from serial console: %s" % res.decode())
-        self.logger.debug("writing to serial console: %s" % cmd)
-        self.tn.write("{}\r".format(cmd).encode())
+            self.logger.trace("waiting for '%s' on %s" % (wait, con_name))
+            res = con.read_until(wait.encode())
+            self.logger.trace("read from %s: %s" % (con_name, res.decode()))
+        self.logger.debug("writing to %s: %s" % (con_name, cmd))
+        con.write("{}\r".format(cmd).encode())
 
 
     def work(self):

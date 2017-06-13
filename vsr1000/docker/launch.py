@@ -35,7 +35,6 @@ class VSR_vm(vrnetlab.VM):
             if re.search(".qco$", e):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
-        self.qemu_args.extend(["-boot", "n", "-monitor", "tcp:0.0.0.0:6000,server,nowait"])
 
         # The VSR supports up to 15 user nics
         self.num_nics = 7
@@ -55,9 +54,7 @@ class VSR_vm(vrnetlab.VM):
             if ridx == 0: # login
                 self.logger.debug("VM started")
 
-                self.logger.debug("Connecting to QEMU Monitor")
-                self.tn = telnetlib.Telnet("127.0.0.1", 6000 + self.num)
-                self.wait_write("", wait="(qemu)")
+                self.wait_write("", wait="(qemu)", con=self.qm)
 
                 # To allow access to aux0 serial console
                 self.logger.debug("Writing to QEMU Monitor")
@@ -84,11 +81,9 @@ quit
                 qemu_commands = [ "sendkey {}".format(key_map.get(c) or c) for c in commands ]
 
                 for c in qemu_commands:
-                    self.wait_write(c, wait="(qemu)")
+                    self.wait_write(c, wait="(qemu)", con=self.qm)
                     # Pace the characters sent via QEMU Monitor
                     time.sleep(0.1)
-
-                self.tn.close()
 
                 self.logger.debug("Done writing to QEMU Monitor")
                 self.logger.debug("Switching to line aux0")

@@ -37,10 +37,10 @@ class XRV_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2", e):
                 disk_image = "/" + e
-        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=8196)
+        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=6144)
         self.num_nics = 16
         self.qemu_args.extend(["-cpu", "host",
-                               "-smp", "cores=4,threads=1,sockets=1",
+                               "-smp", "cores=2,threads=1,sockets=1",
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % (self.num + 1),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % (self.num + 2),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % (self.num + 3)])

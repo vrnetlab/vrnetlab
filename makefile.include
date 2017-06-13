@@ -1,5 +1,5 @@
 VR_NAME=$(shell basename $$(pwd))
-IMAGES=$(shell ls *.tgz *.vmdk* *.qcow2 *.iso 2>/dev/null)
+IMAGES=$(shell ls $(IMAGE_GLOB) 2>/dev/null)
 NUM_IMAGES=$(shell ls $(IMAGES) | wc -l)
 
 ifeq ($(NUM_IMAGES), 0)
@@ -36,5 +36,12 @@ docker-push-image:
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
 	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
 	docker push $(REGISTRY)vr-$(VR_NAME):$(VERSION)
+
+usage:
+	@echo "Usage: put the $(VENDOR) $(NAME) $(IMAGE_FORMAT) image in this directory and run:"
+	@echo "  make"
+
+no-image:
+	@echo "ERROR: you have no $(IMAGE_FORMAT) ($(IMAGE_GLOB)) image"
 
 all: docker-image

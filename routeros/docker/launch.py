@@ -52,7 +52,6 @@ class ROS_vm(vrnetlab.VM):
         if match: # got a match!
             if ridx == 0: # login
                 self.logger.debug("VM started")
-                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
 
                 # Login
                 self.wait_write("\r", None)

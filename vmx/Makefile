@@ -1,14 +1,14 @@
+VENDOR=Juniper
+NAME=vMX
+IMAGE_FORMAT=tgz
+IMAGE_GLOB=*.tgz
+
+# match versions like:
+# TODO: add example file names here
 VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9][0-9]\.[0-9][A-Z][0-9]\+\.[0-9]\+\)[^0-9].*$$/\1/')
 
 -include ../makefile-sanity.include
 -include ../makefile.include
-
-usage:
-	@echo "Usage: put the Juniper vMX .tgz file in this directory and run:"
-	@echo "  make"
-
-no-image:
-	@echo "ERROR: you have no .tgz file"
 
 docker-pre-build:
 	-cat cidfile | xargs --no-run-if-empty docker rm -f

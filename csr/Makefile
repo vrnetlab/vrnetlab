@@ -1,3 +1,8 @@
+VENDOR=Cisco
+NAME=CSR1000v
+IMAGE_FORMAT=qcow2
+IMAGE_GLOB=*.qcow2
+
 # match versions like:
 # csr1000v-universalk9.16.03.01a.qcow2
 # csr1000v-universalk9.16.04.01.qcow2
@@ -5,14 +10,6 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9]\+\.[0-9]\+\.[0-9]\+[s
 
 -include ../makefile-sanity.include
 -include ../makefile.include
-
-
-usage:
-	@echo "Usage: put the Cisco CSR1000v qcow2 image in this directory and run:"
-	@echo "  make"
-
-no-image:
-	@echo "ERROR: you have no .qcow2 image"
 
 docker-pre-build:
 	-cat cidfile | xargs --no-run-if-empty docker rm -f

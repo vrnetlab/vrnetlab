@@ -1,7 +1,9 @@
 vrnetlab BGP speaker
 ====================
-This is vrp-bgp, the vrnetlab BGP speaker. It is specifically written as a test
+This is vr-bgp, the vrnetlab BGP speaker. It is specifically written as a test
 helper for a CI environment so that one can easily test BGP route policies.
+Under the hood we use ExaBGP together with a few Python helper programs to
+build a dead simple HTTP API.
 
 It uses the vrnetlab xcon program to connect to a virtual router port. See
 vr-xcon for more information on how that works under the hood. Naturally it
@@ -38,15 +40,22 @@ routes.
 
 vr-bgp only supports a single BGP neighbor (well, one per AFI - IPv4 / IPv6) at
 a time which might seem tedious at first but it also simplifies things a lot as
-we can key information merely on bgp speaker rather than on individual
-neighbors.
+we don't have to key information on individual neighbors.
+
+next-hops are stored as attributes of a prefix, which isn't entirely correct as
+it's really part of the NLRI information in BGP updates and not part of the
+path attributes. However, putting it as an attribute vastly simplifies things.
+The primary drawback is that there is no way to tell two prefixes with
+different next-hops apart. This normally does not happen for vr-bgp since we
+only have one BGP neighbor per AFI and that neighbor will only announce one
+next-hop per prefix but this might make us incompatible with BGP add-path.
 
 API
 ---
 The vr-bgp API is a very simple RESTful API running by default on port 5000, exposing three endpoints:
-* `GET http://docker-ip:5000/neighbors`: lists all configured neighbors and connection states
-* `GET http://docker-ip:5000/received`: lists all received prefixes by address family and their attributes
-* `POST http://docker-ip:5000/announce`: announces the prefixes specified in the body of the request, with optional attributes
+ * `GET http://docker-ip:5000/neighbors`: lists all configured neighbors and connection states
+ * `GET http://docker-ip:5000/received`: lists all received prefixes by address family and their attributes
+ * `POST http://docker-ip:5000/announce`: announces the prefixes specified in the body of the request, with optional attributes
 
 ### `GET /neighbors`
 ```javascript
@@ -62,7 +71,8 @@ The vr-bgp API is a very simple RESTful API running by default on port 5000, exp
 }
 ```
 
-The example shows a vr-bgp speaker configured with two neighbors. Connections to both neighbors are established.
+The example shows a vr-bgp speaker configured with two neighbors. Connections
+to both neighbors are established.
 
 ### `GET /received`
 ```javascript
@@ -84,6 +94,7 @@ The example shows a vr-bgp speaker configured with two neighbors. Connections to
                 ]
             ],
             "confederation-path": [],
+            "next-hop": 
             "origin": "igp"
         }
     },
@@ -106,8 +117,9 @@ The example shows a vr-bgp speaker configured with two neighbors. Connections to
 }
 ```
 
-The example shows two received prefixes for IPv4 and IPv4 address family with all attributes.
-Note that community string `2792:10300` is broken down into a list of integers `[2792, 10300]`.
+The example shows two received prefixes for IPv4 and IPv4 address family with
+all attributes. Note that community string `2792:10300` is broken down into a
+list of integers `[2792, 10300]`.
 
 ### `POST /announce`
 ```javascript
@@ -119,13 +131,15 @@ Note that community string `2792:10300` is broken down into a list of integers `
 ]
 ```
 
-The example shows announcement configuration for four prefixes. By default, all prefixes originate
-in the local AS (21 in this example).
+The example shows announcement configuration for four prefixes. By default, all
+prefixes originate in the local AS (21 in this example).
 
 Additional attributes exposed through the API are:
-* `community`: set any number of communities by providing a list of strings `["x:y", "w:z"]`
-* `as-path`: override the default as-path (local-as) by providing a list of integers `[21, 65000]`
-* `med`: set multi-exit discriminator (MED) attribute to an integer value
+ * `community`: set any number of communities by providing a list of strings
+   `["x:y", "w:z"]`
+ * `as-path`: override the default as-path (local-as) by providing a list of
+   integers `[21, 65000]`
+ * `med`: set multi-exit discriminator (MED) attribute to an integer value
 
 Example
 -------

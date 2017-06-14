@@ -77,14 +77,23 @@ def parse_message(line):
 
             # handle announce
             if 'announce' in update:
-                for afi, neighbors in update['announce'].items():
-                    if 'null' in neighbors:
+                for afi, nexthops in update['announce'].items():
+                    if 'null' in nexthops:
                         log("Received EOR for {}".format(afi))
                     else:
-                        for neighbor, prefixes in neighbors.items():
+                        for nexthop, prefixes in nexthops.items():
+                            if nexthop.startswith('fe80:'):
+                                # ignore IPv6 link local next-hops. BGP sends
+                                # both LL next-hop and GUA so we just ignore LL
+                                # and parse GUA
+                                continue
                             for prefix in prefixes:
                                 log("announce {}".format(prefix))
                                 attributes = update['attribute']
+                                # store next-hop, which is NLRI information as
+                                # (path) attribute. this is not according to
+                                # RFC but gosh does it simplify things.
+                                attributes['next-hop'] = nexthop
                                 upsert_prefix(afi, prefix, attributes)
 
             # handle withdraws

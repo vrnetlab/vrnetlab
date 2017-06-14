@@ -94,7 +94,7 @@ to both neighbors are established.
                 ]
             ],
             "confederation-path": [],
-            "next-hop": 
+            "next-hop": "192.168.22.1",
             "origin": "igp"
         }
     },
@@ -111,6 +111,7 @@ to both neighbors are established.
                 ]
             ],
             "confederation-path": [],
+            "next-hop": "2001:db8:5::22:1",
             "origin": "igp"
         }
     }

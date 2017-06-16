@@ -78,6 +78,7 @@ if __name__ == '__main__':
     parser.add_argument('--ipv6-prefix', help='IP prefix to configure on the link')
     parser.add_argument('--ipv6-next-hop', help='next-hop address for IPv6 default route')
     parser.add_argument('--allow-mixed-afi-transport', action='store_true', help='do not limit announced prefixes to neighbor AFI')
+    parser.add_argument('--listen', action="store_true", default=False, help='listen to incoming TCP connections')
     parser.add_argument('--local-as', required=True, help='local AS')
     parser.add_argument('--router-id', required=True, help='our router-id')
     parser.add_argument('--peer-as', required=True, help='peer AS')
@@ -107,6 +108,7 @@ if __name__ == '__main__':
         'IPV6_NEIGHBOR': None,
         'IPV4_LOCAL_ADDRESS': None,
         'IPV6_LOCAL_ADDRESS': None,
+        'LISTEN': args.listen,
         'LOCAL_AS': args.local_as,
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',

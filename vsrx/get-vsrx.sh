@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE=$(ls temp/ffp*)
+IMAGE=$(ls temp/ffp* >/dev/null 2>&1)
 
 if [ ! -f temp/*.qcow2 ]; then
 

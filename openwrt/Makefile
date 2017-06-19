@@ -16,3 +16,6 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/openwrt-\([0-9][0-9]\.[0-9][0-9]\(\.[0
 download:
 	python3 download.py
 	for F in `ls *.img.gz`; do gunzip -f $$F; done
+
+build: download
+	$(MAKE) docker-image

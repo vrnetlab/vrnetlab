@@ -4,7 +4,11 @@ This is the vrnetlab docker image for OpenWRT.
 
 Building the docker image
 -------------------------
-Run `make download` to automatically download images from the public OpenWRT
+Run `make build` to automatically download images from the public OpenWRT image
+repository and build them into vrnetlab docker images. `build` consists of the
+`download` step and `docker-image` step, which can be run separately.
+
+Use `make download` to automatically download images from the public OpenWRT
 image repository at https://downloads.openwrt.org. The download script will get
 everything that has a two-digit major version, e.g. 12.09, 14.07, 15.05 etc.
 

@@ -60,7 +60,10 @@ def config_ip(config, input_net, man_address, man_next_hop):
     config['IPV{}_NEIGHBOR'.format(net.version)] = neighbor
 
     subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(address) + "/" + str(net.prefixlen), "dev", "tap0"])
-    subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
+    try:
+        subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
+    except:
+        pass
     subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", "tap0", "via", str(next_hop)])
 
 
@@ -102,6 +105,13 @@ if __name__ == '__main__':
     t2t = subprocess.Popen(["/xcon.py", "--tap-listen", "1"])
     # wait for tcp2tap to bring up the tap0 interface
     time.sleep(1)
+    # stupid hack for docker engine disabling IPv6. It's somewhere around
+    # version 17.04 that docker engine started disabling ipv6 on the sysctl
+    # net.ipv6.conf.all and net.ipv6.conf.default while eth0 and lo still has
+    # it, if docker engine is started with --ipv6. However, with the default at
+    # disable we have to specifically enable it for interfaces created after the
+    # container started...
+    subprocess.check_call(["sysctl", "net.ipv6.conf.tap0.disable_ipv6=0"])
 
     config = {
         'IPV4_NEIGHBOR': None,

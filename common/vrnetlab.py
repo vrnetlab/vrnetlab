@@ -4,6 +4,7 @@ import datetime
 import math
 import logging
 import os
+import re
 import random
 import subprocess
 import telnetlib
@@ -60,11 +61,13 @@ class VM:
         self.num_nics = 0
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
+        overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
+        run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
-                               "-drive", "if=ide,file=%s" % disk_image])
+                               "-drive", "if=ide,file=%s" % overlay_disk_image])
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             self.qemu_args.insert(1, '-enable-kvm')

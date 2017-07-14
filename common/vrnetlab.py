@@ -194,8 +194,17 @@ class VM:
         try:
             self.p.communicate(timeout=10)
         except:
-            self.p.kill()
-            self.p.communicate(timeout=10)
+            try:
+                # this construct is included as an example at
+                # https://docs.python.org/3.6/library/subprocess.html but has
+                # failed on me so wrapping in another try block. It was this
+                # communicate() that failed with:
+                # ValueError: Invalid file object: <_io.TextIOWrapper name=3 encoding='ANSI_X3.4-1968'>
+                self.p.kill()
+                self.p.communicate(timeout=10)
+            except:
+                # just assume it's dead or will die?
+                self.p.wait(timeout=10)
 
 
 

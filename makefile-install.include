@@ -26,9 +26,7 @@
 # there's no need to run the image, otherwise if there's a change we do run it.
 # Include this makefile to have your image automatically do that dance.
 
-docker-prepre-build:
-
-docker-pre-build: docker-prepre-build
+docker-pre-build:
 	-cat cidfile | xargs --no-run-if-empty docker rm -f
 	-rm cidfile
 	-docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION) $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build

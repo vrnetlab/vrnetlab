@@ -18,3 +18,5 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9][0-9]\.[0-9][A-Z][0-9]
 -include ../makefile.include
 -include ../makefile-install.include
 
+docker-build-image-copy:
+	./vmx-extract.sh $(IMAGE)

@@ -13,7 +13,7 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
-COPY vmx /
+COPY vmx /vmx
 COPY *.py /
 
 EXPOSE 22 161/udp 830 5000 10000-10099

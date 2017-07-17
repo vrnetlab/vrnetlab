@@ -128,6 +128,7 @@ class SROS_vm(vrnetlab.VM):
         try:
             uuid_input = license.split(" ")[0]
             self.uuid = mangle_uuid(uuid_input)
+            self.uuid = uuid_input
             m = re.search("([0-9]{4}-[0-9]{2}-)([0-9]{2})", license)
             if m:
                 self.fake_start_date = "%s%02d" % (m.group(1), int(m.group(2))+1)

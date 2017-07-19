@@ -8,6 +8,7 @@ RUN apt-get update -qy \
  && apt-get install -y \
     git \
     golang \
+    procps \
     python \
     python-setuptools \
     python3-jinja2 \

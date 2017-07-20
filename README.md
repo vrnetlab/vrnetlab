@@ -161,9 +161,9 @@ docker run -d --name vr-xcon --link vr1 --link vr2 --link vr3 vr-xcon --p2p vr1/
 See topology-machine/README.md for details on topology machine which can help
 you with managing more complex topologies.
 
-The containers expose port 22 for SSH, port 830 for NETCONF and port 5000 is
-mapped to the virtual serial device (use telnet). All the NICs of the virtual
-routers are exposed via TCP ports in the range 10001-10099.
+The containers expose port 22 for SSH, port 161 for SNMP, port 830 for NETCONF
+and port 5000 is mapped to the virtual serial device (use telnet). All the NICs
+of the virtual routers are exposed via TCP ports in the range 10001-10099.
 
 Use `docker rm -f vr1` to stop and remote a virtual router.
 

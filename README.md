@@ -349,6 +349,10 @@ you need to do is enable the registry for your vrnetlab project. The necessary
 information will be exposed as env vars in GitLab CI which is picked up by the
 build config.
 
+The CI runner executing the jobs must have the tag 'vrnetlab'. Make sure this
+runner supports running VMs (has KVM) and allows the execution of sibling
+docker containers.
+
 If you want, you can use an external docker registry by explicitly configuring
 the following environment variables:
 

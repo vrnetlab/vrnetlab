@@ -5,6 +5,8 @@ stages:
 
 build:
   stage: build
+  tags:
+    - vrnetlab
   script:
     # make sure we pulled LFS files
     - git lfs pull

@@ -9,6 +9,8 @@ import random
 import subprocess
 import telnetlib
 
+MAX_RETRIES=60
+
 def gen_mac(last_octet=None):
     """ Generate a random MAC address that is in the qemu OUI space and that
         has the given last octet.
@@ -113,8 +115,31 @@ class VM:
         except:
             pass
 
-        self.qm = telnetlib.Telnet("127.0.0.1", 4000 + self.num)
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+        for i in range(1, MAX_RETRIES+1):
+            try:
+                self.qm = telnetlib.Telnet("127.0.0.1", 4000 + self.num)
+                break
+            except:
+                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(4000 + self.num, i))
+                time.sleep(1)
+            if i == MAX_RETRIES:
+                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(4000 + self.num))
+
+        for i in range(1, MAX_RETRIES+1):
+            try:
+                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+                break
+            except:
+                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(4000 + self.num, i))
+                time.sleep(1)
+            if i == MAX_RETRIES:
+                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(4000 + self.num))
+        try:
+            outs, errs = self.p.communicate(timeout=2)
+            self.logger.info("STDOUT: %s" % outs)
+            self.logger.info("STDERR: %s" % errs)
+        except:
+            pass
 
 
     def gen_mgmt(self):
@@ -282,3 +307,6 @@ class VR:
                     self.update_health(1, "starting")
 
 
+class QemuBroken(Exception):
+    """ Our Qemu instance is somehow broken
+    """

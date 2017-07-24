@@ -211,9 +211,8 @@ def run_topology(config, dry_run, with_trace=False):
             cmd.extend(["--link", "%s%s:%s" % (args.prefix, vr, vr)])
         cmd.append(docker_registry + "vr-xcon")
         cmd.append("--p2p")
-        cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
+        cmd.extend(["%s/%s--%s/%s" % (link["left"]["router"],
                                            link["left"]["numeric"],
-                                           args.prefix,
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])

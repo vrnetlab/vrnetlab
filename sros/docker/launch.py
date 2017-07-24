@@ -204,6 +204,7 @@ class SROS_cp(SROS_vm):
         # add interface to internal control plane bridge
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
         vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
+        vrnetlab.run_command(["ip", "link", "set", "dev", "vcp-int", "mtu", "10000"])
 
 
 
@@ -266,6 +267,7 @@ class SROS_lc(SROS_vm):
         # add interface to internal control plane bridge
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vfpc{}-int".format(self.slot)])
         vrnetlab.run_command(["ip", "link", "set", "vfpc{}-int".format(self.slot), "up"])
+        vrnetlab.run_command(["ip", "link", "set", "dev", "vfpc{}-int".format(self.slot), "mtu", "10000"])
 
 
 

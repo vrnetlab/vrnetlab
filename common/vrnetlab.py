@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import datetime
-import math
 import logging
+import math
 import os
-import re
 import random
+import re
 import subprocess
 import telnetlib
+import time
 
 MAX_RETRIES=60
 

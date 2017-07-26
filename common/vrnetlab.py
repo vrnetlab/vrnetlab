@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import datetime
-import math
 import logging
+import math
 import os
-import re
 import random
+import re
 import subprocess
 import telnetlib
+import time
 
 MAX_RETRIES=60
 
@@ -130,10 +131,10 @@ class VM:
                 self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
                 break
             except:
-                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(4000 + self.num, i))
+                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(5000 + self.num, i))
                 time.sleep(1)
             if i == MAX_RETRIES:
-                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(4000 + self.num))
+                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(5000 + self.num))
         try:
             outs, errs = self.p.communicate(timeout=2)
             self.logger.info("STDOUT: %s" % outs)

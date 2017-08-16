@@ -22,6 +22,22 @@ vrssh() {
 	fi
 }
 
+vrsftp() {
+        VROUTER=$1
+        USER=$2
+        VR_ADDRESS=$(vr_mgmt_ip $VROUTER)
+
+        if [ -z "$USER" ] ; then
+                if [ -x $(command -v sshpass) ]; then
+                        sshpass -p VR-netlab9 sftp  vrnetlab@$VR_ADDRESS
+                else
+                        sftp vrnetlab@$VR_ADDRESS
+                fi
+        else
+                sftp $USER@$VR_ADDRESS
+        fi
+}
+
 vrcons() {
 	VROUTER=$1
 	telnet $(vr_mgmt_ip $VROUTER) 5000

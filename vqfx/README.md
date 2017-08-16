@@ -43,7 +43,7 @@ System requirements
 -------------------
 CPU: 2 cores
 
-RAM: 3072MB
+RAM: 4096MB
 
 Disk: 1.5GB
 

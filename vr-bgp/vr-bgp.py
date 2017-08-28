@@ -22,7 +22,7 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 
 def config_ip(config, input_net, man_address, man_next_hop):
-    """ Configure IP address on the tap0 interface and set default route
+    """ Configure IP address on the specified interface and set default route
 
         This function is AFI agnostic, just feed it ipaddress objects
     """
@@ -59,12 +59,12 @@ def config_ip(config, input_net, man_address, man_next_hop):
     config['IPV{}_LOCAL_ADDRESS'.format(net.version)] = address
     config['IPV{}_NEIGHBOR'.format(net.version)] = neighbor
 
-    subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(address) + "/" + str(net.prefixlen), "dev", "tap0"])
+    subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(address) + "/" + str(net.prefixlen), "dev", config['INTERFACE']])
     try:
         subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
     except:
         pass
-    subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", "tap0", "via", str(next_hop)])
+    subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", config['INTERFACE'], "via", str(next_hop)])
 
 
 
@@ -87,6 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--peer-as', required=True, help='peer AS')
     parser.add_argument('--md5', help='MD5')
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
+    parser.add_argument('--vlan', type=int, help='VLAN ID to use')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -105,13 +106,7 @@ if __name__ == '__main__':
     t2t = subprocess.Popen(["/xcon.py", "--tap-listen", "1"])
     # wait for tcp2tap to bring up the tap0 interface
     time.sleep(1)
-    # stupid hack for docker engine disabling IPv6. It's somewhere around
-    # version 17.04 that docker engine started disabling ipv6 on the sysctl
-    # net.ipv6.conf.all and net.ipv6.conf.default while eth0 and lo still has
-    # it, if docker engine is started with --ipv6. However, with the default at
-    # disable we have to specifically enable it for interfaces created after the
-    # container started...
-    subprocess.check_call(["sysctl", "net.ipv6.conf.tap0.disable_ipv6=0"])
+    subprocess.check_call(["ip", "link", "set", "tap0", "up"])
 
     config = {
         'IPV4_NEIGHBOR': None,
@@ -123,10 +118,31 @@ if __name__ == '__main__':
         'PEER_AS': args.peer_as,
         'ROUTER_ID': args.router_id or '192.0.2.255',
         'MD5': args.md5,
+        'INTERFACE': 'tap0',
+        'INTERFACE_VLAN': None,
+        'INTERFACE_SYSCTL': 'tap0',
         'ALLOW_MIXED_AFI_TRANSPORT': args.allow_mixed_afi_transport
     }
 
-    subprocess.check_call(["ip", "link", "set", "tap0", "up"])
+    if args.vlan:
+        vlan_intf = "tap0.{}".format(args.vlan)
+        sysctl_vlan_intf = "tap0/{}".format(args.vlan)
+        subprocess.check_call(["ip", "link", "add", "link", "tap0", "name",
+                               vlan_intf, "type", "vlan", "id", str(args.vlan)])
+        subprocess.check_call(["ip", "link", "set", vlan_intf, "up"])
+        config['INTERFACE'] = vlan_intf
+        config['INTERFACE_PHY'] = 'tap0'
+        config['INTERFACE_VLAN'] = args.vlan
+        config['INTERFACE_SYSCTL'] = sysctl_vlan_intf
+
+    # stupid hack for docker engine disabling IPv6. It's somewhere around
+    # version 17.04 that docker engine started disabling ipv6 on the sysctl
+    # net.ipv6.conf.all and net.ipv6.conf.default while eth0 and lo still has
+    # it, if docker engine is started with --ipv6. However, with the default at
+    # disable we have to specifically enable it for interfaces created after the
+    # container started...
+    subprocess.check_call(["sysctl", "net.ipv6.conf.{}.disable_ipv6=0".format(config['INTERFACE_SYSCTL'])])
+
     if args.ipv4_prefix:
         config_ip(config, args.ipv4_prefix,
             args.ipv4_local_address,

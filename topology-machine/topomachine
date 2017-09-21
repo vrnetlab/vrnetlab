@@ -183,6 +183,16 @@ def run_topology(config, dry_run, with_trace=False):
     if with_trace:
         trace = '--trace'
 
+    docker_networks = list(set([r['docker_network'] for r in config['routers'].values() if 'docker_network' in r]))
+    if len(docker_networks) > 1:
+        print("At most 1 docker network allowed")
+        sys.exit(1)
+    try:
+        docker_network = docker_networks[0]
+        run_command(["docker", "network", "create", docker_network, "||", "true"], dry_run)
+    except IndexError:
+        docker_network = None
+
     docker_registry = ""
     if os.getenv("DOCKER_REGISTRY"):
         docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
@@ -190,9 +200,13 @@ def run_topology(config, dry_run, with_trace=False):
         val = config['routers'][router]
         name = "%s%s" % (args.prefix, router)
         cmd = ["docker", "run", "--privileged", "-d",
-               "--name", name,
-               "%svr-%s:%s" % (docker_registry, val["type"], val["version"])
+               "--name", name
         ]
+        if 'docker_network' in val:
+            cmd.append('--network ' + val['docker_network'])
+            cmd.append('--network-alias ' + router)
+
+        cmd.append("%svr-%s:%s" % (docker_registry, val["type"], val["version"]))
         if trace:
             cmd.append(trace)
         if 'run_args' in val:
@@ -209,8 +223,11 @@ def run_topology(config, dry_run, with_trace=False):
         name = "%svr-xcon" % args.prefix
         cmd = ["docker", "run", "--privileged", "-d", "--name", name]
 
-        for vr in sorted(config['routers']):
-            cmd.extend(["--link", "%s%s:%s%s" % (args.prefix, vr, args.prefix, vr)])
+        if docker_network:
+            cmd.extend(["--network", docker_network])
+        else:
+            for vr in sorted(config['routers']):
+                cmd.extend(["--link", "%s%s:%s%s" % (args.prefix, vr, args.prefix, vr)])
         cmd.append(docker_registry + "vr-xcon")
         cmd.append("--p2p")
         cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],

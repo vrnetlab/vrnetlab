@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import collections
 
 import jinja2
 
@@ -40,6 +41,17 @@ class VrTopo:
                 links.extend(fmlinks)
 
         self.links = self.assign_interfaces(links)
+
+        self.links_by_nodes = collections.OrderedDict()
+        for l in self.links:
+            for (link, a, b) in ((l, 'left', 'right'), (l, 'right', 'left')):
+                if link[a]['router'] not in self.links_by_nodes:
+                    self.links_by_nodes[link[a]['router']] = collections.OrderedDict()
+                spec = {'our_interface': link[a]['interface'],
+                        'their_interface': link[b]['interface'],
+                        'our_numeric': link[a]['numeric'],
+                        'their_numeric': link[b]['numeric']}
+                self.links_by_nodes[link[a]['router']].update({link[b]['router']: spec})
 
         for router in sorted(self.routers):
             val = self.routers[router]
@@ -138,7 +150,8 @@ class VrTopo:
         """
         output = {
                 'routers': self.routers,
-                'links': self.links
+                'links': self.links,
+                'links_by_nodes': self.links_by_nodes
             }
 
         if output_format == 'json':

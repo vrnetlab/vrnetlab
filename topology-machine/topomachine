@@ -51,7 +51,9 @@ class VrTopo:
                         'their_interface': link[b]['interface'],
                         'our_numeric': link[a]['numeric'],
                         'their_numeric': link[b]['numeric']}
-                self.links_by_nodes[link[a]['router']].update({link[b]['router']: spec})
+                if link[b]['router'] not in self.links_by_nodes[link[a]['router']]:
+                    self.links_by_nodes[link[a]['router']][link[b]['router']] = []
+                self.links_by_nodes[link[a]['router']][link[b]['router']].append(spec)
 
         for router in sorted(self.routers):
             val = self.routers[router]

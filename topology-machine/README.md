@@ -47,6 +47,17 @@ specify a prefix for the docker container names using `--prefix` which prevents
 collisions if you use the same name for the virtual routers in the different
 topology configurations. Note how 
 
+topology machine is also able to use the docker api to start/stop+remove 
+containers on a remote host. this is achieved using the docker-py module.
+to start a topology run:
+```
+topomachine --api 'tcp://127.0.0.1:2375' --run lltopo.json
+```
+to stop a topology and clean up run:
+```
+topomachine --api 'tcp://127.0.0.1:2375' --stop lltopo.json
+```
+
 Last but not least, there is a template mode which you can use to produce
 configuration for your mangement system, which in turn is provisioning the
 routers. Since the provisioned configuration of the virtual routers needs to

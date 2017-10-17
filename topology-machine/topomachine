@@ -224,12 +224,164 @@ def run_topology(config, dry_run, with_trace=False):
             run_command(cmd, dry_run)
 
 
+def run_container_api(url, image, name, run_args, links=None):
+    import docker
+    client = docker.DockerClient(base_url=url)
+    container = client.containers.run(image, command=run_args, detach=True, privileged=True, name=name, links=links)
+    return(container)
+
+
+def stop_container_api(url, name):
+    import docker
+    client = docker.DockerClient(base_url=url)
+    container = client.containers.get(name)
+    container.stop()
+
+
+
+def remove_container_api(url, name):
+    import docker
+    client = docker.DockerClient(base_url=url)
+    container = client.containers.get(name)
+    container.remove()
+
+
+
+def get_container_health_api(url, name):
+    import docker
+    client = docker.DockerClient(base_url=url)
+    container = client.containers.get(name)
+    health = container.attrs['State']['Health']['Status']
+    return(health)
+
+
+
+def get_container_state_api(url, name):
+    import docker
+    client = docker.DockerClient(base_url=url)
+    container = client.containers.get(name)
+    state = container.attrs['State']['Running']
+    return(state)
+
+
+def run_topology_api(config, url, with_trace=False):
+
+    if 'routers' not in config:
+        print("No routers in config")
+        sys.exit(1)
+
+    trace = ''
+    if with_trace:
+        trace = '--trace'
+
+    docker_registry = ""
+    if os.getenv("DOCKER_REGISTRY"):
+        docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
+    for router in sorted(config['routers']):
+        val = config['routers'][router]
+        name = "%s%s" % (args.prefix, router)
+        image = "%svr-%s:%s" % (docker_registry, val["type"], val["version"])
+
+        api_cmd = []
+        if trace:
+            api_cmd.append(trace)
+        if 'run_args' in val:
+            api_cmd.extend(val["run_args"].split())
+
+        api_output = ''
+        try:
+            api_output = get_container_state_api(url, name)
+        except:
+            pass
+        if api_output:
+            output = ''
+            try:
+                output = get_container_health_api(url, name)
+            except:
+                pass
+            print("Container(%s) already running. Health: %s" % (name, output.strip()))
+        else:
+            print("Starting container(%s)" % name)
+            run_container_api(url, image, name, api_cmd)
+
+    if 'links' in config:
+        name = "%svr-xcon" % args.prefix
+        image = "%s%s" % (docker_registry, name)
+
+        links = []
+        cmd = []
+        for vr in sorted(config['routers']):
+            links.append((vr, vr))
+        cmd.append("--p2p")
+        cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
+                                           link["left"]["numeric"],
+                                           args.prefix,
+                                           link["right"]["router"],
+                                           link["right"]["numeric"]) for link in config['links']])
+        api_output = ''
+        try:
+            api_output = get_container_state_api(url, name)
+        except:
+            pass
+        if api_output:
+            output = ''
+            try:
+                output = get_container_health_api(url, name)
+            except:
+                pass
+            print("Container(%s) already running. Health: %s" % (name, output.strip()))
+        else:
+            print("Starting container(%s)" % name)
+            run_container_api(url, image, name, cmd, links)
+
+
+
+def stop_topology_api(config, url):
+
+    if 'routers' not in config:
+        print("No routers in config")
+        sys.exit(1)
+
+    for router in sorted(config['routers']):
+        name = "%s%s" % (args.prefix, router)
+        try:
+            stop_container_api(url, name)
+            print("Stopped container(%s)" % name)
+        except:
+            print("Container(%s) is not running" % name)
+            pass
+        try:
+            remove_container_api(url, name)
+            print("Removed container(%s)" % name)
+        except:
+            print("Container(%s) already removed" % name)
+            pass
+
+    if 'links' in config:
+        name = "%svr-xcon" % args.prefix
+        try:
+            stop_container_api(url, name)
+            print("Stopped container(%s)" % name)
+        except:
+            print("Container(%s) is not running" % name)
+            pass
+        try:
+            remove_container_api(url, name)
+            print("Removed container(%s)" % name)
+        except:
+            print("Container(%s) already removed" % name)
+            pass
+
+
+
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", help="Build topology from config")
     parser.add_argument("--run", help="Run topology")
+    parser.add_argument("--stop", help="stop and clean up topology")
+    parser.add_argument("--api", help="Run topology using the docker API at this url(example: tcp://127.0.0.1:2375)")
     parser.add_argument("--dry-run", action="store_true", default=False, help="Only print what would be performed during --run")
     parser.add_argument("--prefix", default='', help="docker container name prefix")
     parser.add_argument("--template", nargs=2, help="produce output based on topology information and a template")
@@ -240,6 +392,13 @@ if __name__ == '__main__':
     if args.dry_run and not args.run:
         print("ERROR: --dry-run is only relevant with --run")
         sys.exit(1)
+
+    if args.dry_run and args.api:
+        print("ERROR: --dry-run is not relevant with --api")
+        sys.exit(1)
+
+    if args.stop and not args.api:
+        print("ERROR: --api is required with --stop")
 
     if args.prefix and not args.run:
         print("ERROR: --prefix is only relevant with --run")
@@ -256,13 +415,22 @@ if __name__ == '__main__':
             sys.exit(1)
         print(vt.output())
 
+    if args.stop:
+        input_file = open(args.stop, "r")
+        config = json.loads(input_file.read())
+        input_file.close()
+        stop_topology_api(config, args.api)
+
     if args.run:
         input_file = open(args.run, "r")
         config = json.loads(input_file.read())
         input_file.close()
         if args.dry_run:
             print("The following commands would be executed:")
-        run_topology(config, args.dry_run, args.with_trace)
+        if args.api:
+            run_topology_api(config, args.api, args.with_trace)
+        else:
+            run_topology(config, args.dry_run, args.with_trace)
 
     if args.template:
         input_file = open(args.template[0], "r")

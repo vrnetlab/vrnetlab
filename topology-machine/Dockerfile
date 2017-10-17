@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
  && apt-get upgrade -qy \
  && apt-get install -y \
+    python3-docker \
     python3-jinja2 \
     python3-yaml \
     apt-transport-https \

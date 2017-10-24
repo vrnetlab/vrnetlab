@@ -162,68 +162,6 @@ class VrTopo:
             raise ValueError("Invalid output format")
 
 
-def run_command(cmd, dry_run=False):
-    if dry_run:
-        print(" ".join(cmd))
-        return
-
-    import subprocess
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-    return p.communicate()
-
-
-def run_topology(config, dry_run, with_trace=False):
-    if 'routers' not in config:
-        print("No routers in config")
-        sys.exit(1)
-
-    trace = ''
-    if with_trace:
-        trace = '--trace'
-
-    docker_registry = ""
-    if os.getenv("DOCKER_REGISTRY"):
-        docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
-    for router in sorted(config['routers']):
-        val = config['routers'][router]
-        name = "%s%s" % (args.prefix, router)
-        cmd = ["docker", "run", "--privileged", "-d",
-               "--name", name,
-               "%svr-%s:%s" % (docker_registry, val["type"], val["version"])
-        ]
-        if trace:
-            cmd.append(trace)
-        if 'run_args' in val:
-            cmd.extend(val["run_args"].split())
-
-        output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
-        if output.strip() == "true":
-            output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
-            print("Container already running. Health: %s" % output.strip())
-        else:
-            run_command(cmd, dry_run)
-
-    if 'links' in config:
-        name = "%svr-xcon" % args.prefix
-        cmd = ["docker", "run", "--privileged", "-d", "--name", name]
-
-        for vr in sorted(config['routers']):
-            cmd.extend(["--link", "%s%s:%s" % (args.prefix, vr, vr)])
-        cmd.append(docker_registry + "vr-xcon")
-        cmd.append("--p2p")
-        cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
-                                           link["left"]["numeric"],
-                                           args.prefix,
-                                           link["right"]["router"],
-                                           link["right"]["numeric"]) for link in config['links']])
-        output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
-        if output.strip() == "true":
-            output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
-            print("Container already running. Health: %s" % output.strip())
-        else:
-            run_command(cmd, dry_run)
-
-
 def run_container_api(url, image, name, run_args, links=None):
     import docker
     client = docker.DockerClient(base_url=url)
@@ -238,13 +176,11 @@ def stop_container_api(url, name):
     container.stop()
 
 
-
 def remove_container_api(url, name):
     import docker
     client = docker.DockerClient(base_url=url)
     container = client.containers.get(name)
     container.remove()
-
 
 
 def get_container_health_api(url, name):
@@ -253,7 +189,6 @@ def get_container_health_api(url, name):
     container = client.containers.get(name)
     health = container.attrs['State']['Health']['Status']
     return(health)
-
 
 
 def get_container_state_api(url, name):
@@ -288,48 +223,48 @@ def run_topology_api(config, url, with_trace=False):
         if 'run_args' in val:
             api_cmd.extend(val["run_args"].split())
 
-        api_output = ''
+        state_output = ''
         try:
-            api_output = get_container_state_api(url, name)
+            state_output = get_container_state_api(url, name)
         except:
             pass
-        if api_output:
-            output = ''
+        if state_output:
+            health_output = ''
             try:
-                output = get_container_health_api(url, name)
+                health_output = get_container_health_api(url, name)
             except:
                 pass
-            print("Container(%s) already running. Health: %s" % (name, output.strip()))
+            print("Container(%s) already running. Health: %s" % (name, health_output.strip()))
         else:
             print("Starting container(%s)" % name)
             run_container_api(url, image, name, api_cmd)
 
     if 'links' in config:
         name = "%svr-xcon" % args.prefix
-        image = "%s%s" % (docker_registry, name)
+        image = "%s%s" % (docker_registry, 'vr-xcon')
 
         links = []
         cmd = []
         for vr in sorted(config['routers']):
-            links.append((vr, vr))
+            links.append((args.prefix + vr, args.prefix + vr))
         cmd.append("--p2p")
         cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
                                            link["left"]["numeric"],
                                            args.prefix,
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
-        api_output = ''
+        state_output = ''
         try:
-            api_output = get_container_state_api(url, name)
+            state_output = get_container_state_api(url, name)
         except:
             pass
-        if api_output:
-            output = ''
+        if state_output:
+            health_output = ''
             try:
-                output = get_container_health_api(url, name)
+                health_output = get_container_health_api(url, name)
             except:
                 pass
-            print("Container(%s) already running. Health: %s" % (name, output.strip()))
+            print("Container(%s) already running. Health: %s" % (name, health_output.strip()))
         else:
             print("Starting container(%s)" % name)
             run_container_api(url, image, name, cmd, links)
@@ -381,27 +316,15 @@ if __name__ == '__main__':
     parser.add_argument("--build", help="Build topology from config")
     parser.add_argument("--run", help="Run topology")
     parser.add_argument("--stop", help="stop and clean up topology")
-    parser.add_argument("--api", help="Run topology using the docker API at this url(example: tcp://127.0.0.1:2375)")
-    parser.add_argument("--dry-run", action="store_true", default=False, help="Only print what would be performed during --run")
+    parser.add_argument("--api", help="docker API url. default is 'unix://var/run/docker.sock'", default='unix://var/run/docker.sock')
     parser.add_argument("--prefix", default='', help="docker container name prefix")
     parser.add_argument("--template", nargs=2, help="produce output based on topology information and a template")
     parser.add_argument("--variable", action='append', help="store variables")
     parser.add_argument("--with-trace", action='store_true', help="run virtual routers with --trace")
     args = parser.parse_args()
 
-    if args.dry_run and not args.run:
-        print("ERROR: --dry-run is only relevant with --run")
-        sys.exit(1)
-
-    if args.dry_run and args.api:
-        print("ERROR: --dry-run is not relevant with --api")
-        sys.exit(1)
-
-    if args.stop and not args.api:
-        print("ERROR: --api is required with --stop")
-
-    if args.prefix and not args.run:
-        print("ERROR: --prefix is only relevant with --run")
+    if args.prefix and not (args.run or args.stop):
+        print("ERROR: --prefix is only relevant with --run and --stop")
         sys.exit(1)
 
     if args.build:
@@ -425,12 +348,7 @@ if __name__ == '__main__':
         input_file = open(args.run, "r")
         config = json.loads(input_file.read())
         input_file.close()
-        if args.dry_run:
-            print("The following commands would be executed:")
-        if args.api:
-            run_topology_api(config, args.api, args.with_trace)
-        else:
-            run_topology(config, args.dry_run, args.with_trace)
+        run_topology_api(config, args.api, args.with_trace)
 
     if args.template:
         input_file = open(args.template[0], "r")

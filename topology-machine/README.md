@@ -38,11 +38,10 @@ topology machine is able to run the machines for you, i.e. execute docker run
 for the routers defined in the configuration file and start vr-xcon with the
 relevant arguments to complete the topology:
 ```
-topo --run lltopo.json
+topomachine --run lltopo.json
 ```
 which will then start the docker containers based on the computed topology.
-There's a --dry-run option if you just want to see what commands would be
-executed. If you want to run multiple topologies at the same time you can
+If you want to run multiple topologies at the same time you can
 specify a prefix for the docker container names using `--prefix` which prevents
 collisions if you use the same name for the virtual routers in the different
 topology configurations. Note how 
@@ -51,11 +50,11 @@ topology machine is also able to use the docker api to start/stop+remove
 containers on a remote host. this is achieved using the docker-py module.
 to start a topology run:
 ```
-topomachine --api 'tcp://127.0.0.1:2375' --run lltopo.json
+topomachine --api 'tcp://172.17.0.1:2375' --run lltopo.json
 ```
 to stop a topology and clean up run:
 ```
-topomachine --api 'tcp://127.0.0.1:2375' --stop lltopo.json
+topomachine --api 'tcp://172.17.0.1:2375' --stop lltopo.json
 ```
 
 Last but not least, there is a template mode which you can use to produce

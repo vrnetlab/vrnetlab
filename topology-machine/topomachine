@@ -4,7 +4,7 @@ import json
 import os
 import sys
 import collections
-
+import docker
 import jinja2
 
 class VrTopo:
@@ -163,28 +163,24 @@ class VrTopo:
 
 
 def run_container_api(url, image, name, run_args, links=None):
-    import docker
     client = docker.DockerClient(base_url=url)
     container = client.containers.run(image, command=run_args, detach=True, privileged=True, name=name, links=links)
     return(container)
 
 
 def stop_container_api(url, name):
-    import docker
     client = docker.DockerClient(base_url=url)
     container = client.containers.get(name)
     container.stop()
 
 
 def remove_container_api(url, name):
-    import docker
     client = docker.DockerClient(base_url=url)
     container = client.containers.get(name)
     container.remove()
 
 
 def get_container_health_api(url, name):
-    import docker
     client = docker.DockerClient(base_url=url)
     container = client.containers.get(name)
     health = container.attrs['State']['Health']['Status']
@@ -192,7 +188,6 @@ def get_container_health_api(url, name):
 
 
 def get_container_state_api(url, name):
-    import docker
     client = docker.DockerClient(base_url=url)
     container = client.containers.get(name)
     state = container.attrs['State']['Running']

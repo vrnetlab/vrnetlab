@@ -10,6 +10,7 @@ import socket
 import struct
 import subprocess
 import sys
+import time
 
 
 def handle_SIGCHLD(signal, frame):
@@ -407,5 +408,10 @@ if __name__ == '__main__':
         t2t.work()
 
     if args.raw_listen:
-        t2r = Tcp2Raw(args.raw_if, 10000 + int(args.raw_listen))
-        t2r.work()
+        while True:
+            try:
+                t2r = Tcp2Raw(args.raw_if, 10000 + int(args.raw_listen))
+                t2r.work()
+            except Exception as exc:
+                print(exc)
+            time.sleep(1)

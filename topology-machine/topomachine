@@ -21,7 +21,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('xcon', 'bgp', 'xrv', 'vmx', 'sros', 'csr', 'vqfx', 'vrp'):
+            if val['type'] not in ('dummy', 'xcon', 'bgp', 'xrv', 'vmx', 'sros', 'csr', 'vqfx', 'vrp'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # expand p2p links
@@ -198,6 +198,9 @@ def run_topology(config, dry_run, with_trace=False):
         docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
     for router in sorted(config['routers']):
         val = config['routers'][router]
+        if val["type"] == "dummy":
+            continue
+
         name = "%s%s" % (args.prefix, router)
         cmd = ["docker", "run", "--privileged", "-d",
                "--name", name

@@ -162,7 +162,7 @@ class TcpBridge:
         self.socket2remote[left] = right
         self.socket2remote[right] = left
 
-        
+
 
     def work(self):
         while True:
@@ -211,15 +211,18 @@ class TcpBridge:
 class NoVR(Exception):
     """ No virtual router
     """
-            
+
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", default=False, help='enable debug')
-    parser.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
-    parser.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
-    parser.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
+    p2p = parser.add_argument_group('p2p')
+    p2p.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
+    tap = parser.add_argument_group('tap')
+    tap.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
+    tap.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
+    parser.add_argument('--trace', action="store_true", help="dummy, we don't support tracing but taking the option makes vrnetlab containers uniform")
     args = parser.parse_args()
 
     # sanity

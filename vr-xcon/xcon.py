@@ -218,17 +218,6 @@ class TapConfigurator(object):
     def __init__(self, logger):
         self.logger = logger
 
-    def _wait_for_interface(self, interface):
-        self.logger.debug(interface)
-        while True:
-            try:
-                subprocess.check_call((["ip", "link", "show", interface]))
-                break
-            except subprocess.CalledProcessError:
-                self.logger.debug("Waiting for interface {} to appear".format(interface))
-                time.sleep(1)
-
-
     def _configure_interface_address(self, interface, address, default_route=None):
         net = ipaddress.ip_interface(address)
         if default_route:
@@ -254,9 +243,8 @@ class TapConfigurator(object):
     def configure_interface(self, interface='tap0', vlan=None,
                             ipv4_address=None, ipv4_route=None,
                             ipv6_address=None, ipv6_route=None):
-        # create the interface, wait until it exists
+        # enable the interface
         subprocess.check_call(["ip", "link", "set", interface, "up"])
-        self._wait_for_interface(interface)
 
         interface_sysctl = interface
         if vlan:
@@ -266,7 +254,6 @@ class TapConfigurator(object):
             subprocess.check_call(["ip", "link", "add", "link", physical_interface, "name",
                                    interface, "type", "vlan", "id", str(vlan)])
             subprocess.check_call(["ip", "link", "set", interface, "up"])
-            self._wait_for_interface(interface)
 
         if ipv4_address:
             self._configure_interface_address(interface, ipv4_address, ipv4_route)

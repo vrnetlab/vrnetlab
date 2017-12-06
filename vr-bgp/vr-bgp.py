@@ -179,11 +179,6 @@ if __name__ == '__main__':
         xcon_params.extend(("--vlan", str(args.vlan)))
     t2t = subprocess.Popen(xcon_params)
 
-    # TODO(mzagozen): is this needed?
-    # wait for tcp2tap to bring up the tap0 interface
-    time.sleep(1)
-    subprocess.check_call(["ip", "link", "set", "tap0", "up"])
-
     # generate exabgp config using Jinja2 template
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(['/']))
     template = env.get_template("/exabgp.conf.tpl")

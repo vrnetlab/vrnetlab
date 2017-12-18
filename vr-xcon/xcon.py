@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 import fcntl
+import ipaddress
 import logging
 import os
 import select
 import signal
 import socket
 import struct
+import subprocess
 import sys
 
 
@@ -162,7 +164,7 @@ class TcpBridge:
         self.socket2remote[left] = right
         self.socket2remote[right] = left
 
-        
+
 
     def work(self):
         while True:
@@ -211,15 +213,77 @@ class TcpBridge:
 class NoVR(Exception):
     """ No virtual router
     """
-            
+
+class TapConfigurator(object):
+    def __init__(self, logger):
+        self.logger = logger
+
+    def _configure_interface_address(self, interface, address, default_route=None):
+        net = ipaddress.ip_interface(address)
+        if default_route:
+            try:
+                next_hop = ipaddress.ip_address(default_route)
+            except ValueError:
+                self.logger.error("next-hop address {} could not be parsed".format(default_route))
+                sys.exit(1)
+
+        if default_route and next_hop not in net.network:
+            self.logger.error("next-hop address {} not in network {}".format(next_hop, net))
+            sys.exit(1)
+
+        subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(net.ip) + "/" + str(net.network.prefixlen), "dev", interface])
+        if next_hop:
+            try:
+                subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
+            except:
+                pass
+            subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", interface, "via", str(next_hop)])
+
+
+    def configure_interface(self, interface='tap0', vlan=None,
+                            ipv4_address=None, ipv4_route=None,
+                            ipv6_address=None, ipv6_route=None):
+        # enable the interface
+        subprocess.check_call(["ip", "link", "set", interface, "up"])
+
+        interface_sysctl = interface
+        if vlan:
+            physical_interface = interface
+            interface_sysctl = '{}/{}'.format(interface, vlan)
+            interface = '{}.{}'.format(interface, vlan)
+            subprocess.check_call(["ip", "link", "add", "link", physical_interface, "name",
+                                   interface, "type", "vlan", "id", str(vlan)])
+            subprocess.check_call(["ip", "link", "set", interface, "up"])
+
+        if ipv4_address:
+            self._configure_interface_address(interface, ipv4_address, ipv4_route)
+
+        if ipv6_address:
+            # stupid hack for docker engine disabling IPv6. It's somewhere around
+            # version 17.04 that docker engine started disabling ipv6 on the sysctl
+            # net.ipv6.conf.all and net.ipv6.conf.default while eth0 and lo still has
+            # it, if docker engine is started with --ipv6. However, with the default at
+            # disable we have to specifically enable it for interfaces created after the
+            # container started...
+            subprocess.check_call(["sysctl", "net.ipv6.conf.{}.disable_ipv6=0".format(interface_sysctl)])
+            self._configure_interface_address(interface, ipv6_address, ipv6_route)
+
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", default=False, help='enable debug')
-    parser.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
-    parser.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
-    parser.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
+    p2p = parser.add_argument_group('p2p')
+    p2p.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
+    tap = parser.add_argument_group('tap')
+    tap.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
+    tap.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
+    tap.add_argument('--ipv4-address', help='IPv4 address to use on the tap interface')
+    tap.add_argument('--ipv4-route', help='default IPv4 route to use on the tap interface')
+    tap.add_argument('--ipv6-address', help='IPv6 address to use on the tap interface')
+    tap.add_argument('--ipv6-route', help='default IPv6 route to use on the tap interface')
+    tap.add_argument('--vlan', type=int, help='VLAN ID to use on the tap interface')
+    parser.add_argument('--trace', action="store_true", help="dummy, we don't support tracing but taking the option makes vrnetlab containers uniform")
     args = parser.parse_args()
 
     # sanity
@@ -245,5 +309,12 @@ if __name__ == '__main__':
         tt.work()
 
     if args.tap_listen:
+        # init Tcp2Tap to create interface
         t2t = Tcp2Tap(args.tap_if, 10000 + int(args.tap_listen))
+
+        # now (optionally) configure addressing
+        tc = TapConfigurator(logger)
+        tc.configure_interface(interface=args.tap_if, vlan=args.vlan,
+                               ipv4_address=args.ipv4_address, ipv4_route=args.ipv4_route,
+                               ipv6_address=args.ipv6_address, ipv6_route=args.ipv6_route)
         t2t.work()

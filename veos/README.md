@@ -33,6 +33,10 @@ Usage
 docker run -d --privileged --name my-veos-router vr-veos
 ```
 
+Starting vEOS can easily take more than 10 minutes to start; be patient.
+
+You can use --trace on the docker image to see boot output.
+
 System requirements
 -------------------
 CPU: 1 core

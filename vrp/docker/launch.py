@@ -2,18 +2,12 @@
 
 import datetime
 import logging
-import os
-import random
 import re
 import signal
 import subprocess
 import sys
-import socket
-import telnetlib
 import time
 import math
-import IPy
-import pexpect
 import os
 import vrnetlab
 
@@ -40,133 +34,117 @@ class simulator_VM(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        
+
         self.ram = 16384
         self.vcpu = 6
         self.disk_size = '40G'
-        super(simulator_VM, self).__init__(username, password, disk_image=disk_image, num=0, ram=self.ram)
-        self.logger = logging.getLogger()
+        super(simulator_VM, self).__init__(username, password, disk_image=disk_image, ram=self.ram)
 
         self.num_nics = 14
-        self.wait_time = 20
+        self.wait_time = 30
         self.nic_type = 'virtio-net-pci'
-        vrnetlab.run_command(["qemu-img","create","-f","qcow2","DataDisk.qcow2",self.disk_size])
-        self.qemu_args.extend(["-drive","if=virtio,format=qcow2,file=DataDisk.qcow2"])
+
+        vrnetlab.run_command(["qemu-img", "create", "-f", "qcow2", "DataDisk.qcow2", self.disk_size])
+
         self.qemu_args.extend(["-smp", str(self.vcpu),
-                               "-cpu", "host"])
-        self.qemu_args.extend(["-D", "/var/log/qemu.log"])                       
+                               "-cpu", "host",
+                               "-drive", "if=virtio,format=qcow2,file=DataDisk.qcow2"])
 
-    def start(self):
-        self.logger.info("Starting %s" % self.__class__.__name__)
-        self.start_time = datetime.datetime.now()
-
-        cmd = list(self.qemu_args)
-
-        for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
-            cmd.extend(["-device", "pci-bridge,chassis_nr={},id=pci.{}".format(i, i)])
-
-        cmd.extend(self.gen_mgmt())
-        cmd.extend(self.gen_nics())
-
-        self.logger.debug(cmd)
-        
-        self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE, universal_newlines=True)
-
-        try:
-            outs, errs = self.p.communicate(timeout=2)
-            self.logger.info("STDOUT: %s" % outs)
-            self.logger.info("STDERR: %s" % errs)
-        except:
-            pass
-        
-    def wait_write(self, cmd, wait):
-        
-        idx = self.ssh.expect([pexpect.TIMEOUT, wait])
-        if idx == 1:
-            self.ssh.sendline(cmd)
-            self.logger.debug(wait + " " + cmd)
-        else:
-            raise
-    
-    def user_config(self, user, old_passwd, new_passwd):
-
-        try:
-            self.wait_write('yes', "Are you sure you want to continue connecting")
-            self.wait_write(old_passwd, "%s@%s's password: " % (user, '127.0.0.1'))
-            self.wait_write('y', "The password needs to be changed. Change now?")
-            self.wait_write(old_passwd, "Please enter old password:")
-            self.wait_write(new_passwd, "Please enter new password:")
-            self.wait_write(new_passwd, "Please confirm new password:")
-        except:
-            raise
-            return
-
-    def kill_ssh_process(self):
-        """
-           depend on ssh.pid, kill it, if exception, pass
-        """
-        try:
-            os.kill(self.ssh.pid, signal.SIGKILL)
-        except:
-            pass
+        self.qemu_args.extend(["-D", "/var/log/qemu.log"])
 
     def bootstrap_spin(self):
+        """ This function should be called periodically to do work.
         """
 
-        """
-        hosts = "/root/.ssh/known_hosts"
-        if os.path.isfile(hosts):
-            os.remove(hosts)
-
-        self.ssh = pexpect.spawn('ssh -l %s %s ' % ('omuser', '127.0.0.1'))
-        try:
-            self.user_config('omuser', 'User_hw123', 'Changeme_123')
-            time.sleep(1)
-
-        except:
-            self.logger.trace("SSH Connect TimeOut, Simulator Device is Booting")
-            # kill child subprocess 
-            self.kill_ssh_process()
-            time.sleep(self.wait_time)
+        if self.spins > 300:
+            # too many spins with no result ->  give up
+            self.stop()
+            self.start()
             return
 
-        self.bootstrap_config()
-        self.running = True
-        self.kill_ssh_process()
-        # calc startup time
-        startup_time = datetime.datetime.now() - self.start_time
-        self.logger.info("Startup complete in: %s" % startup_time)
+        tn_switcher = {
+            0: 'root',              # User Root Login
+            1: 'Huawei@123',        # root password
+            2: 'Root@123',          # time_client_start enter password
+            3: 'Root@123',          # time_client_start enter again
+            4: '\n'                   # Press Enter to Continue
+        }
+
+        (ridx, match, res) = self.tn.expect([b'localhost login: ',
+                                             b'Password: ',
+                                             b'Enter Password:',
+                                             b'Confirm Password:',
+                                             b'other key continue'], 1)
+
+        if match:  # got a match!
+            v = tn_switcher.get(ridx)
+            self.wait_write(cmd=v, wait=None)
+            # Enter the CLI, then config device
+            if ridx == 3:
+                # run main config!
+                self.bootstrap_config()
+                time.sleep(1)
+                # send Ctrl + [ to close time_client_start
+                # self.wait_write(cmd='\x1D', wait=None)
+                # close telnet connection
+                self.tn.close()
+                # startup time?
+                startup_time = datetime.datetime.now() - self.start_time
+                self.logger.info("Startup complete in: %s" % startup_time)
+                # mark as running
+                self.running = True
+                return
+
+        time.sleep(5)
+
+        # no match, if we saw some output from the router it's probably
+        # booting, so let's give it some more time
+        if res != b'':
+            self.logger.trace("OUTPUT: %s" % res.decode())
+            # reset spins if we saw some output
+            self.spins = 0
+
+        self.spins += 1
+
+        return
 
     def bootstrap_config(self):
+        """ Do the actual bootstrap config
         """
-        
-        """
-        self.wait_write('system-view', "<HUAWEI>")
-        self.wait_write('aaa', "[~HUAWEI]")
-        self.wait_write('local-user %s password' % self.username, "[~HUAWEI-aaa]")
-        self.wait_write('Changeme_123', "Enter Password:")
-        self.wait_write('Changeme_123', "Confirm Password:")
-        self.wait_write('local-user %s service-type ssh' % self.username, "[*HUAWEI-aaa]")
-        self.wait_write('local-user %s user-group manage-ug' % self.username, "[*HUAWEI-aaa]")
-        self.wait_write('commit', "[*HUAWEI-aaa]")
-        self.wait_write('quit', "[~HUAWEI-aaa]")
-        self.wait_write('quit', "[~HUAWEI]")
-        self.wait_write('quit', "<HUAWEI>")
+        self.logger.info("applying bootstrap configuration")
 
-        hosts = "/root/.ssh/known_hosts"
-        if os.path.isfile(hosts):
-            os.remove(hosts)
+        self.wait_write(cmd="system-view", wait=">")
+        self.wait_write(cmd="sysname HUAWEI", wait="]")
+        self.wait_write(cmd="interface GigabitEthernet 0/0/0", wait="]")
+        self.wait_write(cmd="ip address 10.0.0.15 24", wait="]")
+        self.wait_write(cmd="commit", wait="]")
 
-        self.ssh = pexpect.spawn('ssh -l %s %s ' % (self.username, '127.0.0.1'))
-        self.user_config(self.username, 'Changeme_123', self.password)
+        # when simulator booting, config is not ok
+        # Error: The system is busy in building configuration. Please wait for a moment...
+        while True:
+            (idx, match, res) = self.tn.expect([b'Error:'], 1)
+            if match:
+                if idx == 0:
+                    self.wait_write(cmd="commit", wait=None)
+                    time.sleep(5)
+            else:
+                break
+
+        # add User vrnetlab
+        self.wait_write(cmd="aaa", wait=None)
+        self.wait_write(cmd="local-user %s password" % self.username, wait="]")
+        self.wait_write(cmd="%s" % self.password, wait="Enter Password:")
+        self.wait_write(cmd="%s" % self.password, wait="Confirm Password:")
+        self.wait_write(cmd="local-user %s service-type ssh" % self.username, wait="]")
+        self.wait_write(cmd="local-user %s user-group manage-ug" % self.username, wait="]")
+        self.wait_write(cmd="commit", wait="]")
 
 
 class simulator(vrnetlab.VR):
 
     def __init__(self, username, password):
          super(simulator, self).__init__(username, password)
-         self.vms = [ simulator_VM(username, password)]
+         self.vms = [simulator_VM(username, password)]
 
 
 if __name__ == '__main__':

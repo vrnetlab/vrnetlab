@@ -304,6 +304,7 @@ class TapConfigurator(object):
         self.logger = logger
 
     def _configure_interface_address(self, interface, address, default_route=None):
+        next_hop = None
         net = ipaddress.ip_interface(address)
         if default_route:
             try:

@@ -49,7 +49,7 @@ class VEOS_vm(vrnetlab.VM):
         """ This function should be called periodically to do work.
         """
 
-        if self.spins > 300:
+        if self.spins > 600:
             # too many spins with no result ->  give up
             self.logger.info("To many spins with no result, restarting")
             self.stop()

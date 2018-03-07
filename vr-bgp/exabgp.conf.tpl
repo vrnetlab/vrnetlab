@@ -31,6 +31,9 @@ group test {
         {%- if config.LISTEN %}
         listen 179;
         {%- endif %}
+        {%- if config.TTLSECURITY %}
+        ttl-security;
+        {%- endif %}
     }
 {%- endif %}
 {%- if config.IPV6_NEIGHBOR %}
@@ -47,6 +50,9 @@ group test {
         {%- endif %}
         {%- if config.LISTEN %}
         listen 179;
+        {%- endif %}
+        {%- if config.TTLSECURITY %}
+        ttl-security;
         {%- endif %}
     }
 {%- endif %}

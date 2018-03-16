@@ -30,7 +30,7 @@ class Tcp2Raw:
         self.logger = logging.getLogger()
         # setup TCP side
         self.s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        self.s.bind(('::0', 10001))
+        self.s.bind(('::0', listen_port))
         self.s.listen(1)
         self.tcp = None
 
@@ -113,7 +113,7 @@ class Tcp2Tap:
         self.logger = logging.getLogger()
         # setup TCP side
         self.s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        self.s.bind(('::0', 10001))
+        self.s.bind(('::0', listen_port))
         self.s.listen(1)
         self.tcp = None
 

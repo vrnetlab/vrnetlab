@@ -65,7 +65,11 @@ class VM:
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
         overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
-        run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
+
+        if not os.path.exists(overlay_disk_image):
+            self.logger.debug("Creating overlay disk image")
+            run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
+
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),

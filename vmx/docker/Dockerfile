@@ -13,12 +13,9 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
-ARG IMAGE
-COPY $IMAGE /
-COPY install_vmx.sh /
-RUN /install_vmx.sh
+COPY vmx /vmx
 COPY *.py /
 
-EXPOSE 22 830 5000 10000-10099
+EXPOSE 22 161/udp 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]
-ENTRYPOINT ["/launch_vmx.py"]
+ENTRYPOINT ["/launch.py"]

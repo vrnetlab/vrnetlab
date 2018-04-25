@@ -3,12 +3,10 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import sys
 import telnetlib
-import time
 
 import vrnetlab
 
@@ -30,20 +28,14 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
 logging.Logger.trace = trace
 
-
-
-class VEOS_vm(vrnetlab.VM):
+class OpenWRT_vm(vrnetlab.VM):
     def __init__(self, username, password):
         for e in os.listdir("/"):
-            if re.search(".vmdk$", e):
+            if re.search(".img$", e):
                 disk_image = "/" + e
-        for e in os.listdir("/"):
-            if re.search(".iso$", e):
-                boot_iso = "/" + e
-        super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
-        self.num_nics = 20
-        self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
-
+        super(OpenWRT_vm, self).__init__(username, password, disk_image=disk_image, ram=128)
+        self.nic_type = "virtio-net-pci"
+        self.num_nics = 1
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -51,18 +43,14 @@ class VEOS_vm(vrnetlab.VM):
 
         if self.spins > 300:
             # too many spins with no result ->  give up
-            self.logger.info("To many spins with no result, restarting")
             self.stop()
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"login:"], 1)
+        (ridx, match, res) = self.tn.expect([b"br-lan"], 1)
         if match: # got a match!
             if ridx == 0: # login
-                self.logger.debug("matched login prompt")
-                self.logger.debug("trying to log in with 'admin'")
-                self.wait_write("admin", wait=None)
-
+                self.logger.debug("VM started")
                 # run main config!
                 self.bootstrap_config()
                 # close telnet connection
@@ -85,31 +73,35 @@ class VEOS_vm(vrnetlab.VM):
 
         return
 
-
-
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
         self.logger.info("applying bootstrap configuration")
-        self.wait_write("", None)
-        self.wait_write("enable", ">")
-        self.wait_write("configure")
-        self.wait_write("username %s secret 0 %s role network-admin" % (self.username, self.password))
+        # Get a prompt
+        self.wait_write("\r", None)
+        # Configure interface
+        self.wait_write("ifconfig br-lan 10.0.0.15 netmask 255.255.255.0", "#")
+        # Set root password (ssh login prerequisite)
+        self.wait_write("passwd", "#")
+        self.wait_write(self.password, "New password:")
+        self.wait_write(self.password, "Retype password:")
+        # Create vrnetlab user
+        self.wait_write("echo '%s:x:501:501:%s:/home/%s:/bin/ash' >> /etc/passwd" %(self.username, self.username, self.username), "#")
+        self.wait_write("passwd %s" %(self.username))
+        self.wait_write(self.password, "New password:")
+        self.wait_write(self.password, "Retype password:")
+        # Add user to root group
+        self.wait_write("sed -i '1d' /etc/group", "#")
+        self.wait_write("sed -i '1i root:x:0:%s' /etc/group" % (self.username))
+        # Create home dir
+        self.wait_write("mkdir -p /home/%s" %(self.username))
+        self.wait_write("chown %s /home/%s" %(self.username, self.username))
+        self.logger.info("completed bootstrap configuration")
 
-        # configure mgmt interface
-        self.wait_write("interface Management 1")
-        self.wait_write("ip address 10.0.0.15/24")
-        self.wait_write("exit")
-        self.wait_write("exit")
-        self.wait_write("copy running-config startup-config")
-
-
-
-class VEOS(vrnetlab.VR):
+class OpenWRT(vrnetlab.VR):
     def __init__(self, username, password):
-        super(VEOS, self).__init__(username, password)
-        self.vms = [ VEOS_vm(username, password) ]
-
+        super(OpenWRT, self).__init__(username, password)
+        self.vms = [ OpenWRT_vm(username, password) ]
 
 if __name__ == '__main__':
     import argparse
@@ -127,5 +119,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = VEOS(args.username, args.password)
+    vr = OpenWRT(args.username, args.password)
     vr.start()

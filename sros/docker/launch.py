@@ -123,11 +123,17 @@ class SROS_vm(vrnetlab.VM):
             return
 
         lic_file = open("/tftpboot/license.txt", "r")
-        license = lic_file.read()
+        license = ""
+        for line in lic_file.readlines():
+            # ignore comments in license file
+            if line.startswith('#'):
+                continue
+            license += line
         lic_file.close()
         try:
             uuid_input = license.split(" ")[0]
             self.uuid = mangle_uuid(uuid_input)
+            self.uuid = uuid_input
             m = re.search("([0-9]{4}-[0-9]{2}-)([0-9]{2})", license)
             if m:
                 self.fake_start_date = "%s%02d" % (m.group(1), int(m.group(2))+1)
@@ -203,6 +209,7 @@ class SROS_cp(SROS_vm):
         # add interface to internal control plane bridge
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
         vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
+        vrnetlab.run_command(["ip", "link", "set", "dev", "vcp-int", "mtu", "10000"])
 
 
 
@@ -265,6 +272,7 @@ class SROS_lc(SROS_vm):
         # add interface to internal control plane bridge
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vfpc{}-int".format(self.slot)])
         vrnetlab.run_command(["ip", "link", "set", "vfpc{}-int".format(self.slot), "up"])
+        vrnetlab.run_command(["ip", "link", "set", "dev", "vfpc{}-int".format(self.slot), "mtu", "10000"])
 
 
 

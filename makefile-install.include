@@ -1,0 +1,46 @@
+#
+# This Makefile can be included by images that need to run an install phase,
+# i.e. in addition to doing the docker build, we also want to run some stuff
+# inside that image to come up with the final output image. in the case of
+# JUNOS we want to do this as the first time the vMX RE boots up it detects
+# that it's in a vMX RE mode and then reboots. By starting it up and letting it
+# do this first check-and-reboot during the image build time we save ourselves
+# from doing this on *every* run of the container image later.
+# 
+# Since we start the virtual router we are actually running a virtual machine
+# with qemu and for that we want KVM hardware acceleration, which requires
+# running docker with --privileged. `docker build` doesn't have the
+# --privileged argument, so instead we first run the build as normal up to the
+# point where we want to start the virtual router. Then we use `docker run
+# --privilged ...` do the needful and after commit it using `docker commit ...`
+# to create the final output image.
+#
+# One of the problems with this is that normally the docker build is kind of
+# idempotent in that it uses a command cache and if there are no changes to the
+# Dockerfile or input files it will not rerun those commands but use a cached
+# image. This greatly speeds up the build process. However, when doing this
+# manual `docker run` dance we miss this opportunity since it will always be
+# run.... so we worked around it. Before doing docker run we check the SHA sum
+# of the built image and compare this to the ones of the previously built
+# image. If they are the same it means the docker build was entirely cached and
+# there's no need to run the image, otherwise if there's a change we do run it.
+# Include this makefile to have your image automatically do that dance.
+
+docker-pre-build:
+	-cat cidfile | xargs --no-run-if-empty docker rm -f
+	-rm cidfile
+	-docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION) $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build
+
+docker-build: docker-build-common
+	-docker inspect --format '{{.RootFS.Layers}}' $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build | tr -d '][' | awk '{ print $$(NF-1) }' > built-image-sha-previous
+	docker inspect --format '{{.RootFS.Layers}}' $(REGISTRY)vr-$(VR_NAME):$(VERSION) | tr -d '][' | awk '{ print $$(NF) }' > built-image-sha-current
+	if [ "$$(cat built-image-sha-previous)" = "$$(cat built-image-sha-current)" ]; then echo "Previous image is the same as current, retagging!"; \
+	docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build $(REGISTRY)vr-$(VR_NAME):$(VERSION) || true; \
+	else \
+	echo "Current build differ from previous, running install!"; \
+	docker run --cidfile cidfile --privileged $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install; \
+	docker commit --change='ENTRYPOINT ["/launch.py"]' $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION); \
+	docker rm -f $$(cat cidfile); \
+	fi
+	docker rmi -f $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build || true
+	rm built-image-sha*

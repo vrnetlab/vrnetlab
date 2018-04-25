@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
 import datetime
-import math
 import logging
+import math
 import os
 import random
+import re
 import subprocess
 import telnetlib
+import time
+
+MAX_RETRIES=60
 
 def gen_mac(last_octet=None):
     """ Generate a random MAC address that is in the qemu OUI space and that
@@ -60,11 +64,17 @@ class VM:
         self.num_nics = 0
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
+        overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
+
+        if not os.path.exists(overlay_disk_image):
+            self.logger.debug("Creating overlay disk image")
+            run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
+
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
-                               "-drive", "if=ide,file=%s" % disk_image])
+                               "-drive", "if=ide,file=%s" % overlay_disk_image])
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             self.qemu_args.insert(1, '-enable-kvm')
@@ -110,8 +120,31 @@ class VM:
         except:
             pass
 
-        self.qm = telnetlib.Telnet("127.0.0.1", 4000 + self.num)
-        self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+        for i in range(1, MAX_RETRIES+1):
+            try:
+                self.qm = telnetlib.Telnet("127.0.0.1", 4000 + self.num)
+                break
+            except:
+                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(4000 + self.num, i))
+                time.sleep(1)
+            if i == MAX_RETRIES:
+                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(4000 + self.num))
+
+        for i in range(1, MAX_RETRIES+1):
+            try:
+                self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
+                break
+            except:
+                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(5000 + self.num, i))
+                time.sleep(1)
+            if i == MAX_RETRIES:
+                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(5000 + self.num))
+        try:
+            outs, errs = self.p.communicate(timeout=2)
+            self.logger.info("STDOUT: %s" % outs)
+            self.logger.info("STDERR: %s" % errs)
+        except:
+            pass
 
 
     def gen_mgmt(self):
@@ -123,7 +156,7 @@ class VM:
         res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
                               % { 'i': 0, 'mac': gen_mac(0) })
         res.append("-netdev")
-        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830" % { 'i': 0 })
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830" % { 'i': 0 })
 
         return res
 
@@ -165,8 +198,17 @@ class VM:
         try:
             self.p.communicate(timeout=10)
         except:
-            self.p.kill()
-            self.p.communicate(timeout=10)
+            try:
+                # this construct is included as an example at
+                # https://docs.python.org/3.6/library/subprocess.html but has
+                # failed on me so wrapping in another try block. It was this
+                # communicate() that failed with:
+                # ValueError: Invalid file object: <_io.TextIOWrapper name=3 encoding='ANSI_X3.4-1968'>
+                self.p.kill()
+                self.p.communicate(timeout=10)
+            except:
+                # just assume it's dead or will die?
+                self.p.wait(timeout=10)
 
 
 
@@ -258,6 +300,7 @@ class VR:
         self.logger.debug("Starting vrnetlab %s" % self.__class__.__name__)
         self.logger.debug("VMs: %s" % self.vms)
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
+        run_command(["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
 
         started = False
@@ -278,3 +321,6 @@ class VR:
                     self.update_health(1, "starting")
 
 
+class QemuBroken(Exception):
+    """ Our Qemu instance is somehow broken
+    """

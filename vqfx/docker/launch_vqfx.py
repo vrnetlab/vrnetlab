@@ -40,7 +40,7 @@ class VQFX_vcp(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search("-re-.*.vmdk", e):
                 vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vcp.qcow2"])
-        super(VQFX_vcp, self).__init__(username, password, disk_image="/vcp.qcow2", ram=1024)
+        super(VQFX_vcp, self).__init__(username, password, disk_image="/vcp.qcow2", ram=2048)
         self.num_nics = 12
 
 

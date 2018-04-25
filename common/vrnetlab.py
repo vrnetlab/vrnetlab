@@ -65,7 +65,11 @@ class VM:
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
         overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
-        run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
+
+        if not os.path.exists(overlay_disk_image):
+            self.logger.debug("Creating overlay disk image")
+            run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
+
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
@@ -194,8 +198,17 @@ class VM:
         try:
             self.p.communicate(timeout=10)
         except:
-            self.p.kill()
-            self.p.communicate(timeout=10)
+            try:
+                # this construct is included as an example at
+                # https://docs.python.org/3.6/library/subprocess.html but has
+                # failed on me so wrapping in another try block. It was this
+                # communicate() that failed with:
+                # ValueError: Invalid file object: <_io.TextIOWrapper name=3 encoding='ANSI_X3.4-1968'>
+                self.p.kill()
+                self.p.communicate(timeout=10)
+            except:
+                # just assume it's dead or will die?
+                self.p.wait(timeout=10)
 
 
 

@@ -21,7 +21,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros', 'csr', 'vqfx'):
+            if val['type'] not in ('bgp', 'xrv', 'vmx', 'sros', 'csr', 'vqfx', 'vrp'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # expand p2p links
@@ -121,6 +121,8 @@ class VrTopo:
             return "GigabitEthernet%d" % (interface+1)
         elif r['type'] == 'vqfx':
             return "xe-0/0/%d" % (interface-1)
+        elif r['type'] == 'vrp':
+            return "GigabitEthernet0/0/0/%d" % (interface)
 
         return None
 
@@ -243,9 +245,8 @@ def run_topology_api(config, url, with_trace=False):
         for vr in sorted(config['routers']):
             links.append((args.prefix + vr, args.prefix + vr))
         cmd.append("--p2p")
-        cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
+        cmd.extend(["%s/%s--%s/%s" % (link["left"]["router"],
                                            link["left"]["numeric"],
-                                           args.prefix,
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
         state_output = ''

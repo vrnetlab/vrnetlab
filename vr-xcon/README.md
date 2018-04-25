@@ -4,6 +4,10 @@ This is the vrnetlab docker image of xcon - the cross-connect app.
 
 vr-xcon is used to connect two or more vrnetlab containers with each other.
 
+Modes of operation
+------------------
+
+### TcpBridge
 All vrnetlab routers are run by qemu which expose the router interfaces via TCP
 ports and vr-xcon connects these together. It can be seen as an overlay. The
 underlying TCP ports exposed by qemu listen on the docker0 interface (per
@@ -11,6 +15,7 @@ default) of each container but as long as two vrnetlab containers have
 connectivity via their default network, vr-xcon should be able to perform it's
 job.
 
+### Tcp2Tap
 vr-xcon also provides a mode to interconnect the TCP-socket exposed by qemu to
 a local tap interface, which makes it easy to use other apps together with
 vrnetlab router containers. Run vr-xcon with `--tap-listen INTERFACE` to listen
@@ -19,6 +24,8 @@ INTERFACE=1 will mean it listens on TCP port 10001 and this makes it easy to
 interconnect using vr-xcon. See vr-bgp for an example of how `--tap-listen` can
 be used in real life.
 
+In this mode, vr-xcon can also be used to configure IP addressing of the local
+tap interface. This includes setting an IPv4/IPv6 address, default route and VLAN ID.
 
 Building the docker image
 -------------------------
@@ -35,6 +42,8 @@ through `docker push`.
 
 Usage
 -----
+
+### TcpBridge mode
 To connect the first interface of vr1 and vr2 and the second interface of vr1
 with the first of vr3, run:
 ```
@@ -44,6 +53,27 @@ Note how --p2p is not repeated and the arguments to it are simply appended.
 
 It's possible to use the `--debug` option to have a debug written out for every
 packet.
+
+### Tcp2Tap mode
+For example, say we have a virtual router _r1_, and  want to connect an application
+running in the _app_ docker container to the overlay network. We will need to run vr-xcon
+in the _app_ container in _Tcp2Tap_ mode, and then connect the two containers with
+vr-xcon in _TcpBridge_ mode.
+
+The _r1_ interface already has IPv6 address 2003:1c08:161:1ff::1, we want our app to
+use 2003:1c08:161:1ff::42 and also use _r1_ as the default gateway to access the rest
+of the overlay networks.
+
+First, run vr-xcon in the _app_ container in the background (note this assumes the
+`app` container runs in _privileged_ mode):
+```
+docker exec -d app bash -c "/xcon.py --tap-listen 1 --ipv6-address 2003:1c08:161:1ff::42/64 --ipv6-route 2003:1c08:161:1ff::1"
+```
+
+Then, connect the _app_ container with _r1_ using vr-xcon in _TcpBridge_ mode:
+```
+docker run -d --privileged --name vr-xcon --link r1 --link app vr-xcon --p2p r1/1--app/1
+```
 
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------

@@ -51,6 +51,7 @@ class VEOS_vm(vrnetlab.VM):
 
         if self.spins > 300:
             # too many spins with no result ->  give up
+            self.logger.info("To many spins with no result, restarting")
             self.stop()
             self.start()
             return

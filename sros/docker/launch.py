@@ -123,7 +123,12 @@ class SROS_vm(vrnetlab.VM):
             return
 
         lic_file = open("/tftpboot/license.txt", "r")
-        license = lic_file.read()
+        license = ""
+        for line in lic_file.readlines():
+            # ignore comments in license file
+            if line.startswith('#'):
+                continue
+            license += line
         lic_file.close()
         try:
             uuid_input = license.split(" ")[0]

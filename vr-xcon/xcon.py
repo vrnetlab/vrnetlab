@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
 import fcntl
+import ipaddress
 import logging
 import os
 import select
 import signal
 import socket
 import struct
+import subprocess
 import sys
+import time
 
 
 def handle_SIGCHLD(signal, frame):
@@ -21,12 +24,96 @@ signal.signal(signal.SIGTERM, handle_SIGTERM)
 signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 
+
+class Tcp2Raw:
+    def __init__(self, raw_intf = 'eth1', listen_port=10001):
+        self.logger = logging.getLogger()
+        # setup TCP side
+        self.s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        self.s.bind(('::0', listen_port))
+        self.s.listen(1)
+        self.tcp = None
+
+        # track current state of TCP side tunnel. 0 = reading size, 1 = reading packet
+        self.tcp_state = 0
+        self.tcp_buf = b''
+        self.tcp_remaining = 0
+
+        # setup raw side
+        self.raw = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x0003))
+        self.raw.bind((raw_intf, 0))
+        # don't block
+        self.raw.setblocking(0)
+
+
+    def work(self):
+        while True:
+
+            skts = [self.s, self.raw]
+            if self.tcp is not None:
+                skts.append(self.tcp)
+            ir = select.select(skts,[],[])[0][0]
+            if ir == self.s:
+                self.logger.debug("received incoming TCP connection, setting up!")
+                self.tcp, addr = self.s.accept()
+            elif ir == self.tcp:
+                self.logger.debug("received packet from TCP and sending to raw interface")
+
+                try:
+                    buf = ir.recv(2048)
+                except (ConnectionResetError, OSError):
+                    self.logger.warning("connection dropped")
+                    continue
+
+                self.tcp_buf += buf
+                self.logger.debug("read %d bytes from tcp, tcp_buf length %d" % (len(buf), len(self.tcp_buf)))
+                while True:
+                    if self.tcp_state == 0:
+                        # we want to read the size, which is 4 bytes, if we
+                        # don't have enough bytes wait for the next spin
+                        if not len(self.tcp_buf) > 4:
+                            self.logger.debug("reading size - less than 4 bytes available in buf; waiting for next spin")
+                            break
+                        size = socket.ntohl(struct.unpack("I", self.tcp_buf[:4])[0]) # first 4 bytes is size of packet
+                        self.tcp_buf = self.tcp_buf[4:] # remove first 4 bytes of buf
+                        self.tcp_remaining = size
+                        self.tcp_state = 1
+                        self.logger.debug("reading size - pkt size: %d" % self.tcp_remaining)
+
+                    if self.tcp_state == 1: # read packet data
+                        # we want to read the whole packet, which is specified
+                        # by tcp_remaining, if we don't have enough bytes we
+                        # wait for the next spin
+                        if len(self.tcp_buf) < self.tcp_remaining:
+                            self.logger.debug("reading packet - less than remaining bytes; waiting for next spin")
+                            break
+                        self.logger.debug("reading packet - reading %d bytes" % self.tcp_remaining)
+                        payload = self.tcp_buf[:self.tcp_remaining]
+                        self.tcp_buf = self.tcp_buf[self.tcp_remaining:]
+                        self.tcp_remaining = 0
+                        self.tcp_state = 0
+                        self.raw.send(payload)
+
+            else:
+                # we always get full packets from the raw interface
+                payload = self.raw.recv(2048)
+                buf = struct.pack("I", socket.htonl(len(payload))) + payload
+                if self.tcp is None:
+                    self.logger.warning("received packet from raw interface but TCP not connected, discarding packet")
+                else:
+                    self.logger.debug("received packet from raw interface and sending to TCP")
+                    try:
+                        self.tcp.send(buf)
+                    except:
+                        self.logger.warning("could not send packet to TCP session")
+
+
 class Tcp2Tap:
     def __init__(self, tap_intf = 'tap0', listen_port=10001):
         self.logger = logging.getLogger()
         # setup TCP side
         self.s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        self.s.bind(('::0', 10001))
+        self.s.bind(('::0', listen_port))
         self.s.listen(1)
         self.tcp = None
 
@@ -162,7 +249,7 @@ class TcpBridge:
         self.socket2remote[left] = right
         self.socket2remote[right] = left
 
-        
+
 
     def work(self):
         while True:
@@ -211,15 +298,81 @@ class TcpBridge:
 class NoVR(Exception):
     """ No virtual router
     """
-            
+
+class TapConfigurator(object):
+    def __init__(self, logger):
+        self.logger = logger
+
+    def _configure_interface_address(self, interface, address, default_route=None):
+        next_hop = None
+        net = ipaddress.ip_interface(address)
+        if default_route:
+            try:
+                next_hop = ipaddress.ip_address(default_route)
+            except ValueError:
+                self.logger.error("next-hop address {} could not be parsed".format(default_route))
+                sys.exit(1)
+
+        if default_route and next_hop not in net.network:
+            self.logger.error("next-hop address {} not in network {}".format(next_hop, net))
+            sys.exit(1)
+
+        subprocess.check_call(["ip", "-{}".format(net.version), "address", "add", str(net.ip) + "/" + str(net.network.prefixlen), "dev", interface])
+        if next_hop:
+            try:
+                subprocess.check_call(["ip", "-{}".format(net.version), "route", "del", "default"])
+            except:
+                pass
+            subprocess.check_call(["ip", "-{}".format(net.version), "route", "add", "default", "dev", interface, "via", str(next_hop)])
+
+
+    def configure_interface(self, interface='tap0', vlan=None,
+                            ipv4_address=None, ipv4_route=None,
+                            ipv6_address=None, ipv6_route=None):
+        # enable the interface
+        subprocess.check_call(["ip", "link", "set", interface, "up"])
+
+        interface_sysctl = interface
+        if vlan:
+            physical_interface = interface
+            interface_sysctl = '{}/{}'.format(interface, vlan)
+            interface = '{}.{}'.format(interface, vlan)
+            subprocess.check_call(["ip", "link", "add", "link", physical_interface, "name",
+                                   interface, "type", "vlan", "id", str(vlan)])
+            subprocess.check_call(["ip", "link", "set", interface, "up"])
+
+        if ipv4_address:
+            self._configure_interface_address(interface, ipv4_address, ipv4_route)
+
+        if ipv6_address:
+            # stupid hack for docker engine disabling IPv6. It's somewhere around
+            # version 17.04 that docker engine started disabling ipv6 on the sysctl
+            # net.ipv6.conf.all and net.ipv6.conf.default while eth0 and lo still has
+            # it, if docker engine is started with --ipv6. However, with the default at
+            # disable we have to specifically enable it for interfaces created after the
+            # container started...
+            subprocess.check_call(["sysctl", "net.ipv6.conf.{}.disable_ipv6=0".format(interface_sysctl)])
+            self._configure_interface_address(interface, ipv6_address, ipv6_route)
+
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", default=False, help='enable debug')
-    parser.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
-    parser.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
-    parser.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
+    p2p = parser.add_argument_group('p2p')
+    p2p.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
+    raw = parser.add_argument_group('raw')
+    raw.add_argument('--raw-listen', help='raw to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
+    raw.add_argument('--raw-if', default="eth1", help='name of raw interface (use with other --raw-* arguments)')
+    tap = parser.add_argument_group('tap')
+    tap.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
+    tap.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
+    tap.add_argument('--ipv4-address', help='IPv4 address to use on the tap interface')
+    tap.add_argument('--ipv4-route', help='default IPv4 route to use on the tap interface')
+    tap.add_argument('--ipv6-address', help='IPv6 address to use on the tap interface')
+    tap.add_argument('--ipv6-route', help='default IPv6 route to use on the tap interface')
+    tap.add_argument('--vlan', type=int, help='VLAN ID to use on the tap interface')
+    parser.add_argument('--trace', action="store_true", help="dummy, we don't support tracing but taking the option makes vrnetlab containers uniform")
     args = parser.parse_args()
 
     # sanity
@@ -245,5 +398,21 @@ if __name__ == '__main__':
         tt.work()
 
     if args.tap_listen:
+        # init Tcp2Tap to create interface
         t2t = Tcp2Tap(args.tap_if, 10000 + int(args.tap_listen))
+
+        # now (optionally) configure addressing
+        tc = TapConfigurator(logger)
+        tc.configure_interface(interface=args.tap_if, vlan=args.vlan,
+                               ipv4_address=args.ipv4_address, ipv4_route=args.ipv4_route,
+                               ipv6_address=args.ipv6_address, ipv6_route=args.ipv6_route)
         t2t.work()
+
+    if args.raw_listen:
+        while True:
+            try:
+                t2r = Tcp2Raw(args.raw_if, 10000 + int(args.raw_listen))
+                t2r.work()
+            except Exception as exc:
+                print(exc)
+            time.sleep(1)

@@ -277,7 +277,28 @@ class VMX_installer(VMX):
         vcp = self.vms[0]
         while not vcp.running:
             vcp.work()
-        time.sleep(30)
+
+        # wait for system to shut down cleanly
+        for i in range(0, 600):
+            time.sleep(1)
+            try:
+                vcp.p.communicate(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass
+            except Exception as exc:
+                # assume it's dead
+                self.logger.info("Can't communicate with qemu process, assuming VM has shut down properly." + str(exc))
+                break
+
+            try:
+                (ridx, match, res) = vcp.tn.expect([b"Powering system off"], 1)
+                if res != b'':
+                    self.logger.trace("OUTPUT VCP: %s" % res.decode())
+            except Exception as exc:
+                # assume it's dead
+                self.logger.info("Can't communicate over serial console, assuming VM has shut down properly." + str(exc))
+                break
+
         vcp.stop()
         self.logger.info("Installation complete")
 

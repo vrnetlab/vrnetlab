@@ -122,7 +122,7 @@ class VrTopo:
         elif r['type'] == 'vqfx':
             return "xe-0/0/%d" % (interface-1)
         elif r['type'] == 'vrp':
-            return "GigabitEthernet0/0/0/%d" % (interface)
+            return "GigabitEthernet4/0/%d" % (interface)
 
         return None
 

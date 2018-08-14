@@ -1,4 +1,4 @@
-VRS = vr-xcon vr-bgp csr nxos routeros sros veos vmx vsr1000 vqfx vrp xrv
+VRS = vr-xcon vr-bgp csr nxos routeros sros veos vmx vsr1000 vqfx vrp xrv xrv9k
 VRS_PUSH = $(VRS:=-push)
 
 .PHONY: all $(VRS) $(VRS_PUSH)

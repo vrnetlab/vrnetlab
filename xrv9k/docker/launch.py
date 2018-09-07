@@ -108,7 +108,13 @@ class XRV_vm(vrnetlab.VM):
                 self.logger.debug("logged in with %s / %s" % (username, password))
             if self.xr_ready == True and ridx == 4:
                 # run main config!
-                self.bootstrap_config()
+                if not self.bootstrap_config():
+                    # main config failed :/
+                    self.logger.debug('bootstrap_config failed, restarting device')
+                    self.stop()
+                    self.start()
+                    return
+
                 # close telnet connection
                 self.tn.close()
                 # startup time?
@@ -153,7 +159,10 @@ class XRV_vm(vrnetlab.VM):
         # make sure we get our prompt back
         self.wait_write("")
 
-        self.wait_write("show interface description")
+        # wait for Gi0/0/0/0 in config
+        if not self._wait_interface():
+            return False
+
         self.wait_write("configure")
         # configure netconf
         self.wait_write("ssh server v2")
@@ -173,6 +182,25 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("commit")
         self.wait_write("exit")
 
+        return True
+
+    def _wait_interface(self):
+        """ GigabitEthernet interfaces take some time to "show up" in the config.
+            To make sure the device is really ready, wait here.
+        """
+        self.logger.debug('waiting for GigabitEthernet interfaces to appear')
+        interface_spins = 0
+        # 10s * 90 = 900s = 15min timeout
+        while interface_spins < 90:
+            self.wait_write("show interfaces description", wait=None)
+            _, match, data = self.tn.expect([b"Gi0/0/0/0"], timeout=10)
+            self.logger.trace(data.decode('UTF-8'))
+            if match:
+                self.logger.debug('a wild Gi0/0/0/0 has appeared!')
+                return True
+            interface_spins += 1
+        self.logger.error('interface Gi0/0/0/0 not found')
+        return False
 
 
 class XRV(vrnetlab.VR):

@@ -160,7 +160,11 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("")
 
         # wait for Gi0/0/0/0 in config
-        if not self._wait_interface():
+        if not self._wait_config("show interfaces description", "Gi0/0/0/0"):
+            return False
+
+        # wait for call-home in config
+        if not self._wait_config("show running-config call-home", "service active"):
             return False
 
         self.wait_write("configure")
@@ -184,22 +188,22 @@ class XRV_vm(vrnetlab.VM):
 
         return True
 
-    def _wait_interface(self):
-        """ GigabitEthernet interfaces take some time to "show up" in the config.
+    def _wait_config(self, show_cmd, expect):
+        """ Some configuration takes some time to "show up".
             To make sure the device is really ready, wait here.
         """
-        self.logger.debug('waiting for GigabitEthernet interfaces to appear')
-        interface_spins = 0
+        self.logger.debug('waiting for {} to appear in {}'.format(expect, show_cmd))
+        wait_spins = 0
         # 10s * 90 = 900s = 15min timeout
-        while interface_spins < 90:
-            self.wait_write("show interfaces description", wait=None)
-            _, match, data = self.tn.expect([b"Gi0/0/0/0"], timeout=10)
+        while wait_spins < 90:
+            self.wait_write(show_cmd, wait=None)
+            _, match, data = self.tn.expect([expect.encode('UTF-8')], timeout=10)
             self.logger.trace(data.decode('UTF-8'))
             if match:
-                self.logger.debug('a wild Gi0/0/0/0 has appeared!')
+                self.logger.debug('a wild {} has appeared!'.format(expect))
                 return True
-            interface_spins += 1
-        self.logger.error('interface Gi0/0/0/0 not found')
+            wait_spins += 1
+        self.logger.error('{} not found in {}'.format(expect, show_cmd))
         return False
 
 

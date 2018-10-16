@@ -56,7 +56,7 @@ class XRV_vm(vrnetlab.VM):
         res = []
         # mgmt interface
         res.extend(["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)])
-        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2830-10.0.0.15:830"])
+        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830"])
         # dummy interface for xrv9k ctrl interface
         res.extend(["-device", "virtio-net-pci,netdev=ctrl-dummy,id=ctrl-dummy,mac=%s" % vrnetlab.gen_mac(0),
                     "-netdev", "tap,ifname=ctrl-dummy,id=ctrl-dummy,script=no,downscript=no"])

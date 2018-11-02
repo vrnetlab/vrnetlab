@@ -10,6 +10,8 @@ stages:
   script:
     # make sure we pulled LFS files
     - git lfs fetch -I ${CI_JOB_NAME}
+    - git lfs checkout ${CI_JOB_NAME}
+    - ls -l ${CI_JOB_NAME}
     # We allow the user to control which Docker registry is used through the
     # env var DOCKER_REGISTRY. If it is not set then we assume we should use
     # the GitLab built-in Docker registry so we check if it is enabled.

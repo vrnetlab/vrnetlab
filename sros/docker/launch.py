@@ -200,7 +200,7 @@ class SROS_cp(SROS_vm):
         self.num_lc = num_lc
 
         self.num_nics = 0
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 slot=A card=cpm-x20"]
+        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 slot=A sfm=sfm-x20-b card=cpm-x20"]
 
 
     def start(self):
@@ -240,7 +240,7 @@ class SROS_cp(SROS_vm):
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
 
         # configure SFMs
-        for i in range(1, 16):
+        for i in range(1, 8):
             self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
 
         # configure line card & MDAs
@@ -262,7 +262,7 @@ class SROS_lc(SROS_vm):
         self.slot = slot
 
         self.num_nics = 6
-        self.smbios = ["type=1,product=TIMOS:chassis=XRS-20 slot={} card=xcm-x20 mda/1=cx20-10g-sfp".format(slot)]
+        self.smbios = ["type=1,product=TIMOS:chassis=XRS-20 slot={} sfm=sfm-x20-b card=xcm-x20 mda/1=cx20-10g-sfp".format(slot)]
 
 
 

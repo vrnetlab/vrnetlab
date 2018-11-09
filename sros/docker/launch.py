@@ -240,7 +240,7 @@ class SROS_cp(SROS_vm):
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
 
         # configure SFMs
-        for i in range(1, 8):
+        for i in range(1, 9):
             self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
 
         # configure line card & MDAs

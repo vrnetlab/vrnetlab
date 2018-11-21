@@ -12,7 +12,8 @@ It supports:
  * Arista vEOS
  * Cisco CSR1000v
  * Cisco Nexus NX-OS (using Titanium emulator)
- * Cisco XRv (not XRv9000)
+ * Cisco XRv
+ * Cisco XRv 9000
  * Juniper vMX
  * Juniper vQFX
  * Nokia VSR

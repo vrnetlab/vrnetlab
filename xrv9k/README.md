@@ -1,11 +1,10 @@
 vrnetlab / Cisco IOS XRv9k
-========================
+==========================
 This is the vrnetlab docker image for Cisco IOS XRv9k.
 
 There are two flavours of virtual XR routers, XRv and XRv9k where the latter
-has a much more complete forwarding plane. This image is not tested with
-XRv9k, which has a different dataplane and potentially different setup/boot
-mechanics.
+has a much more complete forwarding plane. This is for XRv9k if you have the
+non-9k see the 'xrv' directory instead.
 
 I've not tested XRv9k with less than 4 cores and 8G of RAM.
 
@@ -32,6 +31,7 @@ It's been tested to boot and respond to SSH with:
 
  * 6.1.3 (xrv9k-fullk9-x.vrr-6.1.3.qcow2)
  * 6.2.1 (xrv9k-fullk9-x.vrr-6.2.1.qcow2)
+ * xrv9k-fullk9-x-6.4.2.qcow2	MD5:6958763192c7bb59a1b8049d377de1b4
 
 Usage
 -----
@@ -60,7 +60,12 @@ higher performing forwarding plane that can be used for forwarding of
 production traffic.
 
 ##### Q: How many NICs are supported?
-A: 11, which is the maximum as specified by Cisco. 
+A: Cisco specifies a maximum of 11 NICs but that seems to be balooney as it
+successfully starts with 226 NICs. Be aware though that the startup time scales
+linearly with the number of interfaces so unless you actually need a lot of
+interfaces it is better to start it with fewer. The default is set to 24 which
+felt like a good compromise and also means only a single PCI bus is needed,
+which just felt like a good thing.
 
 ##### Q: Is a license required?
 A: Yes and no. XRv9k can run in a demo mode or a production mode, where the

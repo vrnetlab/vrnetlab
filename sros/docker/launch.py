@@ -64,7 +64,7 @@ def uuid_rev_part(part):
 
 
 class SROS_vm(vrnetlab.VM):
-    def __init__(self, username, password, num=0):
+    def __init__(self, username, password, num=0, ram=6144):
         super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2", num=num)
 
         self.uuid = "00000000-0000-0000-0000-000000000000"

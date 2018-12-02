@@ -17,6 +17,13 @@ It's been tested to at least boot with:
  * 13.0.R7
  * 14.0.R4
  * 14.0.R5
+ * 16.0.R1
+ * 16.0.R2
+ * 16.0.R2-1
+ * 16.0.R3
+ * 16.0.R3-1
+ * 16.0.R4
+ * 16.0.R4-1
 
 Usage
 -----
@@ -44,7 +51,7 @@ through `--num-nics`. `--num-nics 6` means one line card VM (and one control
 plane VM) is started whereas `--num-nics 15` would yield three line card VMs
 (3x6=18 ports). In distributed mode the router is simulating an XRS-20. Each
 line card is equipped with one cx20-10g-sfp MDA (XMA really). Note how each VM,
-both control plane and line card, consume 4GB of RAM each.
+both control plane and line card, consume 6GB of RAM each.
 
 The ports follow the pattern X/1/[1..6] where X is the line card slot. For an
 integrated VM the slot is always 1 whereas for distributed mode there can be
@@ -88,3 +95,7 @@ the commands you can run, including "configure", which makes the VSR with SROS
 A: Many! You can specify the number of ports you want with the `--num-nics`
 argument. If you specify more than 5 the router will be started in
 "distributed" mode which means multiple line cards (VMs) are used.
+
+##### Q: Why 6GB of RAM? It says only 4GB is required.
+A: SROS 16 seems to require 6GB and we don't build with different amount of
+CPU/RAM per versions so that's why every version gets the same.

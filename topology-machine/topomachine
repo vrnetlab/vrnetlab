@@ -211,7 +211,11 @@ def get_network_api(client, name):
 def run_topology_api(config, url, with_trace=False):
 
     # set up connection to docker api
-    client = docker.DockerClient(base_url=url)
+    try:
+        client = docker.DockerClient(base_url=url)
+    except docker.errors.APIError:
+        print("ERROR: {}".format(docker.errors.APIError))
+        sys.exit(1)
 
     if 'routers' not in config:
         print("No routers in config")
@@ -307,13 +311,21 @@ def run_topology_api(config, url, with_trace=False):
 
 
     # close connection to docker api
-    client.close()
+    try:
+        client.close()
+    except docker.errors.APIError:
+        print("ERROR: {}".format(docker.errors.APIError))
+        sys.exit(1)
 
 
 def stop_topology_api(config, url):
 
     # set up connection to docker api
-    client = docker.DockerClient(base_url=url)
+    try:
+        client = docker.DockerClient(base_url=url)
+    except docker.errors.APIError:
+        print("ERROR: {}".format(docker.errors.APIError))
+        sys.exit(1)
 
     if 'routers' not in config:
         print("No routers in config")
@@ -354,7 +366,11 @@ def stop_topology_api(config, url):
             print("Container(%s) already removed" % name)
 
     # close connection to docker api
-    client.close()
+    try:
+        client.close()
+    except docker.errors.APIError:
+        print("ERROR: {}".format(docker.errors.APIError))
+        sys.exit(1)
 
 
 

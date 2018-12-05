@@ -20,7 +20,7 @@ machine comes in.
 You write a high level topology definition which topology machine can convert
 into a low level topology definition through --build:
 ```
-topo --build hltopo.json > lltopo.json
+topomachine --build hltopo.json > lltopo.json
 ```
 The output is printed to stdout so you can view it, pipe or redirect to a file
 if you want. You only need to run the build the low level topology from the
@@ -38,14 +38,24 @@ topology machine is able to run the machines for you, i.e. execute docker run
 for the routers defined in the configuration file and start vr-xcon with the
 relevant arguments to complete the topology:
 ```
-topo --run lltopo.json
+topomachine --run lltopo.json
 ```
 which will then start the docker containers based on the computed topology.
-There's a --dry-run option if you just want to see what commands would be
-executed. If you want to run multiple topologies at the same time you can
+If you want to run multiple topologies at the same time you can
 specify a prefix for the docker container names using `--prefix` which prevents
 collisions if you use the same name for the virtual routers in the different
 topology configurations. Note how 
+
+topology machine is also able to use the docker api to start/stop+remove
+containers on a remote host. this is achieved using the docker-py module.
+to start a topology run:
+```
+topomachine --api 'tcp://172.17.0.1:2375' --run lltopo.json
+```
+to stop a topology and clean up run:
+```
+topomachine --api 'tcp://172.17.0.1:2375' --stop lltopo.json
+```
 
 Last but not least, there is a template mode which you can use to produce
 configuration for your mangement system, which in turn is provisioning the
@@ -184,7 +194,7 @@ generate the low level topology:
 $ docker run -t -v $(pwd):/data topomachine --build /data/example-hltopo.json > example-lltopo.json
 ```
 
-generate the docker run commands:
+generate the docker run commands(this is now obsolete):
 ```
 $ docker run -v $(pwd):/data topomachine --run /data/example-lltopo.json --dry-run
 The following commands would be executed:

@@ -228,7 +228,7 @@ class TcpBridge:
         hostname, interface = hostintf.split("/")
 
         try:
-            res = socket.getaddrinfo(hostname, "100%02d" % int(interface))
+            res = socket.getaddrinfo(hostname, "100%02d" % int(interface), socket.AF_INET)
         except socket.gaierror:
             raise NoVR("Unable to resolve %s" % hostname)
         sockaddr = res[0][4]

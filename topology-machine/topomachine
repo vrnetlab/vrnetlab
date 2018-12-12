@@ -3,7 +3,7 @@
 import json
 import os
 import sys
-import collections
+from collections import OrderedDict
 
 import jinja2
 
@@ -42,11 +42,11 @@ class VrTopo:
 
         self.links = self.assign_interfaces(links)
 
-        self.links_by_nodes = collections.OrderedDict()
+        self.links_by_nodes = OrderedDict()
         for l in self.links:
             for (link, a, b) in ((l, 'left', 'right'), (l, 'right', 'left')):
                 if link[a]['router'] not in self.links_by_nodes:
-                    self.links_by_nodes[link[a]['router']] = collections.OrderedDict()
+                    self.links_by_nodes[link[a]['router']] = OrderedDict()
                 spec = {'our_interface': link[a]['interface'],
                         'their_interface': link[b]['interface'],
                         'our_numeric': link[a]['numeric'],
@@ -269,7 +269,7 @@ if __name__ == '__main__':
 
     if args.build:
         input_file = open(args.build, "r")
-        config = json.loads(input_file.read())
+        config = json.loads(input_file.read(), object_pairs_hook=OrderedDict)
         input_file.close()
         try:
             vt = VrTopo(config)
@@ -280,7 +280,7 @@ if __name__ == '__main__':
 
     if args.run:
         input_file = open(args.run, "r")
-        config = json.loads(input_file.read())
+        config = json.loads(input_file.read(), object_pairs_hook=OrderedDict)
         input_file.close()
         if args.dry_run:
             print("The following commands would be executed:")
@@ -288,7 +288,7 @@ if __name__ == '__main__':
 
     if args.template:
         input_file = open(args.template[0], "r")
-        config = json.loads(input_file.read())
+        config = json.loads(input_file.read(), object_pairs_hook=OrderedDict)
         input_file.close()
 
         import sys

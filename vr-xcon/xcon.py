@@ -65,6 +65,15 @@ class Tcp2Raw:
                     self.logger.warning("connection dropped")
                     continue
 
+                if len(buf) == 0:
+                    self.logger.info("no data from TCP socket, assuming client hung up, closing our socket")
+                    ir.close()
+                    self.tcp = None
+                    self.tcp_state = 0
+                    self.tcp_buf = b''
+                    self.tcp_remaining = 0
+                    continue
+
                 self.tcp_buf += buf
                 self.logger.debug("read %d bytes from tcp, tcp_buf length %d" % (len(buf), len(self.tcp_buf)))
                 while True:
@@ -152,6 +161,15 @@ class Tcp2Tap:
                     buf = ir.recv(2048)
                 except (ConnectionResetError, OSError):
                     self.logger.warning("connection dropped")
+                    continue
+
+                if len(buf) == 0:
+                    self.logger.info("no data from TCP socket, assuming client hung up, closing our socket")
+                    ir.close()
+                    self.tcp = None
+                    self.tcp_state = 0
+                    self.tcp_buf = b''
+                    self.tcp_remaining = 0
                     continue
 
                 self.tcp_buf += buf

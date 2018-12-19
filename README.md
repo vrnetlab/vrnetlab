@@ -280,10 +280,10 @@ See the README file of each virtual router type for CPU, RAM and disk
 requirements.
 
 
-Docker healtcheck
+Docker healthcheck
 -----------------
-Docker v1.12 includes a healtcheck feature that would be really sweet to use to
-tell if the router has been bootstrapped or not.
+vrnetlab containers use the Docker healthcheck mechanism to report whether
+they've started up properly or not.
 
 
 FUAQ - Frequently or Unfrequently Asked Questions

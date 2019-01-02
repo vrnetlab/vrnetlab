@@ -33,7 +33,7 @@ logging.Logger.trace = trace
 
 
 class XRV_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, username, password, meshnet=False):
         for e in os.listdir("/"):
             if re.search(".vmdk", e):
                 disk_image = "/" + e
@@ -44,6 +44,7 @@ class XRV_vm(vrnetlab.VM):
             ]
 
         self.xr_ready = False
+        self.meshnet = meshnet
 
 
     def bootstrap_spin(self):
@@ -164,9 +165,9 @@ class XRV_vm(vrnetlab.VM):
 
 
 class XRV(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, username, password, meshnet):
         super(XRV, self).__init__(username, password)
-        self.vms = [ XRV_vm(username, password) ]
+        self.vms = [ XRV_vm(username, password, meshnet) ]
 
 
 
@@ -176,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
+    parser.add_argument('--meshnet', action='store_true', help='Native docker networking mode')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -186,5 +188,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = XRV(args.username, args.password)
+    vr = XRV(args.username, args.password, meshnet=args.meshnet)
     vr.start()

@@ -167,10 +167,11 @@ class VMX_vcp(vrnetlab.VM):
 
 
 class VMX_vfpc(vrnetlab.VM):
-    def __init__(self, version):
+    def __init__(self, version, meshnet=False):
         super(VMX_vfpc, self).__init__(None, None, disk_image = "/vmx/vfpc.img", num=1)
         self.version = version
         self.num_nics = 96
+        self.meshnet = meshnet
 
         self.nic_type = "virtio-net-pci"
         self.qemu_args.extend(["-cpu", "SandyBridge", "-M", "pc", "-smp", "3"])
@@ -191,7 +192,7 @@ class VMX_vfpc(vrnetlab.VM):
         res.extend(["-netdev",
                     "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
 
-        if self.version in ('15.1F6.9', '16.1R2.11'):
+        if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13'):
             # dummy interface for some vMX versions - not sure why vFPC wants
             # it but without it we get a misalignment
             res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" %
@@ -233,14 +234,14 @@ class VMX(vrnetlab.VR):
     """ Juniper vMX router
     """
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, meshnet=False):
         self.version = None
         self.version_info = []
         self.read_version()
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image), VMX_vfpc(self.version) ]
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image), VMX_vfpc(self.version, meshnet=meshnet) ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -313,6 +314,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install vMX')
+    parser.add_argument('--meshnet', action='store_true', help='Native docker networking mode')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -327,5 +329,5 @@ if __name__ == '__main__':
         vr = VMX_installer(args.username, args.password)
         vr.install()
     else:
-        vr = VMX(args.username, args.password)
+        vr = VMX(args.username, args.password, meshnet=args.meshnet)
         vr.start()

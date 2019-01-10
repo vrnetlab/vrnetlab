@@ -56,12 +56,6 @@ class VrTopo:
                     self.links_by_nodes[link[a]['router']][link[b]['router']] = []
                 self.links_by_nodes[link[a]['router']][link[b]['router']].append(spec)
 
-        for router in sorted(self.routers):
-            val = self.routers[router]
-            if 'interfaces' in val:
-                for num_id in val['interfaces']:
-                    val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
-
         if 'hubs' in config:
             for hub in sorted(config['hubs']):
                 self.hubs[hub] = []
@@ -72,6 +66,12 @@ class VrTopo:
                     }
                     ep['interface'] = self.intf_num_to_name(router, ep['numeric'])
                     self.hubs[hub].append(ep)
+
+        for router in sorted(self.routers):
+            val = self.routers[router]
+            if 'interfaces' in val:
+                for num_id in val['interfaces']:
+                    val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
 
 
 

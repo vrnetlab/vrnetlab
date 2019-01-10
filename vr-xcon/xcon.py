@@ -312,6 +312,95 @@ class TcpBridge:
                     continue
 
 
+class TcpHub:
+    def __init__(self):
+        self.logger = logging.getLogger()
+        self.sockets = []
+        self.socket2hostintf = {}
+
+    def ep2addr(self, hostintf):
+        """ Return address based on endpoint
+        """
+        hostname, interface = hostintf.split("/")
+
+        try:
+            res = socket.getaddrinfo(hostname, "100%02d" % int(interface))
+        except socket.gaierror:
+            raise NoVR("Unable to resolve %s" % hostname)
+        sockaddr = res[0][4]
+        return sockaddr
+
+
+    def add_ep(self, ep):
+        host, interface = ep.split("/")
+
+        remote = self.ep2addr(ep)
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # dict to map back to hostname & interface
+        self.socket2hostintf[s] = "%s/%s" % (host, interface)
+
+        try:
+            s.connect(remote)
+        except:
+            self.logger.info("Unable to connect to %s" % self.socket2hostintf[remote])
+
+        # add to list of sockets
+        self.sockets.append(s)
+
+
+    def work(self):
+        while True:
+            try:
+                ir,_,_ = select.select(self.sockets, [], [])
+            except select.error as exc:
+                break
+
+            for i in ir:
+
+                try:
+                    buf = i.recv(2048)
+                except ConnectionResetError as exc:
+                    self.logger.warning("connection dropped, reconnecting to source %s" % self.socket2hostintf[i])
+                    try:
+                        i.connect(self.ep2addr(self.socket2hostintf[i]))
+                        self.logger.debug("reconnect to %s successful" % self.socket2hostintf[i])
+                    except Exception as exc:
+                        self.logger.warning("reconnect failed %s" % str(exc))
+                    continue
+                except OSError as exc:
+                    self.logger.warning("endpoint not connected, connecting to source %s" % self.socket2hostintf[i])
+                    try:
+                        i.connect(self.ep2addr(self.socket2hostintf[i]))
+                        self.logger.debug("connect to %s successful" % self.socket2hostintf[i])
+                    except:
+                        self.logger.warning("connect failed %s" % str(exc))
+                    continue
+
+                if len(buf) == 0:
+                    return
+
+                # send to all other sockets
+                for remote in self.sockets:
+                    self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
+                    # don't need to send to ourselves though
+                    if i is remote:
+                        continue
+
+                    try:
+                        remote.send(buf)
+                    except BrokenPipeError:
+                        self.logger.warning("unable to send packet %05d bytes %s -> %s due to remote being down, trying reconnect" % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
+                        try:
+                            remote.connect(self.ep2addr(self.socket2hostintf[remote]))
+                            self.logger.debug("connect to %s successful" % self.socket2hostintf[remote])
+                        except Exception as exc:
+                            self.logger.warning("connect failed %s" % str(exc))
+                        continue
+
+
+
 
 class NoVR(Exception):
     """ No virtual router
@@ -377,13 +466,14 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--debug', action="store_true", default=False, help='enable debug')
-    p2p = parser.add_argument_group('p2p')
-    p2p.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
+    meg = parser.add_mutually_exclusive_group(required=True)
+    meg.add_argument('--p2p', nargs='+', help='point-to-point link between virtual routers')
+    meg.add_argument('--hub', nargs='+', help='hub between virtual routers, will forward any incoming packets to all outputs, like a hub')
+    meg.add_argument('--raw-listen', help='raw to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
+    meg.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
     raw = parser.add_argument_group('raw')
-    raw.add_argument('--raw-listen', help='raw to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
     raw.add_argument('--raw-if', default="eth1", help='name of raw interface (use with other --raw-* arguments)')
     tap = parser.add_argument_group('tap')
-    tap.add_argument('--tap-listen', help='tap to virtual router. Will listen on specified port for incoming connection; 1 for TCP/10001')
     tap.add_argument('--tap-if', default="tap0", help='name of tap interface (use with other --tap-* arguments)')
     tap.add_argument('--ipv4-address', help='IPv4 address to use on the tap interface')
     tap.add_argument('--ipv4-route', help='default IPv4 route to use on the tap interface')
@@ -392,11 +482,6 @@ if __name__ == '__main__':
     tap.add_argument('--vlan', type=int, help='VLAN ID to use on the tap interface')
     parser.add_argument('--trace', action="store_true", help="dummy, we don't support tracing but taking the option makes vrnetlab containers uniform")
     args = parser.parse_args()
-
-    # sanity
-    if args.p2p and args.tap_listen:
-        print("--p2p and --tap-listen are mutually exclusive", file=sys.stderr)
-        sys.exit(1)
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
     logging.basicConfig(format=LOG_FORMAT)
@@ -414,6 +499,16 @@ if __name__ == '__main__':
                 print(exc, " Is it started and did you link it?")
                 sys.exit(1)
         tt.work()
+
+    if args.hub:
+        hub = TcpHub()
+        for ep in args.hub:
+            try:
+                hub.add_ep(ep)
+            except NoVR as exc:
+                print(exc, " Is it started and did you link it?")
+                sys.exit(1)
+        hub.work()
 
     if args.tap_listen:
         # init Tcp2Tap to create interface

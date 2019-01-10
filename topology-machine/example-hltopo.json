@@ -24,5 +24,8 @@
 	"fullmeshes": {
 		"europe": [ "ams-core-1", "ams-core-2", "fra-core-1", "fra-core-2", "par-core-1", "par-core-2" ],
 		"asia": [ "sgp-core-1", "kul-core-1" ]
+	},
+	"hubs": {
+		"ams-mgmt": [ "ams-core-1", "ams-core-2", "ams-edge-1" ]
 	}
 }

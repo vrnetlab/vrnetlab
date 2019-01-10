@@ -14,6 +14,7 @@ class VrTopo:
         self.routers = {}
         self.links = []
         self.fullmeshes = {}
+        self.hubs = {}
         if 'routers' in config:
             self.routers = config['routers']
 
@@ -60,6 +61,18 @@ class VrTopo:
             if 'interfaces' in val:
                 for num_id in val['interfaces']:
                     val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
+
+        if 'hubs' in config:
+            for hub in sorted(config['hubs']):
+                self.hubs[hub] = []
+                for router in config['hubs'][hub]:
+                    ep = {
+                        'router': router,
+                        'numeric': self.get_interface(router)
+                    }
+                    ep['interface'] = self.intf_num_to_name(router, ep['numeric'])
+                    self.hubs[hub].append(ep)
+
 
 
     def expand_fullmesh(self, routers):
@@ -155,7 +168,8 @@ class VrTopo:
         output = {
                 'routers': self.routers,
                 'links': self.links,
-                'links_by_nodes': self.links_by_nodes
+                'links_by_nodes': self.links_by_nodes,
+                'hubs': self.hubs
             }
 
         if output_format == 'json':
@@ -245,6 +259,20 @@ def run_topology(config, dry_run, with_trace=False):
         else:
             run_command(cmd, dry_run)
 
+    if 'hubs' in config:
+        for hub, eps in config['hubs'].items():
+            name = "{}vr-xcon-hub-{}".format(args.prefix, hub)
+            cmd = ["docker", "run", "--privileged", "-d", "--name", name]
+
+            if docker_network:
+                cmd.extend(["--network", docker_network])
+            else:
+                for vr in sorted(config['routers']):
+                    cmd.extend(["--link", "%s%s:%s%s" % (args.prefix, vr, args.prefix, vr)])
+            cmd.append(docker_registry + "vr-xcon")
+            cmd.append("--hub")
+            cmd.extend(["%s%s/%s" % (args.prefix, ep["router"], ep["numeric"]) for ep in eps])
+            run_command(cmd, dry_run)
 
 
 if __name__ == '__main__':

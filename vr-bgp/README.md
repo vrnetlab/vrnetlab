@@ -124,12 +124,14 @@ list of integers `[2792, 10300]`.
 
 ### `POST /announce`
 ```javascript
-[
-    { "prefix": "21.0.0.0/24" },
-    { "prefix": "21.1.0.0/24", "community": ["2792:10300"]},
-    { "prefix": "21.2.0.0/24", "as-path": [21, 65000] },
-    { "prefix": "21.3.0.0/24", "med": 100 }
-]
+{"routes":
+    [
+        { "prefix": "21.0.0.0/24" },
+        { "prefix": "21.1.0.0/24", "community": ["2792:10300"]},
+        { "prefix": "21.2.0.0/24", "as-path": [21, 65000] },
+        { "prefix": "21.3.0.0/24", "med": 100 }
+    ]
+}
 ```
 
 The example shows announcement configuration for four prefixes. By default, all

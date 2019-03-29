@@ -34,6 +34,9 @@ group test {
         {%- if config.TTLSECURITY %}
         ttl-security;
         {%- endif %}
+        {%- if config.ROUTEREFRESH %}
+        route-refresh;
+        {%- endif %}
     }
 {%- endif %}
 {%- if config.IPV6_NEIGHBOR %}
@@ -53,6 +56,9 @@ group test {
         {%- endif %}
         {%- if config.TTLSECURITY %}
         ttl-security;
+        {%- endif %}
+        {%- if config.ROUTEREFRESH %}
+        route-refresh;
         {%- endif %}
     }
 {%- endif %}

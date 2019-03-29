@@ -35,7 +35,9 @@ group test {
         ttl-security;
         {%- endif %}
         {%- if config.ROUTEREFRESH %}
-        route-refresh;
+        capability {
+            route-refresh;
+        }
         {%- endif %}
     }
 {%- endif %}
@@ -58,7 +60,9 @@ group test {
         ttl-security;
         {%- endif %}
         {%- if config.ROUTEREFRESH %}
-        route-refresh;
+        capability {
+            route-refresh;
+        }
         {%- endif %}
     }
 {%- endif %}

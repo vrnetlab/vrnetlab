@@ -178,6 +178,7 @@ class SROS_integrated(SROS_vm):
             self.wait_write("configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
         self.wait_write("configure system netconf no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
+        self.wait_write("configure system login-control ssh inbound-max-sessions 30")
         self.wait_write("configure card 1 mda 1 shutdown")
         self.wait_write("configure card 1 mda 1 no mda-type")
         self.wait_write("configure card 1 shutdown")
@@ -238,6 +239,7 @@ class SROS_cp(SROS_vm):
             self.wait_write("configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
         self.wait_write("configure system netconf no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
+        self.wait_write("configure system login-control ssh inbound-max-sessions 30")
 
         # configure SFMs
         for i in range(1, 17):

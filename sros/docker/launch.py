@@ -145,9 +145,9 @@ class SROS_vm(vrnetlab.VM):
 class SROS_integrated(SROS_vm):
     """ Integrated VSR-SIM
     """
-    def __init__(self, username, password):
+    def __init__(self, username, password, mixed_mode):
         super(SROS_integrated, self).__init__(username, password)
-
+        self.mixed_mode = mixed_mode
         self.num_nics = 5
         self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
 
@@ -187,6 +187,11 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
         self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
         self.wait_write("configure card 1 no shutdown")
+        if self.mixed_mode:
+            self.wait_write("configure system management-interface yang-modules no nokia-modules")
+            self.wait_write("configure system management-interface yang-modules nokia-combined-modules")
+            self.wait_write("configure system management-interface yang-modules no base-r13-modules")
+            self.wait_write("configure system management-interface configuration-mode mixed")
         self.wait_write("admin save")
         self.wait_write("logout")
 
@@ -196,10 +201,10 @@ class SROS_integrated(SROS_vm):
 class SROS_cp(SROS_vm):
     """ Control plane for distributed VSR-SIM
     """
-    def __init__(self, username, password, num_lc=1):
+    def __init__(self, username, password, mixed_mode, num_lc=1):
         super(SROS_cp, self).__init__(username, password)
         self.num_lc = num_lc
-
+        self.mixed_mode = mixed_mode
         self.num_nics = 0
         self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"]
 
@@ -240,6 +245,11 @@ class SROS_cp(SROS_vm):
         self.wait_write("configure system netconf no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure system login-control ssh inbound-max-sessions 30")
+        if self.mixed_mode:
+            self.wait_write("configure system management-interface yang-modules no nokia-modules")
+            self.wait_write("configure system management-interface yang-modules nokia-combined-modules")
+            self.wait_write("configure system management-interface yang-modules no base-r13-modules")
+            self.wait_write("configure system management-interface configuration-mode mixed")
 
         # configure SFMs
         for i in range(1, 17):
@@ -321,7 +331,7 @@ class SROS_lc(SROS_vm):
 
 
 class SROS(vrnetlab.VR):
-    def __init__(self, username, password, num_nics):
+    def __init__(self, username, password, num_nics, mixed_mode):
         super(SROS, self).__init__(username, password)
 
         # move files into place
@@ -337,6 +347,7 @@ class SROS(vrnetlab.VR):
             self.license = True
 
         self.logger.info("Number of NICS: " + str(num_nics))
+        self.logger.info("Mixed Mode: " + str(mixed_mode))
         # if we have more than 5 NICs we use distributed VSR-SIM
         if num_nics > 5:
             if not self.license:
@@ -345,12 +356,12 @@ class SROS(vrnetlab.VR):
 
             num_lc = math.ceil(num_nics / 6)
             self.logger.info("Number of linecards: " + str(num_lc))
-            self.vms = [ SROS_cp(username, password, num_lc=num_lc) ]
+            self.vms = [ SROS_cp(username, password, mixed_mode, num_lc=num_lc) ]
             for i in range(1, num_lc+1):
                 self.vms.append(SROS_lc(i))
 
         else: # 5 ports or less means integrated VSR-SIM
-            self.vms = [ SROS_integrated(username, password) ]
+            self.vms = [ SROS_integrated(username, password, mixed_mode) ]
 
         # set up bridge for connecting CP with LCs
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -366,6 +377,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--num-nics', default=5, help='Number of NICs')
+    parser.add_argument('--mixed-mode', action='store_true', help='enable mixed configuration mode of the system')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -376,5 +388,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    ia = SROS(args.username, args.password, num_nics=int(args.num_nics))
+    ia = SROS(args.username, args.password, num_nics=int(args.num_nics), mixed_mode=args.mixed_mode)
     ia.start()

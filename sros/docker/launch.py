@@ -149,7 +149,7 @@ class SROS_integrated(SROS_vm):
         super(SROS_integrated, self).__init__(username, password)
 
         self.num_nics = 5
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1s card=xcm-1s mda/1=s36-400gb-qsfpdd"]
+        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me12-100gb-qsfp28 mda/2=me12-100gb-qsfp28"]
 
 
 
@@ -180,11 +180,13 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure card 1 mda 1 shutdown")
         self.wait_write("configure card 1 mda 1 no mda-type")
+        self.wait_write("configure card 1 mda 2 shutdown")
+        self.wait_write("configure card 1 mda 2 no mda-type")
         self.wait_write("configure card 1 shutdown")
         self.wait_write("configure card 1 no card-type")
-        self.wait_write("configure card 1 card-type iom-xp-b")
-        self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
-        self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
+        self.wait_write("configure card 1 card-type iom-1 level he")
+        self.wait_write("configure card 1 mda 1 mda-type me12-100gb-qsfp28")
+        self.wait_write("configure card 1 mda 2 mda-type me12-100gb-qsfp28")
         self.wait_write("configure card 1 no shutdown")
         self.wait_write("admin save")
         self.wait_write("logout")

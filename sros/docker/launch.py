@@ -149,7 +149,7 @@ class SROS_integrated(SROS_vm):
         super(SROS_integrated, self).__init__(username, password)
 
         self.num_nics = 5
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
+        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1s card=xcm-1s mda/1=s36-400gb-qsfpdd"]
 
 
 

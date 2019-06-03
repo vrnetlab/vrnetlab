@@ -149,7 +149,7 @@ class SROS_integrated(SROS_vm):
         super(SROS_integrated, self).__init__(username, password)
 
         self.num_nics = 5
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me12-100gb-qsfp28 mda/2=me12-100gb-qsfp28"]
+        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me6-100gb-qsfp28"]
 
 
 
@@ -161,10 +161,11 @@ class SROS_integrated(SROS_vm):
         # call parent function to generate first mgmt interface (e1000)
         res = super(SROS_integrated, self).gen_mgmt()
         # add virtio NIC for internal control plane interface to vFPC
-        res.append("-device")
-        res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
-        res.append("-netdev")
-        res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
+        # changed system to SR-1 from SR-c12.  do not need the vfpc control interface
+        #res.append("-device")
+        #res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
+        #res.append("-netdev")
+        #res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
         return res
 
 
@@ -180,13 +181,10 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure card 1 mda 1 shutdown")
         self.wait_write("configure card 1 mda 1 no mda-type")
-        self.wait_write("configure card 1 mda 2 shutdown")
-        self.wait_write("configure card 1 mda 2 no mda-type")
         self.wait_write("configure card 1 shutdown")
         self.wait_write("configure card 1 no card-type")
         self.wait_write("configure card 1 card-type iom-1 level he")
-        self.wait_write("configure card 1 mda 1 mda-type me12-100gb-qsfp28")
-        self.wait_write("configure card 1 mda 2 mda-type me12-100gb-qsfp28")
+        self.wait_write("configure card 1 mda 1 mda-type me6-100gb-qsfp28")
         self.wait_write("configure card 1 no shutdown")
         self.wait_write("admin save")
         self.wait_write("logout")

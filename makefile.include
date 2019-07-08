@@ -47,4 +47,8 @@ usage:
 no-image:
 	@echo "ERROR: you have no $(IMAGE_FORMAT) ($(IMAGE_GLOB)) image"
 
+version-test:
+	@echo Extracting version from filename $(IMAGE)
+	@echo Version: $(VERSION)
+
 all: docker-image

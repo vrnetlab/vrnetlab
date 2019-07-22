@@ -236,11 +236,6 @@ class SROS_cp(SROS_vm):
         self.wait_write("configure system netconf no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure system login-control ssh inbound-max-sessions 30")
-        if self.mode != 'cli':
-            self.wait_write("configure system management-interface yang-modules no nokia-modules")
-            self.wait_write("configure system management-interface yang-modules nokia-combined-modules")
-            self.wait_write("configure system management-interface yang-modules no base-r13-modules")
-            self.wait_write("configure system management-interface configuration-mode {}".format(self.mode))
 
         # configure SFMs
         for i in range(1, 17):
@@ -251,6 +246,11 @@ class SROS_cp(SROS_vm):
             self.wait_write("configure card {} card-type xcm-x20".format(i))
             self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
 
+        if self.mode != 'cli':
+            self.wait_write("configure system management-interface yang-modules no nokia-modules")
+            self.wait_write("configure system management-interface yang-modules nokia-combined-modules")
+            self.wait_write("configure system management-interface yang-modules no base-r13-modules")
+            self.wait_write("configure system management-interface configuration-mode {}".format(self.mode))
         self.wait_write("admin save")
         self.wait_write("logout")
 

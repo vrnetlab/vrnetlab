@@ -37,7 +37,7 @@ docker-push:
 
 docker-push-image:
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
-	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
+	@if [ "$(IMAGE)" != "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
 	docker push $(REGISTRY)vr-$(VR_NAME):$(VERSION)
 
 usage:

@@ -65,7 +65,7 @@ def uuid_rev_part(part):
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, num=0, ram=6144):
-        super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2", num=num)
+        super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2", num=num,ram=ram)
 
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
@@ -145,11 +145,19 @@ class SROS_vm(vrnetlab.VM):
 class SROS_integrated(SROS_vm):
     """ Integrated VSR-SIM
     """
-    def __init__(self, username, password):
+    def __init__(self, username, password, major_release):
         super(SROS_integrated, self).__init__(username, password)
 
+        self.major_release = major_release
         self.num_nics = 5
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
+        self.model = "SR-c12"
+        
+        if self.major_release >= 19:   # integrated SRc12 no longer supported => switch to SR-1 and supported IOM/MDA
+            self.model = "SR-1"
+            self.logger.info("SROS release is 19.x or higher. Using integrated model 'SR-1' - SR-c12 no longer supported!")
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me6-100gb-qsfp28"]
+        else:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
 
 
 
@@ -160,11 +168,12 @@ class SROS_integrated(SROS_vm):
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(SROS_integrated, self).gen_mgmt()
-        # add virtio NIC for internal control plane interface to vFPC
-        res.append("-device")
-        res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
-        res.append("-netdev")
-        res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
+        if not self.model == "SR-1":
+            # add virtio NIC for internal control plane interface to vFPC
+            res.append("-device")
+            res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
+            res.append("-netdev")
+            res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
         return res
 
 
@@ -182,9 +191,13 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure card 1 mda 1 no mda-type")
         self.wait_write("configure card 1 shutdown")
         self.wait_write("configure card 1 no card-type")
-        self.wait_write("configure card 1 card-type iom-xp-b")
-        self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
-        self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
+        if self.major_release >= 19:
+            self.wait_write('configure card 1 card-type iom-1')
+            self.wait_write('configure card 1 mda 1 mda-type "me6-100gb-qsfp28"')
+        else:
+            self.wait_write("configure card 1 card-type iom-xp-b")
+            self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
+            self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
         self.wait_write("configure card 1 no shutdown")
         self.wait_write("admin save")
         self.wait_write("logout")
@@ -323,10 +336,13 @@ class SROS(vrnetlab.VR):
         super(SROS, self).__init__(username, password)
 
         # move files into place
+        self.major_release = 0
         for e in os.listdir("/"):
-            if re.search("\.qcow2$", e):
+            match = re.match(r'[^0-9]+([0-9]+)\S+\.qcow2$', e)
+            if match:
+                self.major_release = int(match.group(1))
                 os.rename("/" + e, "/sros.qcow2")
-            if re.search("\.license$", e):
+            if re.search(r'\.license$', e):
                 os.rename("/" + e, "/tftpboot/license.txt")
 
         self.license = False
@@ -348,7 +364,7 @@ class SROS(vrnetlab.VR):
                 self.vms.append(SROS_lc(i))
 
         else: # 5 ports or less means integrated VSR-SIM
-            self.vms = [ SROS_integrated(username, password) ]
+            self.vms = [ SROS_integrated(username, password, self.major_release) ]
 
         # set up bridge for connecting CP with LCs
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])

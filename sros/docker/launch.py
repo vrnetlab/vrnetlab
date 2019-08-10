@@ -191,7 +191,7 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure card 1 mda 1 no mda-type")
         self.wait_write("configure card 1 shutdown")
         self.wait_write("configure card 1 no card-type")
-        if self.major_release >= 19:
+        if self.model == "SR-1":
             self.wait_write('configure card 1 card-type iom-1')
             self.wait_write('configure card 1 mda 1 mda-type "me6-100gb-qsfp28"')
         else:

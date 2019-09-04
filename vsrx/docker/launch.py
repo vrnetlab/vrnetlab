@@ -44,7 +44,6 @@ class VSRX_vm(vrnetlab.VM):
                 disk_image = "/" + e
         super(VSRX_vm, self).__init__(username, password, disk_image=disk_image, ram=4096)
         self.qemu_args.extend(["-smp", "2"])
-        self.qemu_args.extend(["-boot", "c"])  # boot harddrive first
         self.nic_type = "virtio-net-pci"
         self.num_nics = 10
 
@@ -105,7 +104,7 @@ class VSRX_vm(vrnetlab.VM):
         self.wait_write(self.password, "New password:")
         self.wait_write(self.password, "Retype new password:")
         self.wait_write("delete interfaces ge-0/0/0", "#")
-        self.wait_write("set interfaces fxp0.0 unit 0 family inet address 10.0.0.15/24", "#")
+        self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24", "#")
         self.wait_write("commit", "#")
         self.wait_write("quit", "#")
         self.logger.info("completed bootstrap configuration")

@@ -21,6 +21,8 @@ It supports:
 I talk a little about it during my presentation about TeraStream testing at
 the NetNod autum meeting 2016 - https://youtu.be/R_vCdGkGeSk?t=9m25s
 
+Brian Linkletter has written a good introduction too https://www.brianlinkletter.com/vrnetlab-emulate-networks-using-kvm-and-docker/
+
 
 Usage
 -----

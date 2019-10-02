@@ -30,6 +30,8 @@ RUN apt-get update -qy \
     python3-ipy \
     tcpdump \
     telnet \
+    python3-pip \
+ && pip3 install scapy \
  && rm -rf /var/lib/apt/lists/*
 
 ADD xcon.py /

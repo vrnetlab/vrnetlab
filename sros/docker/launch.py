@@ -192,12 +192,16 @@ class SROS_integrated(SROS_vm):
 class SROS_cp(SROS_vm):
     """ Control plane for distributed VSR-SIM
     """
-    def __init__(self, username, password, mode, num_lc=1):
+    def __init__(self, username, password, mode, major_release, num_lc=1):
         super(SROS_cp, self).__init__(username, password)
         self.num_lc = num_lc
         self.mode = mode
         self.num_nics = 0
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"]
+        if major_release >= 19:
+            self.logger.info("SROS release 19 or higher, use card xcm-x20 instead of cpm-x20")
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=xcm-x20"]
+        else:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"]
 
 
     def start(self):
@@ -325,8 +329,13 @@ class SROS(vrnetlab.VR):
     def __init__(self, username, password, num_nics, mode):
         super(SROS, self).__init__(username, password)
 
+        major_release = 0
+
         # move files into place
         for e in os.listdir("/"):
+            match = re.match(r'[^0-9]+([0-9]+)\S+\.qcow2$', e)
+            if match:
+                major_release = int(match.group(1))
             if re.search("\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
             if re.search("\.license$", e):
@@ -339,15 +348,15 @@ class SROS(vrnetlab.VR):
 
         self.logger.info("Number of NICS: " + str(num_nics))
         self.logger.info("Mode: " + str(mode))
-        # if we have more than 5 NICs we use distributed VSR-SIM
-        if num_nics > 5:
+        # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
+        if num_nics > 5 or major_release >= 19:
             if not self.license:
                 self.logger.error("More than 5 NICs require distributed VSR which requires a license but no license is found")
                 sys.exit(1)
 
             num_lc = math.ceil(num_nics / 6)
             self.logger.info("Number of linecards: " + str(num_lc))
-            self.vms = [ SROS_cp(username, password, mode, num_lc=num_lc) ]
+            self.vms = [ SROS_cp(username, password, mode, major_release, num_lc=num_lc) ]
             for i in range(1, num_lc+1):
                 self.vms.append(SROS_lc(i))
 

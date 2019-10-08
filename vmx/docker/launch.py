@@ -143,6 +143,8 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24")
         self.wait_write("delete interfaces fxp0 unit 0 family inet dhcp")
         self.wait_write("delete system processes dhcp-service")
+        # delete auto-image-upgrade so VMX won't restart in VMX 18
+        self.wait_write("delete chassis auto-image-upgrade")
         self.wait_write("commit")
         self.wait_write("exit")
 

@@ -160,7 +160,8 @@
             "right": {
                 "interface": "GigabitEthernet0/0/0/41",
                 "numeric": 42,
-                "router": "kul-core-1"
+                "router": "kul-core-1",
+                "vlan": 1337
             }
         },
         {
@@ -783,7 +784,8 @@
                     "our_interface": "GigabitEthernet0/0/0/1",
                     "our_numeric": 2,
                     "their_interface": "GigabitEthernet0/0/0/41",
-                    "their_numeric": 42
+                    "their_numeric": 42,
+                    "vlan": 1337
                 }
             ],
             "sgp-core-1": [

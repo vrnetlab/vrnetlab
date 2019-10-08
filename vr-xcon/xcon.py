@@ -251,10 +251,10 @@ class TcpBridge:
             sys.exit(1)
         elif ':' in source:
             source, vlan = source.split(':')
-            self.vlans[source] = vlan
+            self.vlans[destination] = vlan
         elif ':' in destination:
             destination, vlan = destination.split(':')
-            self.vlans[destination] = vlan
+            self.vlans[source] = vlan
         src_router, src_interface = source.split("/")
         dst_router, dst_interface = destination.split("/")
         src = self.hostintf2addr(source)

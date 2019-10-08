@@ -148,12 +148,14 @@ router twice:
  * foo <-> a
  * foo <-> a
 
-The array of routers on the right side may also include static interface assignment. Use the format `router:interface` to assign a specific interface to a link. For example:
+The array of routers on the right side may also include static interface
+assignment. Use the a dict to assign a specific interface to a link. For
+example:
 
 ```
 {
     "p2p": {
-        "foo": [ "a", "b:2" ]
+        "foo": [ "a", {"router": b, "numeric": 42} ]
     }
 }
 ```
@@ -161,6 +163,24 @@ The array of routers on the right side may also include static interface assignm
  * foo <-> a/1
  * foo <-> b/2
 
+ Another option is to have links where you want to emulate an access switch
+ between the two endpoints. 802.1q VLAN tags will be automatically stripped from
+ the frames sent from the left side to the right side. And conversely, the right
+ side is expected to send untagged frames which are then tagged before being
+ sent to the left side. For example:
+
+ ```
+ "p2p": {
+        "foo": [ "b", {"router": "b", "vlan": 123}, {"router": "b", "vlan": 456}]
+    }
+ ```
+
+ Generated links:
+
+ * foo <-> b with untagged traffic
+ * foo <-> b:123 where foo is sending tagged traffic with vlan 123 and b receives untagged traffic.
+ * foo <-> b:456 where foo is sending tagged traffic with vlan 456 and b receives untagged traffic.
+ 
 Configuration section "fullmeshes"
 ----------------------------------
 Last but not least we have the fullmeshes section which helps you build one or

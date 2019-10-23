@@ -36,8 +36,8 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, install_mode=False):
-        super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
+    def __init__(self, username, password, image, install_mode=False, extra_config=None):
+        super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048, extra_config=extra_config)
         self.install_mode = install_mode
         self.num_nics = 0
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
@@ -145,6 +145,8 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("delete system processes dhcp-service")
         # delete auto-image-upgrade so VMX won't restart in VMX 18
         self.wait_write("delete chassis auto-image-upgrade")
+        for line in self.extra_config:
+            self.wait_write(line)
         self.wait_write("commit")
         self.wait_write("exit")
 
@@ -238,14 +240,14 @@ class VMX(vrnetlab.VR):
     """ Juniper vMX router
     """
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, extra_config=None):
         self.version = None
         self.version_info = []
         self.read_version()
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image), VMX_vfpc(self.version) ]
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, extra_config=extra_config), VMX_vfpc(self.version) ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -318,6 +320,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install vMX')
+    parser.add_argument('--extra-config', action='append', default=[], help='Configure vMX with commands on startup')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -332,5 +335,5 @@ if __name__ == '__main__':
         vr = VMX_installer(args.username, args.password)
         vr.install()
     else:
-        vr = VMX(args.username, args.password)
+        vr = VMX(args.username, args.password, args.extra_config)
         vr.start()

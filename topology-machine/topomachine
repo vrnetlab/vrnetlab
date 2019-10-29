@@ -203,6 +203,7 @@ def stop_container_api(client, name):
 def remove_container_api(client, name):
     container = client.containers.get(name)
     container.remove()
+<<<<<<< HEAD
 
 
 def get_container_health_api(client, name):
@@ -222,6 +223,27 @@ def get_network_api(client, name):
     return(network)
 
 
+=======
+
+
+def get_container_health_api(client, name):
+    container = client.containers.get(name)
+    health = container.attrs['State']['Health']['Status']
+    return(health)
+
+
+def get_container_state_api(client, name):
+    container = client.containers.get(name)
+    state = container.attrs['State']['Status']
+    return(state)
+
+
+def get_network_api(client, name):
+    network = client.networks.get(name)
+    return(network)
+
+
+>>>>>>> 112c33b9b2e042652896f51ea05faf9c89382649
 def run_topology_api(config, url, with_trace=False):
 
     # set up connection to docker api
@@ -361,6 +383,33 @@ def stop_topology_api(config, url):
             raise
         except:
             print("Container(%s) already removed" % name)
+<<<<<<< HEAD
+=======
+
+    if 'links' in config:
+        name = "%svr-xcon" % args.prefix
+        try:
+            stop_container_api(client, name)
+            print("Stopped container(%s)" % name)
+        except KeyboardInterrupt:
+            raise
+        except:
+            print("Container(%s) is not running" % name)
+        try:
+            remove_container_api(client, name)
+            print("Removed container(%s)" % name)
+        except KeyboardInterrupt:
+            raise
+        except:
+            print("Container(%s) already removed" % name)
+
+    # close connection to docker api
+    try:
+        client.close()
+    except docker.errors.APIError:
+        print("ERROR: {}".format(docker.errors.APIError))
+        sys.exit(1)
+>>>>>>> 112c33b9b2e042652896f51ea05faf9c89382649
 
     if 'links' in config:
         name = "%svr-xcon" % args.prefix
@@ -440,6 +489,15 @@ if __name__ == '__main__':
         input_file = open(args.stop, "r")
         config = json.loads(input_file.read())
         input_file.close()
+<<<<<<< HEAD
+=======
+        run_topology_api(config, args.api, args.with_trace)
+
+    if args.stop:
+        input_file = open(args.stop, "r")
+        config = json.loads(input_file.read())
+        input_file.close()
+>>>>>>> 112c33b9b2e042652896f51ea05faf9c89382649
         stop_topology_api(config, args.api)
 
     if args.template:

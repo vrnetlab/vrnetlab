@@ -4,10 +4,8 @@ import datetime
 import logging
 import re
 import signal
-import subprocess
 import sys
 import time
-import math
 import os
 import vrnetlab
 
@@ -111,7 +109,12 @@ class simulator_VM(vrnetlab.VM):
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
+        self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/1')
+        self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/4')
+        self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/14')
         self.logger.info("applying bootstrap configuration")
+        self.wait_write(cmd="", wait=None)
+        self.wait_write(cmd="", wait=None)
 
         self.wait_write(cmd="system-view", wait=">")
         self.wait_write(cmd="sysname HUAWEI", wait="]")
@@ -140,12 +143,11 @@ class simulator_VM(vrnetlab.VM):
         self.wait_write(cmd="local-user %s user-group manage-ug" % self.username, wait="]")
         self.wait_write(cmd="commit", wait="]")
 
-
 class simulator(vrnetlab.VR):
 
     def __init__(self, username, password):
-         super(simulator, self).__init__(username, password)
-         self.vms = [simulator_VM(username, password)]
+        super(simulator, self).__init__(username, password)
+        self.vms = [simulator_VM(username, password)]
 
 
 if __name__ == '__main__':

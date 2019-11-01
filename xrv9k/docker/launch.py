@@ -165,11 +165,11 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("")
 
         # wait for Gi0/0/0/0 in config
-        if not self._wait_config("show interfaces description", "Gi0/0/0/0"):
+        if not self.wait_config("show interfaces description", "Gi0/0/0/0"):
             return False
 
         # wait for call-home in config
-        if not self._wait_config("show running-config call-home", "service active"):
+        if not self.wait_config("show running-config call-home", "service active"):
             return False
 
         self.wait_write("configure")
@@ -193,23 +193,6 @@ class XRV_vm(vrnetlab.VM):
 
         return True
 
-    def _wait_config(self, show_cmd, expect):
-        """ Some configuration takes some time to "show up".
-            To make sure the device is really ready, wait here.
-        """
-        self.logger.debug('waiting for {} to appear in {}'.format(expect, show_cmd))
-        wait_spins = 0
-        # 10s * 90 = 900s = 15min timeout
-        while wait_spins < 90:
-            self.wait_write(show_cmd, wait=None)
-            _, match, data = self.tn.expect([expect.encode('UTF-8')], timeout=10)
-            self.logger.trace(data.decode('UTF-8'))
-            if match:
-                self.logger.debug('a wild {} has appeared!'.format(expect))
-                return True
-            wait_spins += 1
-        self.logger.error('{} not found in {}'.format(expect, show_cmd))
-        return False
 
 class XRV_Installer(vrnetlab.VR_Installer):
     """ XRV installer
@@ -223,6 +206,7 @@ class XRV_Installer(vrnetlab.VR_Installer):
     def __init__(self, username, password, ram, nics):
         super().__init__()
         self.vm = XRV_vm(username, password, ram, nics, install_mode=True)
+
 
 class XRV(vrnetlab.VR):
     def __init__(self, username, password, ram, nics):

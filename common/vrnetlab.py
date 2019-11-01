@@ -70,6 +70,7 @@ class VM:
         self.spins = 0
         self.p = None
         self.tn = None
+        self.qm = None
 
         #  various settings
         self.uuid = None
@@ -294,7 +295,8 @@ class VM:
                 self.logger.error("Telnet session was disconnected, restarting")
                 self.restart()
 
-
+    def bootstrap_spin(self):
+        raise NotImplementedError()
 
     def check_qemu(self):
         """ Check health of qemu. This is mostly just seeing if there's error
@@ -317,11 +319,28 @@ class VM:
             self.stop()
             self.start()
 
-
+    def wait_config(self, show_cmd, expect, spins=90):
+        """ Some configuration takes some time to "show up".
+            To make sure the device is really ready, wait here.
+        """
+        self.logger.debug('waiting for {} to appear in {}'.format(expect, show_cmd))
+        wait_spins = 0
+        # 10s * 90 = 900s = 15min timeout
+        while wait_spins < spins:
+            self.wait_write(show_cmd, wait=None)
+            _, match, data = self.tn.expect([expect.encode('UTF-8')], timeout=10)
+            self.logger.trace(data.decode('UTF-8'))
+            if match:
+                self.logger.debug('a wild {} has appeared!'.format(expect))
+                return True
+            wait_spins += 1
+        self.logger.error('{} not found in {}'.format(expect, show_cmd))
+        return False
 
 class VR:
     def __init__(self, username, password):
         self.logger = logging.getLogger()
+        self.vms = []
 
         try:
             os.mkdir("/tftpboot")
@@ -351,7 +370,7 @@ class VR:
             all_running = True
             for vm in self.vms:
                 vm.work()
-                if vm.running != True:
+                if not vm.running:
                     all_running = False
 
             if all_running:

@@ -116,7 +116,7 @@ class simulator_VM(vrnetlab.VM):
         self.wait_write(cmd="", wait=None)
         self.wait_write(cmd="", wait=None)
 
-        self.wait_write(cmd="system-view", wait=">")
+        self.wait_write(cmd="system-view", wait=None)
         self.wait_write(cmd="sysname HUAWEI", wait="]")
         self.wait_write(cmd="ssh server key-exchange dh_group14_sha1", wait="]")
         self.wait_write(cmd="interface GigabitEthernet 0/0/0", wait="]")

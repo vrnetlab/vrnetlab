@@ -112,6 +112,12 @@ class simulator_VM(vrnetlab.VM):
         self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/1')
         self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/4')
         self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/14')
+        # The first response might be the log message like
+        # 12/active/linkDown/Major/occurredTime:2019-11-11 23:49:03/-/-/alarmID:0x08520003/VS=Admin-VS-CID=0x807a0404:The interface status changes. (ifName=GigabitEthernet4/0/14, AdminStatus=UP, OperStatus=UP, Reason=Interface physical link is up, mainIfname=GigabitEthernet4/0/14
+        # So wait three more times to make sure we get the correct response
+        self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/14')
+        self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/14')
+        self.wait_config("display current-configuration interface GigabitEthernet", 'GigabitEthernet4/0/14')
         self.logger.info("applying bootstrap configuration")
         self.wait_write(cmd="", wait=None)
         self.wait_write(cmd="", wait=None)

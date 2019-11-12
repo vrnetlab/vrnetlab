@@ -198,7 +198,7 @@ class VMX_vfpc(vrnetlab.VM):
         res.extend(["-netdev",
                     "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
 
-        if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13'):
+        if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13', '18.2R2.6'):
             # dummy interface for some vMX versions - not sure why vFPC wants
             # it but without it we get a misalignment
             res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" %

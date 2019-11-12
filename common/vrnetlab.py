@@ -327,6 +327,14 @@ class VM:
         wait_spins = 0
         # 10s * 90 = 900s = 15min timeout
         while wait_spins < spins:
+            # On some devices (Huawei VRP), the command to disable paging
+            # only has a temporary effect?!
+            # To make sure we're not getting paged output, send the no_paging_command
+            # always, if the attribute exists on the extended VM class.
+            try:
+                self.wait_write(self.no_paging_command, wait=None)
+            except AttributeError:
+                pass
             self.wait_write(show_cmd, wait=None)
             _, match, data = self.tn.expect([expect.encode('UTF-8')], timeout=10)
             self.logger.trace(data.decode('UTF-8'))

@@ -36,13 +36,16 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, install_mode=False, extra_config=None):
+    def __init__(self, username, password, image, version, install_mode=False, extra_config=None):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048, extra_config=extra_config)
         self.install_mode = install_mode
         self.num_nics = 0
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
         self.smbios = ["type=0,vendor=Juniper",
                        "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"]
+        # insert juniper config file into metadata image to prevent auto-image-upgrades
+        if self.install_mode and version.startswith('18'):
+            self.insert_juniper_config()
         # add metadata image if it exists
         if os.path.exists("/vmx/metadata-usb-re.img"):
             self.qemu_args.extend(
@@ -167,6 +170,16 @@ class VMX_vcp(vrnetlab.VM):
         self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
+    def insert_juniper_config(self):
+        vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
+        vrnetlab.run_command(["mkdir", "/tmp/vmm-config"])
+        vrnetlab.run_command(["tar", "-xzvf", "/mnt/vmm-config.tgz", "-C", "/tmp/vmm-config"])
+        vrnetlab.run_command(["mkdir", "/tmp/vmm-config/config"])
+        vrnetlab.run_command(["touch", "/tmp/vmm-config/config/juniper.conf"])
+        vrnetlab.run_command(["tar", "zcf", "vmm-config.tgz", "-C", "/tmp/vmm-config", "."])
+        vrnetlab.run_command(["cp", "vmm-config.tgz", "/mnt/vmm-config.tgz"])
+        vrnetlab.run_command(["umount", "/mnt"])
+
 
 
 
@@ -247,7 +260,7 @@ class VMX(vrnetlab.VR):
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, extra_config=extra_config), VMX_vfpc(self.version) ]
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version, extra_config=extra_config), VMX_vfpc(self.version) ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -279,7 +292,7 @@ class VMX_installer(VMX):
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, install_mode=True) ]
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version, install_mode=True) ]
 
     def install(self):
         self.logger.info("Installing VMX")

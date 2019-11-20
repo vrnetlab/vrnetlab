@@ -211,7 +211,7 @@ class VMX_vfpc(vrnetlab.VM):
         res.extend(["-netdev",
                     "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
 
-        if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13', '18.2R2.6'):
+        if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13', '18.2R2.6', '18.4R1.8'):
             # dummy interface for some vMX versions - not sure why vFPC wants
             # it but without it we get a misalignment
             res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" %
@@ -234,7 +234,7 @@ class VMX_vfpc(vrnetlab.VM):
     def bootstrap_spin(self):
         (ridx, match, res) = self.tn.expect([b"localhost login", b"qemux86-64 login", b"mounting /dev/sda2 on /mnt failed"], 1)
         if match:
-            if ridx == 0 or ridx == 1: # got login - vFPC start succeeded!
+            if ridx in (0, 1): # got login - vFPC start succeeded!
                 self.logger.info("vFPC successfully started")
                 self.running = True
             if ridx == 2: # vFPC start failed - restart it

@@ -15,6 +15,7 @@ RUN apt-get update -qy \
 
 COPY vmx /vmx
 COPY *.py /
+COPY juniper.conf /
 
 EXPOSE 22 161/udp 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]

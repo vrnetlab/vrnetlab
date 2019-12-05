@@ -65,6 +65,15 @@ as soon as you close it though. Use `-d` for long running routers.
 The vFPC has a serial port that is exposed on TCP port 5001. Normally you don't
 need to interact with it but I imagine it could be useful for some debugging.
 
+You can provide additional configuration in the form of a file, to be merged with
+running configuration on startup. To do that, place the config in the
+`/extra-config.conf` file in the container on startup. The configuration must
+be a valid Junos configuration file (curly braces).
+
+```
+docker run --privileged -it --name vmx15 -v $(pwd)/extra-config.conf:/extra-config.conf vrnetlab/vr-vmx:15.1F6.9 --trace
+```
+
 System requirements
 -------------------
 CPU: 4 cores - 3 for the vFPC (virtual FPC - the forwarding plane) and 1 for

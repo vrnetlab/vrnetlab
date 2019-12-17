@@ -22,7 +22,7 @@ docker-build-image-copy:
 
 docker-build-common: docker-clean-build docker-pre-build
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
-	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string ($(IMAGE))"; exit 1; fi
+	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string ($(IMAGE)). The regexp for extracting version information is likely incorrect, check the regexp in the Makefile or open an issue at https://github.com/plajjan/vrnetlab/issues/new including the image file name you are using."; exit 1; fi
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
 	cp ../common/* docker/
 	$(MAKE) IMAGE=$$IMAGE docker-build-image-copy
@@ -46,5 +46,9 @@ usage:
 
 no-image:
 	@echo "ERROR: you have no $(IMAGE_FORMAT) ($(IMAGE_GLOB)) image"
+
+version-test:
+	@echo Extracting version from filename $(IMAGE)
+	@echo Version: $(VERSION)
 
 all: docker-image

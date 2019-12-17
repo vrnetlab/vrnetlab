@@ -15,6 +15,7 @@ build:
     # the GitLab built-in Docker registry so we check if it is enabled.
     # CI_REGISTRY is only set when the GitLab Docker registry is enabled
     - if [ -z "${DOCKER_REGISTRY}" ]; then if [ -n "${CI_REGISTRY}" ]; then export DOCKER_USER=gitlab-ci-token; export DOCKER_PASSWORD=${CI_BUILD_TOKEN}; export DOCKER_REGISTRY=${CI_REGISTRY_IMAGE}; fi; fi
+    - 'echo "DOCKER_REGISTRY: ${DOCKER_REGISTRY}"'
     # if DOCKER_REGISTRY set, either explicitly by user or implicitly by GitLab
     # (see above) we login to repo, build images and push them
     - if [ -n "${DOCKER_REGISTRY}" ]; then docker login -u ${DOCKER_USER} -p=${DOCKER_PASSWORD} ${DOCKER_REGISTRY}; fi

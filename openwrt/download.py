@@ -20,10 +20,10 @@ def get_rel(url, version):
         if not re.search('combined-ext4.img.gz', filename):
             #print("ignoring {}".format(filename))
             continue
-        if re.search('[^0-9][0-9]{2}\.[0-9]{2}[^0-9]', filename):
-            local_filename = filename
+        if re.search('^openwrt-x86-', filename):
+            local_filename = re.sub('^openwrt-x86-', 'openwrt-{}-x86-'.format(version), filename)
         else:
-            local_filename = re.sub('^openwrt-', 'openwrt-{}-'.format(version), filename)
+            local_filename = "openwrt-{}-x86-kvm_guest-{}".format(version, filename)
         file_url = "{}{}".format(url, filename)
         print("Downloading {} -> {}".format(file_url, local_filename))
         r = requests.get(file_url, stream=True)
@@ -39,7 +39,11 @@ def main():
     soup = BeautifulSoup(c, "lxml")
     links = soup.find_all("a")
     for l in links:
-        rel_url = "{}{}x86/kvm_guest/".format(base_url, l.attrs['href'])
+        m = re.search('^http(s|):\/\/', l.attrs['href'])
+        if not m:
+            rel_url = "{}{}x86/kvm_guest/".format(base_url, l.attrs['href'])
+        else:
+            rel_url = "{}x86/kvm_guest/".format(l.attrs['href'])
         m = re.search('[^0-9]([0-9]{2}\.[0-9]{2})[^0-9]', l.attrs['href'])
         if not m:
             continue

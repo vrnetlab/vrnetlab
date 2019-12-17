@@ -1,4 +1,4 @@
-FROM debian:stable
+FROM debian:stretch
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 RUN apt-get update -qy \

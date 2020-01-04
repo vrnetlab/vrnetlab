@@ -3,15 +3,11 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import subprocess
 import sys
-import telnetlib
 import time
-
-import IPy
 
 import vrnetlab
 
@@ -208,8 +204,7 @@ class VMX_vfpc(vrnetlab.VM):
         if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13', '18.2R2.6', '18.4R1.8'):
             # dummy interface for some vMX versions - not sure why vFPC wants
             # it but without it we get a misalignment
-            res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" %
-                                   vrnetlab.gen_mac(0)])
+            res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" % vrnetlab.gen_mac(0)])
             res.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
 
         return res
@@ -263,7 +258,7 @@ class VMX(vrnetlab.VR):
 
     def read_version(self):
         for e in os.listdir("/vmx/"):
-            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e)
+            m = re.search(r"-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e)
             if m:
                 self.vcp_image = e
                 self.version = m.group(1)
@@ -284,7 +279,7 @@ class VMX_installer(VMX):
         self.version_info = []
         self.read_version()
 
-        super(VMX, self).__init__(username, password)
+        super().__init__(username, password)
 
         self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version, install_mode=True) ]
 
@@ -327,6 +322,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install vMX')
+    parser.add_argument('--num-nics', type=int, default=96, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

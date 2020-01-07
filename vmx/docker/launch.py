@@ -169,12 +169,13 @@ class VMX_vcp(vrnetlab.VM):
         vrnetlab.run_command(["umount", "/mnt"])
 
     def insert_extra_config(self):
-        vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
-        if os.path.exists('/extra-config.conf'):
-            vrnetlab.run_command(["cp", "/extra-config.conf", "/mnt/"])
-        else:
-            vrnetlab.run_command(["touch", "/mnt/extra-config.conf"])
-        vrnetlab.run_command(["umount", "/mnt"])
+        extra_config = os.getenv('EXTRA_CONFIG')
+        if extra_config:
+            self.logger.debug('extra_config = ' + extra_config)
+            vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
+            with open('/mnt/extra-config.conf', 'w') as f:
+                f.write(extra_config)
+            vrnetlab.run_command(["umount", "/mnt"])
 
 
 class VMX_vfpc(vrnetlab.VM):

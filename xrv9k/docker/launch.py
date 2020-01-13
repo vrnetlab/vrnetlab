@@ -220,7 +220,7 @@ if __name__ == '__main__':
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--nics', type=int, default=128, help='Number of NICS')
+    parser.add_argument('--num-nics', type=int, default=24, help='Number of NICS')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -231,5 +231,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = XRV(args.username, args.password, args.nics)
+    vr = XRV(args.username, args.password, args.num_nics)
     vr.start()

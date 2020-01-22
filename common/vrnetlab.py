@@ -43,7 +43,7 @@ class VM:
         return self.__class__.__name__
 
 
-    def __init__(self, username, password, disk_image=None, num=0, ram=4096):
+    def __init__(self, username, password, disk_image=None, num=0, ram=4096, cpus=1):
         self.logger = logging.getLogger()
 
         # username / password to configure
@@ -73,6 +73,7 @@ class VM:
 
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
+        self.qemu_args.extend(["-smp", "cpus={}".format(cpus)])
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
                                "-drive", "if=ide,file=%s" % overlay_disk_image])

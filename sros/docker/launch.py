@@ -65,7 +65,7 @@ def uuid_rev_part(part):
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, num=0, ram=6144):
-        super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2", num=num)
+        super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2", num=num, cpus=2, ram=ram)
 
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
@@ -145,11 +145,15 @@ class SROS_vm(vrnetlab.VM):
 class SROS_integrated(SROS_vm):
     """ Integrated VSR-SIM
     """
-    def __init__(self, username, password):
+    def __init__(self, username, password, newchassis=False):
         super(SROS_integrated, self).__init__(username, password)
 
         self.num_nics = 5
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
+        self.newchassis = newchassis
+        if self.newchassis:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me6-100gb-qsfp28"]
+        else:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
 
 
 
@@ -182,9 +186,13 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure card 1 mda 1 no mda-type")
         self.wait_write("configure card 1 shutdown")
         self.wait_write("configure card 1 no card-type")
-        self.wait_write("configure card 1 card-type iom-xp-b")
-        self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
-        self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
+        if self.newchassis:
+            self.wait_write("configure card 1 card-type iom-1 level he")
+            self.wait_write("configure card 1 mda 1 mda-type me6-100gb-qsfp28")
+        else:
+            self.wait_write("configure card 1 card-type iom-xp-b")
+            self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
+            self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
         self.wait_write("configure card 1 no shutdown")
         self.wait_write("admin save")
         self.wait_write("logout")
@@ -195,12 +203,16 @@ class SROS_integrated(SROS_vm):
 class SROS_cp(SROS_vm):
     """ Control plane for distributed VSR-SIM
     """
-    def __init__(self, username, password, num_lc=1):
+    def __init__(self, username, password, num_lc=1, newchassis=False):
         super(SROS_cp, self).__init__(username, password)
+        self.newchassis = newchassis
         self.num_lc = num_lc
 
         self.num_nics = 0
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"]
+        if self.newchassis:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=SR-14s slot=A sfm=sfm-s card=cpm-s"]
+        else:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"]
 
 
     def start(self):
@@ -239,14 +251,28 @@ class SROS_cp(SROS_vm):
         self.wait_write("configure system netconf no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
 
+        # configure Power on new chassis
+        if self.newchassis:
+            for i in range(1,3):
+                self.wait_write("configure system power-shelf {} power-shelf-type ps-a10-shelf-dc".format(i))
+                for m in range(1, 11):
+                    self.wait_write("configure system power-shelf {} power-module {} power-module-type ps-a-dc-6000".format(i, m))
+
         # configure SFMs
-        for i in range(1, 17):
-            self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
+        if self.newchassis:
+            for i in range(1, 9):
+                self.wait_write("configure sfm {} sfm-type sfm-s".format(i))
+        else:
+            for i in range(1, 17):
+                self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
 
         # configure line card & MDAs
         for i in range(1, self.num_lc+1):
-            self.wait_write("configure card {} card-type xcm-x20".format(i))
-            self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
+            if self.newchassis:
+                pass
+            else:
+                self.wait_write("configure card {} card-type xcm-x20".format(i))
+                self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
 
         self.wait_write("admin save")
         self.wait_write("logout")
@@ -257,12 +283,16 @@ class SROS_cp(SROS_vm):
 class SROS_lc(SROS_vm):
     """ Line card for distributed VSR-SIM
     """
-    def __init__(self, slot=1):
+    def __init__(self, slot=1, newchassis=False):
         super(SROS_lc, self).__init__(None, None, num=slot)
         self.slot = slot
-
+        self.newchassis = newchassis
+        
         self.num_nics = 6
-        self.smbios = ["type=1,product=TIMOS:chassis=XRS-20 chassis-topology=XRS-40 slot={} sfm=sfm-x20-b card=xcm-x20 mda/1=cx20-10g-sfp".format(slot)]
+        if self.newchassis:
+            self.smbios = ["type=1,product=TIMOS:chassis=SR-14s slot={} sfm=sfm-s card=xcm-14s mda/1=s36-400gb-qsfpdd".format(slot)]
+        else:
+            self.smbios = ["type=1,product=TIMOS:chassis=XRS-20 chassis-topology=XRS-40 slot={} sfm=sfm-x20-b card=xcm-x20 mda/1=cx20-10g-sfp".format(slot)]
 
 
 
@@ -319,7 +349,7 @@ class SROS_lc(SROS_vm):
 
 
 class SROS(vrnetlab.VR):
-    def __init__(self, username, password, num_nics):
+    def __init__(self, username, password, num_nics, newchassis=False):
         super(SROS, self).__init__(username, password)
 
         # move files into place
@@ -343,12 +373,12 @@ class SROS(vrnetlab.VR):
 
             num_lc = math.ceil(num_nics / 6)
             self.logger.info("Number of linecards: " + str(num_lc))
-            self.vms = [ SROS_cp(username, password, num_lc=num_lc) ]
+            self.vms = [ SROS_cp(username, password, num_lc=num_lc, newchassis=newchassis) ]
             for i in range(1, num_lc+1):
-                self.vms.append(SROS_lc(i))
+                self.vms.append(SROS_lc(i, newchassis=newchassis))
 
         else: # 5 ports or less means integrated VSR-SIM
-            self.vms = [ SROS_integrated(username, password) ]
+            self.vms = [ SROS_integrated(username, password, newchassis=newchassis) ]
 
         # set up bridge for connecting CP with LCs
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -364,6 +394,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--num-nics', default=5, help='Number of NICs')
+    parser.add_argument('--newchassis', help='Use New Chassis SR-1, SR-14s', action="store_true")
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -374,5 +405,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    ia = SROS(args.username, args.password, num_nics=int(args.num_nics))
+    ia = SROS(args.username, args.password, num_nics=int(args.num_nics), newchassis=args.newchassis)
     ia.start()

@@ -147,7 +147,7 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("restconf")
         self.wait_write("netconf-yang")
 
-        self.wait_write("line vty 0 4")
+        self.wait_write("line vty 0 98")
         self.wait_write("login local")
         self.wait_write("transport input all")
         self.wait_write("end")

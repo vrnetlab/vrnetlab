@@ -150,6 +150,8 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("line vty 0 98")
         self.wait_write("login local")
         self.wait_write("transport input all")
+        self.wait_write("line vty 1")
+        self.wait_write("no length 0")
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
         self.wait_write("\r", None)

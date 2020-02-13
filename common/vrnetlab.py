@@ -162,7 +162,7 @@ class VM:
             res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
                        % { 'i': 0, 'mac': gen_mac(0) })
         res.append("-netdev")
-        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443" % { 'i': 0 })
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2023-10.0.0.15:23,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443" % { 'i': 0 })
 
         return res
 
@@ -311,6 +311,7 @@ class VR:
         self.logger.debug("Starting vrnetlab %s" % self.__class__.__name__)
         self.logger.debug("VMs: %s" % self.vms)
         run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
+        run_command(["socat", "TCP-LISTEN:23,fork", "TCP:127.0.0.1:2023"], background=True)
         run_command(["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True)
         run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
         run_command(["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True)

@@ -117,6 +117,11 @@ class NXOS_vm(vrnetlab.VM):
         self.wait_write("interface mgmt0")
         self.wait_write("ip address 10.0.0.15/24")
         self.wait_write("exit")
+
+        # setup nxapi/scp server
+        self.wait_write("feature scp-server")
+        self.wait_write("feature nxapi")
+        self.wait_write("feature telnet")
         self.wait_write("exit")
         self.wait_write("copy running-config startup-config")
 

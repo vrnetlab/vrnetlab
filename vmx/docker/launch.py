@@ -249,11 +249,11 @@ class VMX(vrnetlab.VR):
 
     def read_version(self):
         for e in os.listdir("/vmx/"):
-            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)\.([0-9]+))", e)
+            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-D[0-9]*)?\.([0-9]+))", e)
             if m:
                 self.vcp_image = e
                 self.version = m.group(1)
-                self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(6))]
+                self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(7))]
 
 
 class VMX_installer(VMX):

@@ -149,7 +149,11 @@ class SROS_integrated(SROS_vm):
         super(SROS_integrated, self).__init__(username, password)
 
         self.num_nics = 5
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me6-100gb-qsfp28"]
+        self.newchassis = newchassis
+        if self.newchassis:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-1 card=iom-1 mda/1=me6-100gb-qsfp28"]
+        else:
+            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt slot=A chassis=SR-c12 card=cfm-xp-b mda/1=m20-1gb-xp-sfp"]
 
 
 
@@ -161,11 +165,10 @@ class SROS_integrated(SROS_vm):
         # call parent function to generate first mgmt interface (e1000)
         res = super(SROS_integrated, self).gen_mgmt()
         # add virtio NIC for internal control plane interface to vFPC
-        # changed system to SR-1 from SR-c12.  do not need the vfpc control interface
-        #res.append("-device")
-        #res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
-        #res.append("-netdev")
-        #res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
+        res.append("-device")
+        res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
+        res.append("-netdev")
+        res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
         return res
 
 
@@ -183,8 +186,13 @@ class SROS_integrated(SROS_vm):
         self.wait_write("configure card 1 mda 1 no mda-type")
         self.wait_write("configure card 1 shutdown")
         self.wait_write("configure card 1 no card-type")
-        self.wait_write("configure card 1 card-type iom-1 level he")
-        self.wait_write("configure card 1 mda 1 mda-type me6-100gb-qsfp28")
+        if self.newchassis:
+            self.wait_write("configure card 1 card-type iom-1 level he")
+            self.wait_write("configure card 1 mda 1 mda-type me6-100gb-qsfp28")
+        else:
+            self.wait_write("configure card 1 card-type iom-xp-b")
+            self.wait_write("configure card 1 mcm 1 mcm-type mcm-xp")
+            self.wait_write("configure card 1 mda 1 mda-type m20-1gb-xp-sfp")
         self.wait_write("configure card 1 no shutdown")
         self.wait_write("admin save")
         self.wait_write("logout")
@@ -197,6 +205,7 @@ class SROS_cp(SROS_vm):
     """
     def __init__(self, username, password, num_lc=1, chassis=None):
         super(SROS_cp, self).__init__(username, password)
+        self.newchassis = newchassis
         self.num_lc = num_lc
 
         self.num_nics = 0
@@ -244,14 +253,28 @@ class SROS_cp(SROS_vm):
         self.wait_write("configure system netconf no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
 
+        # configure Power on new chassis
+        if self.newchassis:
+            for i in range(1,3):
+                self.wait_write("configure system power-shelf {} power-shelf-type ps-a10-shelf-dc".format(i))
+                for m in range(1, 11):
+                    self.wait_write("configure system power-shelf {} power-module {} power-module-type ps-a-dc-6000".format(i, m))
+
         # configure SFMs
-        for i in range(1, 17):
-            self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
+        if self.newchassis:
+            for i in range(1, 9):
+                self.wait_write("configure sfm {} sfm-type sfm-s".format(i))
+        else:
+            for i in range(1, 17):
+                self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
 
         # configure line card & MDAs
         for i in range(1, self.num_lc+1):
-            self.wait_write("configure card {} card-type xcm-x20".format(i))
-            self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
+            if self.newchassis:
+                pass
+            else:
+                self.wait_write("configure card {} card-type xcm-x20".format(i))
+                self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
 
         self.wait_write("admin save")
         self.wait_write("logout")
@@ -265,7 +288,8 @@ class SROS_lc(SROS_vm):
     def __init__(self, slot=1, chassis=None):
         super(SROS_lc, self).__init__(None, None, num=slot)
         self.slot = slot
-
+        self.newchassis = newchassis
+        
         self.num_nics = 6
         if chassis in ['SR-7s']:
             self.smbios = ["type=1,product=TIMOS:chassis=SR-7s slot={} sfm=sfm-s card=xcm-7s mda/1=s36-400gb-qsfpdd".format(slot)]

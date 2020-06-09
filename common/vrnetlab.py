@@ -43,7 +43,7 @@ class VM:
         return self.__class__.__name__
 
 
-    def __init__(self, username, password, disk_image=None, num=0, ram=4096):
+    def __init__(self, username, password, disk_image=None, num=0, ram=16000):
         self.logger = logging.getLogger()
 
         # username / password to configure

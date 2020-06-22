@@ -22,6 +22,7 @@ RUN apt-get update -qy \
     python-pip \
     zlib1g-dev \
  && rm -rf /var/lib/apt/lists/* \
+ && pip install --upgrade pip \
  && pip install napalm
 
 ADD configengine /

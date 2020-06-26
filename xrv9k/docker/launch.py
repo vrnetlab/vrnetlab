@@ -95,17 +95,11 @@ class XRV_vm(vrnetlab.VM):
                 self.wait_write(self.password, wait="Enter secret:")
                 self.wait_write(self.password, wait="Enter secret again:")
                 self.credentials.insert(0, [self.username, self.password])
-            if ridx == 3: # matched login prompt, so should login
-                self.logger.debug("matched login prompt")
-                try:
-                    username, password = self.credentials.pop(0)
-                except IndexError as exc:
-                    self.logger.error("no more credentials to try")
-                    return
-                self.logger.debug("trying to log in with %s / %s" % (username, password))
-                self.wait_write(username, wait=None)
-                self.wait_write(password, wait="Password:")
-                self.logger.debug("logged in with %s / %s" % (username, password))
+            if ridx == 3: # matched username prompt, so should login
+                self.logger.debug("trying to log in with %s / %s" % (self.credentials[0][0], self.credentials[0][1]))
+                self.wait_write(self.credentials[0][0], wait=None)
+                self.wait_write(self.credentials[0][1], wait="Password:")
+                self.logger.debug("logged in with %s / %s" % (self.credentials[0][0], self.credentials[0][1]))
             if self.xr_ready == True and ridx == 4:
                 # run main config!
                 if not self.bootstrap_config():

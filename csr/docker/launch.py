@@ -33,7 +33,7 @@ logging.Logger.trace = trace
 
 
 class CSR_vm(vrnetlab.VM):
-    def __init__(self, username, password, install_mode=False):
+    def __init__(self, username, password, install_mode=False, meshnet=False):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
@@ -49,6 +49,7 @@ class CSR_vm(vrnetlab.VM):
 
         self.install_mode = install_mode
         self.num_nics = 9
+        self.meshnet = meshnet
 
         if self.install_mode:
             logger.trace("install mode")
@@ -156,9 +157,9 @@ class CSR_vm(vrnetlab.VM):
 
 
 class CSR(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, username, password, meshnet=False):
         super(CSR, self).__init__(username, password)
-        self.vms = [ CSR_vm(username, password) ]
+        self.vms = [ CSR_vm(username, password, meshnet=meshnet) ]
 
 
 class CSR_installer(CSR):
@@ -188,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install CSR')
+    parser.add_argument('--meshnet', action='store_true', help='Native docker networking')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -202,5 +204,5 @@ if __name__ == '__main__':
         vr = CSR_installer(args.username, args.password)
         vr.install()
     else:
-        vr = CSR(args.username, args.password)
+        vr = CSR(args.username, args.password, meshnet=args.meshnet)
         vr.start()

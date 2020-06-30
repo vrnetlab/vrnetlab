@@ -24,13 +24,13 @@ def gen_mac(last_octet=None):
 
 
 
-def run_command(cmd, cwd=None, background=False):
+def run_command(cmd, cwd=None, background=False,shell=False):
     res = None
     try:
         if background:
             p = subprocess.Popen(cmd, cwd=cwd)
         else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd, shell=shell)
             res = p.communicate()
     except:
         pass
@@ -65,6 +65,7 @@ class VM:
         self.num_nics = 0
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
+        self.meshnet = False # Default to not do meshnet
         overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
 
         if not os.path.exists(overlay_disk_image):
@@ -148,6 +149,27 @@ class VM:
             pass
 
 
+    def create_bridges(self):
+        """ Create a linux bridge for every attached eth interface
+            Returns list of bridge names 
+        """
+        run_command(["mkdir", "-p", "/etc/qemu"]) # This is to whitlist all bridges
+        run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+
+        bridges = list()
+        intfs = [x for x in os.listdir('/sys/class/net/') if 'eth' in x if x != 'eth0']
+        intfs.sort()
+
+        self.logger.info("Creating bridges for interfaces: %s" % intfs)
+
+        for idx, intf in enumerate(intfs):
+            run_command(["ip", "link", "add", "name", "br-%s" % idx, "type", "bridge"], background=True)
+            run_command(["ip", "link", "set", "br-%s" % idx, "up"], background=True)
+            run_command(["ip", "link", "set", intf,  "master", "br-%s" % idx], background=True)
+            run_command(["echo 16384 > /sys/class/net/br-%s/bridge/group_fwd_mask" % idx], shell=True)
+            bridges.append("br-%s" % idx)
+        return bridges
+
     def gen_mgmt(self):
         """ Generate qemu args for the mgmt interface(s)
         """
@@ -171,6 +193,8 @@ class VM:
         """ Generate qemu args for the normal traffic carrying interface(s)
         """
         res = []
+        if self.num_nics > 0:
+            bridges = self.create_bridges()
         # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
         if 'vEOS-lab' in self.image:
             range_start = 2
@@ -189,9 +213,18 @@ class VM:
                        'addr': addr,
                        'mac': gen_mac(i)
                     })
-            res.append("-netdev")
-            res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+            if self.meshnet: # Meshnet logic
+                if i <= len(bridges):
+                    bridge = bridges[i-1] # We're starting from 0
+                    res.append("-netdev")
+                    res.append("bridge,id=p%(i)02d,br=%(bridge)s"
+                                % { 'i': i, 'bridge': bridge })
+                else: # We don't create more interfaces than we have bridges
+                    del res[-2:] # Removing recently added interface
+            else:      
+                res.append("-netdev")
+                res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
+                           % { 'i': i })
         return res
 
 

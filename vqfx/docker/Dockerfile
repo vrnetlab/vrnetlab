@@ -18,6 +18,6 @@ COPY $IMAGE /
 COPY *-pfe-* /
 COPY *.py /
 
-EXPOSE 22 161/udp 830 5000 10000-10099
+EXPOSE 22 161/udp 830 5000 10000-10099 32767
 HEALTHCHECK CMD ["/healthcheck.py"]
 ENTRYPOINT ["/launch_vqfx.py"]

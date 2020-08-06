@@ -50,6 +50,7 @@ class VQFX_vcp(vrnetlab.VM):
         # add interface to internal control plane bridge
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
         vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
+        vrnetlab.run_command(["socat", "TCP-LISTEN:32767,fork", "TCP:127.0.0.1:2767"], background=True)
 
 
     def gen_mgmt(self):

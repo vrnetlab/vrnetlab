@@ -3,15 +3,9 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
-import subprocess
 import sys
-import telnetlib
-import time
-
-import IPy
 
 import vrnetlab
 

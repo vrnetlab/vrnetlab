@@ -8,7 +8,7 @@ RUN apt-get update -qy \
  && apt-get install -y \
     bridge-utils \
     iproute2 \
-    python3-ipy \
+    python3 \
     socat \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*

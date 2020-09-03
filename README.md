@@ -23,6 +23,8 @@ the NetNod autum meeting 2016 - https://youtu.be/R_vCdGkGeSk?t=9m25s
 
 Brian Linkletter has written a good introduction too https://www.brianlinkletter.com/vrnetlab-emulate-networks-using-kvm-and-docker/
 
+Przemek Rogala wrote overview and has step-by-step use examples https://ttl255.com/vrnetlab-run-virtual-routers-in-docker-containers/
+
 
 Usage
 -----

@@ -225,6 +225,8 @@ def run_topology(config, dry_run, with_trace=False):
         if 'docker_network' in val:
             cmd.append('--network ' + val['docker_network'])
             cmd.append('--network-alias ' + router)
+        if 'ip' in val:
+            cmd.append('--ip {}'.format(val['ip']))
 
         cmd.append("%svr-%s:%s" % (docker_registry, val["type"], val["version"]))
         if trace:

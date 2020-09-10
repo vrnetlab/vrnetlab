@@ -241,7 +241,7 @@ def run_topology(config, dry_run, with_trace=False):
 
     if 'links' in config:
         name = "%svr-xcon" % args.prefix
-        cmd = ["docker", "run", "--privileged", "-d", "--name", name]
+        cmd = ["docker", "run", "--rm", "--privileged", "-d", "--name", name]
 
         if docker_network:
             cmd.extend(["--network", docker_network])

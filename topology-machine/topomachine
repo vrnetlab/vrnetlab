@@ -230,7 +230,7 @@ def run_topology(config, dry_run, with_trace=False):
             cmd.extend(val["run_args"].split())
 
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
-        if output.strip() == "true":
+        if not dry_run and output.strip() == "true":
             output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
             print("Container already running. Health: %s" % output.strip())
         else:
@@ -253,7 +253,7 @@ def run_topology(config, dry_run, with_trace=False):
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
-        if output.strip() == "true":
+        if not dry_run and output.strip() == "true":
             output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
             print("Container already running. Health: %s" % output.strip())
         else:

@@ -210,6 +210,9 @@ def run_topology(config, dry_run, with_trace=False):
     docker_registry = ""
     if os.getenv("DOCKER_REGISTRY"):
         docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
+    else:
+        docker_registry = 'vrnetlab/'
+
     for router in sorted(config['routers']):
         val = config['routers'][router]
         if val["type"] == "dummy":

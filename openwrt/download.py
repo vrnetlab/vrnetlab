@@ -1,55 +1,57 @@
 #!/usr/bin/env python3
-
+import os
 import re
-import shutil
-
 import requests
-from bs4 import BeautifulSoup
+from lxml import html
 
-base_url = "https://downloads.openwrt.org/"
-
-def get_rel(url, version):
+def get_hrefs(url):
+    'Fetch, parse, strip and return [href,href,..]'
     res = requests.get(url)
     if not res.status_code == 200:
         return
-    c = res.content
-    soup = BeautifulSoup(c, "lxml")
-    links = soup.find_all("a")
-    for l in links:
-        filename = l.string.strip()
-        if not re.search('combined-ext4.img.gz', filename):
-            #print("ignoring {}".format(filename))
+    tree = html.fromstring(res.content)
+    anchors = tree.xpath('//a[@href]')
+    refs = list(map(lambda a: a.get('href').strip('/'), anchors))
+    return refs
+
+def get_file(url, save_dest):
+    'Fetch, write and return Content-Length'
+    with requests.get(url, stream=True) as src:
+        with open(save_dest, 'wb') as dest:
+            dest.write(src.content)
+            dest.close()
+        src.close()
+        return src.headers.get('Content-Length')
+
+def get_latest(releases):
+    'Find the latest NN out of many NN.nn.nn'
+    release_matrix = {}
+    for rel in releases:
+        if not re.match('^\d{2}\.\d{2}\.\d+', rel):
             continue
-        if re.search('^openwrt-x86-', filename):
-            local_filename = re.sub('^openwrt-x86-', 'openwrt-{}-x86-'.format(version), filename)
-        else:
-            local_filename = "openwrt-{}-x86-kvm_guest-{}".format(version, filename)
-        file_url = "{}{}".format(url, filename)
-        print("Downloading {} -> {}".format(file_url, local_filename))
-        r = requests.get(file_url, stream=True)
-        with open(local_filename, 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
+        major = rel.split('.')[0]
+        release_matrix.setdefault(major, '')
+        release_matrix[major] = max(release_matrix[major], rel)
+    return list(release_matrix.values())
 
 
 def main():
-    res = requests.get("https://downloads.openwrt.org/")
-    if not res.status_code == 200:
-        return
-    c = res.content
-    soup = BeautifulSoup(c, "lxml")
-    links = soup.find_all("a")
-    for l in links:
-        m = re.search('^http(s|):\/\/', l.attrs['href'])
-        if not m:
-            rel_url = "{}{}x86/kvm_guest/".format(base_url, l.attrs['href'])
-        else:
-            rel_url = "{}x86/kvm_guest/".format(l.attrs['href'])
-        m = re.search('[^0-9]([0-9]{2}\.[0-9]{2})[^0-9]', l.attrs['href'])
-        if not m:
-            continue
-        print(l.string.strip(), l.attrs['href'], rel_url)
-        get_rel(rel_url, m.group(1))
 
+    base_url = "https://downloads.openwrt.org/releases"
+    stable_releases = get_hrefs(base_url)
+    latest_releases = get_latest(stable_releases)
 
+    for release in  latest_releases:
+
+        base_x86_64= f'{base_url}/{release}/targets/x86/64'
+        for filename in get_hrefs(base_x86_64):
+            # ignore if not ext4 fs
+            if not re.match('^openwrt-.*-combined-ext4.img.gz', filename):
+                continue
+
+            remote_file = f'{base_x86_64}/{filename}'
+            local_file = os.path.basename(remote_file)
+            size = get_file(remote_file, local_file)
+            print(f'Downloaded {local_file} ({size} bytes)')
 
 main()

@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import re
+import select
 import signal
 import subprocess
 import sys
@@ -32,32 +33,49 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, version, install_mode=False):
-        super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
+    def __init__(self, username, password, image, version, dual_re=False, re_instance=0, install_mode=False):
+        self.dual_re = dual_re
+        self.num = re_instance
         self.install_mode = install_mode
+        super(VMX_vcp, self).__init__(username, password, disk_image=self._get_file_in_vcp_folder(image), ram=2048, num=re_instance)
+
         self.num_nics = 0
-        self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
+        self.qemu_args.extend(["-drive", "if=ide,file=" + self._get_file_in_vcp_folder("vmxhdd.img")])
+        if dual_re:
+            product = "VM-vcp_vmx2-161-dualre-{}".format(re_instance)
+        else:
+            product = "VM-vcp_vmx2-161-re-0"
         self.smbios = ["type=0,vendor=Juniper",
-                       "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"]
+                       "type=1,manufacturer=Juniper,product=%s,version=0.1.0" % product]
         # insert bootstrap config file into metadata image
         if self.install_mode:
             self.insert_bootstrap_config()
         else:
             self.insert_extra_config()
         # add metadata image if it exists
-        if os.path.exists("/vmx/metadata-usb-re.img"):
+        if os.path.exists(self._metadata_usb):
             self.qemu_args.extend(
-                ["-usb", "-drive", "id=my_usb_disk,media=disk,format=raw,file=/vmx/metadata-usb-re.img,if=none",
+                 ["-usb", "-drive", "id=my_usb_disk,media=disk,format=raw,file={},if=none".format(self._metadata_usb),
                  "-device", "usb-storage,drive=my_usb_disk"])
 
+    def _get_file_in_vcp_folder(self, file):
+        return "/vmx/re{}/{}".format(self.num if self.dual_re else '', file)
+
+    @property
+    def _metadata_usb(self):
+        return self._get_file_in_vcp_folder("metadata-usb-re{}.img".format(self.num if self.dual_re else ''))
+
+    @property
+    def _vcp_int(self):
+        return "vcp-int{}".format(self.num if self.dual_re else '')
 
     def start(self):
         # use parent class start() function
         super(VMX_vcp, self).start()
         # add interface to internal control plane bridge
         if not self.install_mode:
-            vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
-            vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
+            vrnetlab.run_command(["brctl", "addif", "int_cp", self._vcp_int])
+            vrnetlab.run_command(["ip", "link", "set", self._vcp_int, "up"])
 
 
     def gen_mgmt(self):
@@ -68,14 +86,16 @@ class VMX_vcp(vrnetlab.VM):
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(VMX_vcp, self).gen_mgmt()
+        # do not set up port forwards for the backup routing-engine mgmt NIC or when running in install mode
+        if self.num == 1 or self.install_mode:
+            res[-1] = re.sub(r',hostfwd.*', '', res[-1])
         if not self.install_mode:
             # add virtio NIC for internal control plane interface to vFPC
             res.append("-device")
-            res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
+            res.append("virtio-net-pci,netdev=%s,mac=%s" % (self._vcp_int, vrnetlab.gen_mac(1)))
             res.append("-netdev")
-            res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
+            res.append("tap,ifname=%(_vcp_int)s,id=%(_vcp_int)s,script=no,downscript=no" % { '_vcp_int': self._vcp_int })
         return res
-
 
 
     def bootstrap_spin(self):
@@ -119,7 +139,7 @@ class VMX_vcp(vrnetlab.VM):
             # no match, if we saw some output from the router it's probably
             # booting, so let's give it some more time
             if res != b'':
-                self.logger.trace("OUTPUT VCP: %s" % res.decode())
+                self.logger.trace("OUTPUT VCP[%d]: %s" % (self.num, res.decode()))
                 # reset spins if we saw some output
                 self.spins = 0
 
@@ -155,7 +175,7 @@ class VMX_vcp(vrnetlab.VM):
         self.tn.write("{}\r".format(cmd).encode())
 
     def insert_bootstrap_config(self):
-        vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
+        vrnetlab.run_command(["mount", "-o", "loop", self._metadata_usb, "/mnt"])
         vrnetlab.run_command(["mkdir", "/tmp/vmm-config"])
         vrnetlab.run_command(["tar", "-xzvf", "/mnt/vmm-config.tgz", "-C", "/tmp/vmm-config"])
         vrnetlab.run_command(["mkdir", "/tmp/vmm-config/config"])
@@ -168,7 +188,7 @@ class VMX_vcp(vrnetlab.VM):
         extra_config = os.getenv('EXTRA_CONFIG')
         if extra_config:
             self.logger.debug('extra_config = ' + extra_config)
-            vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
+            vrnetlab.run_command(["mount", "-o", "loop", self._metadata_usb, "/mnt"])
             with open('/mnt/extra-config.conf', 'w') as f:
                 f.write(extra_config)
             vrnetlab.run_command(["umount", "/mnt"])
@@ -176,7 +196,9 @@ class VMX_vcp(vrnetlab.VM):
 
 class VMX_vfpc(vrnetlab.VM):
     def __init__(self, version):
-        super(VMX_vfpc, self).__init__(None, None, disk_image = "/vmx/vfpc.img", num=1)
+        # "Hardcode" the num to 3 for this VM. This gives us a static mapping
+        # for the console port (5002) independent of how man VCPs are running
+        super(VMX_vfpc, self).__init__(None, None, disk_image = "/vmx/vfpc.img", num=3)
         self.version = version
         self.num_nics = 96
 
@@ -243,14 +265,20 @@ class VMX(vrnetlab.VR):
     """ Juniper vMX router
     """
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, dual_re=False):
         self.version = None
         self.version_info = []
         self.read_version()
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version), VMX_vfpc(self.version) ]
+        if not dual_re:
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version), VMX_vfpc(self.version) ]
+        else:
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=0),
+                         VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=1),
+                         VMX_vfpc(self.version) ]
+
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -258,7 +286,7 @@ class VMX(vrnetlab.VR):
 
 
     def read_version(self):
-        for e in os.listdir("/vmx/"):
+        for e in os.listdir("/vmx/re"):
             m = re.search(r"-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e)
             if m:
                 self.vcp_image = e
@@ -275,43 +303,60 @@ class VMX_installer(VMX):
         this "install" when building the docker image we can decrease the
         normal startup time of the vMX.
     """
-    def __init__(self, username, password):
+    def __init__(self, username, password, dual_re=False):
         self.version = None
         self.version_info = []
         self.read_version()
 
-        super().__init__(username, password)
+        super().__init__(username, password, dual_re)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version, install_mode=True) ]
+        if not dual_re:
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version, install_mode=True) ]
+        else:
+            # When installing in dual-RE mode, boot a standalone RE and also 2x
+            # dualre. The final image will end up with 3 VMs, but we choose
+            # which are started with the `--dual-re` option.
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=0, install_mode=True),
+                         VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=1, install_mode=True),
+                         VMX_vcp(username, password, self.vcp_image, self.version, dual_re=False, re_instance=2, install_mode=True)]
 
     def install(self):
-        self.logger.info("Installing VMX")
-        vcp = self.vms[0]
-        while not vcp.running:
-            vcp.work()
+        self.logger.info("Installing VMX (%d VCP)" % len(self.vms))
+        while not all(vcp.running for vcp in self.vms):
+            for idx, vcp in enumerate(self.vms):
+                if not vcp.running:
+                    self.logger.trace("RE[%d]: working" % idx)
+                    vcp.work()
+        self.logger.debug("All %d VCPs running" % len(self.vms))
 
+        def waitable_pipes():
+            return [vcp.p.stdout for vcp in self.vms if vcp.running] + [vcp.p.stderr for vcp in self.vms if vcp.running]
         # wait for system to shut down cleanly
-        for i in range(0, 600):
-            time.sleep(1)
-            try:
-                vcp.p.communicate(timeout=1)
-            except subprocess.TimeoutExpired:
-                pass
-            except Exception as exc:
-                # assume it's dead
-                self.logger.info("Can't communicate with qemu process, assuming VM has shut down properly." + str(exc))
-                break
+        while waitable_pipes():
+            read_pipes, _, _ = select.select(waitable_pipes(), [],  [])
+            for read_pipe in read_pipes:
+                for idx, vcp in enumerate(self.vms):
+                    if read_pipe in (vcp.p.stdout, vcp.p.stderr):
+                        break
 
-            try:
-                (ridx, match, res) = vcp.tn.expect([b"Powering system off"], 1)
-                if res != b'':
-                    self.logger.trace("OUTPUT VCP: %s" % res.decode())
-            except Exception as exc:
-                # assume it's dead
-                self.logger.info("Can't communicate over serial console, assuming VM has shut down properly." + str(exc))
-                break
+                try:
+                    vcp.p.communicate(timeout=1)
+                except subprocess.TimeoutExpired:
+                    pass
+                except Exception as exc:
+                    # assume it's dead
+                    self.logger.info("RE[%d]: Can't communicate with qemu process, assuming VM has shut down properly.\n%s" % (idx, str(exc)))
+                    vcp.stop()
 
-        vcp.stop()
+                try:
+                    (ridx, match, res) = vcp.tn.expect([b"Powering system off"], 1)
+                    if res != b'':
+                        self.logger.trace("RE[%d]: OUTPUT VCP: %s" % (idx, res.decode()))
+                except Exception as exc:
+                    # assume it's dead
+                    self.logger.info("RE[%d]: Can't communicate with qemu process, assuming VM has shut down properly.\n%s" % (idx, str(exc)))
+                    vcp.stop()
+
         self.logger.info("Installation complete")
 
 
@@ -323,6 +368,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install vMX')
+    parser.add_argument('--dual-re', action='store_true', help='Boot dual Routing Engines')
     parser.add_argument('--num-nics', type=int, default=96, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
     args = parser.parse_args()
 
@@ -335,8 +381,8 @@ if __name__ == '__main__':
         logger.setLevel(1)
 
     if args.install:
-        vr = VMX_installer(args.username, args.password)
+        vr = VMX_installer(args.username, args.password, args.dual_re)
         vr.install()
     else:
-        vr = VMX(args.username, args.password)
+        vr = VMX(args.username, args.password, args.dual_re)
         vr.start()

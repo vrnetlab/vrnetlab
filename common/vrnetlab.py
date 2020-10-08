@@ -260,7 +260,7 @@ class VM:
             try:
                 self.bootstrap_spin()
             except EOFError:
-                self.logger.error("Telnet session was disconncted, restarting")
+                self.logger.error("Telnet session was disconnected, restarting")
                 self.restart()
 
 

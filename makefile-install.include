@@ -40,7 +40,7 @@ docker-build: docker-build-common
 	docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build $(REGISTRY)vr-$(VR_NAME):$(VERSION) || true; \
 	else \
 	echo "Current build differ from previous, running install!"; \
-	docker run --cidfile cidfile --privileged $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install; \
+	docker run --cidfile cidfile --privileged $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install $(EXTRA_INSTALL_ARGS); \
 	docker commit --change='ENTRYPOINT ["/launch.py"]' $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION); \
 	docker rm -f $$(cat cidfile); \
 	fi

@@ -190,8 +190,8 @@ class VM:
                        'mac': gen_mac(i)
                     })
             res.append("-netdev")
-            res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+            res.append("socket,id=p%(i)02d,listen=:%(j)02d"
+                       % { 'i': i, 'j': i + 10000 })
         return res
 
 

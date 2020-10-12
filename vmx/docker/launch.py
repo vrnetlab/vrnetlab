@@ -226,6 +226,7 @@ class VMX_vfpc(vrnetlab.VM):
             if ridx in (0, 1): # got login - vFPC start succeeded!
                 self.logger.info("vFPC successfully started")
                 self.running = True
+                self.tn.close()
             if ridx == 2: # vFPC start failed - restart it
                 self.logger.info("vFPC start failed, restarting")
                 self.stop()

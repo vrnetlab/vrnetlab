@@ -86,9 +86,14 @@ class VMX_vcp(vrnetlab.VM):
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(VMX_vcp, self).gen_mgmt()
-        # do not set up port forwards for the backup routing-engine mgmt NIC or when running in install mode
-        if self.num == 1 or self.install_mode:
+        # install mode doesn't need host port forwarding rules. if running in
+        # dual-re mode, replace host port forwarding rules for the backup
+        # routing engine
+        if self.install_mode:
             res[-1] = re.sub(r',hostfwd.*', '', res[-1])
+        elif self.dual_re and self.num == 1:
+            res[-1] = re.sub(r',hostfwd.*', self.gen_host_forwards(mgmt_ip='10.0.0.16', offset=3000), res[-1])
+
         if not self.install_mode:
             # add virtio NIC for internal control plane interface to vFPC
             res.append("-device")
@@ -269,6 +274,7 @@ class VMX(vrnetlab.VR):
         self.version = None
         self.version_info = []
         self.read_version()
+        self.dual_re = dual_re
 
         super(VMX, self).__init__(username, password)
 
@@ -292,6 +298,13 @@ class VMX(vrnetlab.VR):
                 self.vcp_image = e
                 self.version = m.group(1)
                 self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(7))]
+
+    def start(self):
+        # Set up socats for re1, with a different offset: $CONTAINER_IP:1022 -> 10.0.0.16:3022
+        if self.dual_re:
+            self.start_socat(src_offset=1000, dst_offset=3000)
+
+        super(VMX, self).start()
 
 
 class VMX_installer(VMX):

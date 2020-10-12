@@ -88,11 +88,15 @@ docker run --privileged -it --name vmx15 --env EXTRA_CONFIG="`cat extra-config.c
 
 By default the virtual router runs in standalone mode - a single routing
 engine. To change the mode to dual RE, pass `--dual-re` to the launch script.
-The second RE console is exposed on port 5000, but it is not mapped to any
-external ports on the container IP.
+The second RE console is exposed on port 5001. The management ports (NETCONF,
+SSH, SNMP) are exposed on the container IP, offset by 1000.
 
 ```
 docker run --privileged -d --name vmx15-dual-re vrnetlab/vr-vmx:15.1F6.9 --trace --dual-re
+# connect to re0
+ssh vrnetlab@$CONTAINER_IP -p 22
+# connect to re1
+ssh vrnetlab@$CONTAINER_IP -p 1022
 ```
 
 System requirements

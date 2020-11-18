@@ -46,7 +46,7 @@ class CSR_vm(vrnetlab.VM):
             self.license = True
 
         super(CSR_vm, self).__init__(username, password, disk_image=disk_image)
-
+        self.nic_type = "virtio-net-pci"
         self.install_mode = install_mode
         self.num_nics = 9
 
@@ -97,6 +97,11 @@ class CSR_vm(vrnetlab.VM):
         if match: # got a match!
             if ridx == 0: # login
                 if self.install_mode:
+                    self.wait_write("", wait=None)
+                    self.wait_write("", None)
+                    self.wait_write("enable", wait=">")
+                    self.wait_write("clear platform software vnic-if nvtable")
+                    self.wait_write("")
                     self.running = True
                     return
 

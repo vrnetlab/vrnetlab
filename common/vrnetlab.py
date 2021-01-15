@@ -154,8 +154,8 @@ class VM:
         res = []
         # mgmt interface is special - we use qemu user mode network
         res.append("-device")
-        # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it
-        if 'vEOS-lab' in self.image:
+        # vEOS-lab/vRR requires its mgmt interface to be the first in the bus, so let's hardcode it
+        if 'vEOS-lab' in self.image or "type=1,product=VRR" in self.smbios:
             res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s,bus=pci.1,addr=0x2"
                        % { 'i': 0, 'mac': gen_mac(0) })
         else:
@@ -174,12 +174,20 @@ class VM:
         # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
         if 'vEOS-lab' in self.image:
             range_start = 2
+            addr_offset = 1
+        # vRR requires its em0 interface to be the first on the bus, so offset bus addr by 2.
+        # i actually think this is probably what was intented above, but do not have access to
+        # that image to test.
+        elif "type=1,product=VRR" in self.smbios:
+            range_start = 1
+            addr_offset = 2
         else:
             range_start = 1
+            addr_offset = 1
         for i in range(range_start, self.num_nics+1):
             # calc which PCI bus we are on and the local add on that PCI bus
             pci_bus = math.floor(i/self.nics_per_pci_bus) + 1
-            addr = (i % self.nics_per_pci_bus) + 1
+            addr = (i % self.nics_per_pci_bus) + addr_offset
 
             res.append("-device")
             res.append("%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x" % {

@@ -10,11 +10,14 @@ import sys
 
 import vrnetlab
 
+
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
+
 def handle_SIGTERM(signal, frame):
     sys.exit(0)
+
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
@@ -22,19 +25,23 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
+
+
 logging.Logger.trace = trace
 
 SROS_VARIANTS = {
     "sr1": {
         "distributed": False,
-        "min_ram": 5120, # minimum RAM requirements
+        "min_ram": 5120,  # minimum RAM requirements
         "max_nics": 10,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28",
-        "card_config": "/configure card 1 card-type iom-1"
+        "card_config": "/configure card 1 card-type iom-1",
     }
 }
 
@@ -65,9 +72,9 @@ SROS_COMMON_CFG = """/configure system name {name}
 /configure system security user "admin" access ftp
 """
 
+
 def mangle_uuid(uuid):
-    """ Mangle the UUID to fix endianness mismatch on first part
-    """
+    """Mangle the UUID to fix endianness mismatch on first part"""
     parts = uuid.split("-")
 
     new_parts = [
@@ -75,37 +82,32 @@ def mangle_uuid(uuid):
         uuid_rev_part(parts[1]),
         uuid_rev_part(parts[2]),
         parts[3],
-        parts[4]
+        parts[4],
     ]
 
-    return '-'.join(new_parts)
+    return "-".join(new_parts)
 
 
 def uuid_rev_part(part):
-    """ Reverse part of a UUID
-    """
+    """Reverse part of a UUID"""
     res = ""
     for i in reversed(range(0, len(part), 2)):
         res += part[i]
-        res += part[i+1]
+        res += part[i + 1]
     return res
-
-
 
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, num=0):
-        super(SROS_vm, self).__init__(username, password, disk_image = "/sros.qcow2", num=num, ram=ram)
+        super(SROS_vm, self).__init__(
+            username, password, disk_image="/sros.qcow2", num=num, ram=ram
+        )
 
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
 
-
-
-
     def bootstrap_spin(self):
-        """ This function should be called periodically to do work.
-        """
+        """This function should be called periodically to do work."""
 
         if self.spins > 60:
             # too many spins with no result, probably means SROS hasn't started
@@ -117,8 +119,8 @@ class SROS_vm(vrnetlab.VM):
             return
 
         (ridx, match, res) = self.tn.expect([b"Login:", b"^[^ ]+#"], 1)
-        if match: # got a match!
-            if ridx == 0: # matched login prompt, so should login
+        if match:  # got a match!
+            if ridx == 0:  # matched login prompt, so should login
                 self.logger.debug("matched login prompt")
                 self.wait_write("admin", wait=None)
                 self.wait_write("admin", wait="Password:")
@@ -134,7 +136,7 @@ class SROS_vm(vrnetlab.VM):
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
-        if res != b'':
+        if res != b"":
             self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
@@ -143,10 +145,9 @@ class SROS_vm(vrnetlab.VM):
 
         return
 
-
     def read_license(self):
-        """ Read the license file, if it exists, and extract the UUID and start
-            time of the license
+        """Read the license file, if it exists, and extract the UUID and start
+        time of the license
         """
         if not os.path.isfile("/tftpboot/license.txt"):
             self.logger.info("No license file found")
@@ -156,7 +157,7 @@ class SROS_vm(vrnetlab.VM):
         license = ""
         for line in lic_file.readlines():
             # ignore comments in license file
-            if line.startswith('#'):
+            if line.startswith("#"):
                 continue
             license += line
         lic_file.close()
@@ -166,30 +167,37 @@ class SROS_vm(vrnetlab.VM):
             self.uuid = uuid_input
             m = re.search("([0-9]{4}-[0-9]{2}-)([0-9]{2})", license)
             if m:
-                self.fake_start_date = "%s%02d" % (m.group(1), int(m.group(2))+1)
+                self.fake_start_date = "%s%02d" % (m.group(1), int(m.group(2)) + 1)
         except:
             raise ValueError("Unable to parse license file")
-        self.logger.info("License file found for UUID %s with start date %s" % (self.uuid, self.fake_start_date))
+        self.logger.info(
+            "License file found for UUID %s with start date %s"
+            % (self.uuid, self.fake_start_date)
+        )
 
 
 class SROS_integrated(SROS_vm):
-    """ Integrated VSR-SIM
-    """
+    """Integrated VSR-SIM"""
+
     def __init__(self, hostname, username, password, mode, num_nics, variant):
-        super(SROS_integrated, self).__init__(username, password, ram=variant["min_ram"])
+        super(SROS_integrated, self).__init__(
+            username, password, ram=variant["min_ram"]
+        )
         self.mode = mode
         self.num_nics = num_nics
-        self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt {}".format(variant["timos_line"])]
+        self.smbios = [
+            "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt {}".format(
+                variant["timos_line"]
+            )
+        ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
         self.variant = variant
         self.hostname = hostname
 
-
-
     def gen_mgmt(self):
-        """ Generate mgmt interface(s)
+        """Generate mgmt interface(s)
 
-            We override the default function since we want a fake NIC in there
+        We override the default function since we want a fake NIC in there
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(SROS_integrated, self).gen_mgmt()
@@ -200,20 +208,28 @@ class SROS_integrated(SROS_vm):
         res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
         return res
 
-
-
     def bootstrap_config(self):
-        """ Do the actual bootstrap config
-        """
+        """Do the actual bootstrap config"""
 
         # apply common configuration
-        for l in iter(SROS_COMMON_CFG.format(name=self.hostname, mode=self.mode).splitlines()):
+        for l in iter(
+            SROS_COMMON_CFG.format(name=self.hostname, mode=self.mode).splitlines()
+        ):
             self.wait_write(l)
 
         if self.username and self.password:
-            self.wait_write("/configure system security user \"%s\" password %s" % (self.username, self.password))
-            self.wait_write("/configure system security user \"%s\" access console netconf" % (self.username))
-            self.wait_write("/configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
+            self.wait_write(
+                '/configure system security user "%s" password %s'
+                % (self.username, self.password)
+            )
+            self.wait_write(
+                '/configure system security user "%s" access console netconf'
+                % (self.username)
+            )
+            self.wait_write(
+                '/configure system security user "%s" console member "administrative" "default"'
+                % (self.username)
+            )
 
         # configure card/mda of a given variant
         for l in iter(self.variant["card_config"].splitlines()):
@@ -222,20 +238,26 @@ class SROS_integrated(SROS_vm):
         self.wait_write("/admin save")
         self.wait_write("/logout")
 
+
 class SROS_cp(SROS_vm):
-    """ Control plane for distributed VSR-SIM
-    """
+    """Control plane for distributed VSR-SIM"""
+
     def __init__(self, username, password, mode, major_release, num_lc=1):
         super(SROS_cp, self).__init__(username, password)
         self.num_lc = num_lc
         self.mode = mode
         self.num_nics = 0
         if major_release >= 19:
-            self.logger.info("SROS release 19 or higher, use card xcm-x20 instead of cpm-x20")
-            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=xcm-x20"]
+            self.logger.info(
+                "SROS release 19 or higher, use card xcm-x20 instead of cpm-x20"
+            )
+            self.smbios = [
+                "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=xcm-x20"
+            ]
         else:
-            self.smbios = ["type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"]
-
+            self.smbios = [
+                "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"
+            ]
 
     def start(self):
         # use parent class start() function
@@ -245,12 +267,10 @@ class SROS_cp(SROS_vm):
         vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
         vrnetlab.run_command(["ip", "link", "set", "dev", "vcp-int", "mtu", "10000"])
 
-
-
     def gen_mgmt(self):
-        """ Generate mgmt interface(s)
+        """Generate mgmt interface(s)
 
-            We override the default function since we want a NIC to the vFPC
+        We override the default function since we want a NIC to the vFPC
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(SROS_cp, self).gen_mgmt()
@@ -261,17 +281,25 @@ class SROS_cp(SROS_vm):
         res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
         return res
 
-
-
     def bootstrap_config(self):
-        """ Do the actual bootstrap config
-        """
+        """Do the actual bootstrap config"""
         if self.username and self.password:
-            self.wait_write("configure system security user \"%s\" password %s" % (self.username, self.password))
-            self.wait_write("configure system security user \"%s\" access console netconf" % (self.username))
-            self.wait_write("configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
+            self.wait_write(
+                'configure system security user "%s" password %s'
+                % (self.username, self.password)
+            )
+            self.wait_write(
+                'configure system security user "%s" access console netconf'
+                % (self.username)
+            )
+            self.wait_write(
+                'configure system security user "%s" console member "administrative" "default"'
+                % (self.username)
+            )
         self.wait_write("configure system netconf no shutdown")
-        self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
+        self.wait_write(
+            'configure system security profile "administrative" netconf base-op-authorization lock'
+        )
         self.wait_write("configure system login-control ssh inbound-max-sessions 30")
 
         # configure SFMs
@@ -279,83 +307,96 @@ class SROS_cp(SROS_vm):
             self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
 
         # configure line card & MDAs
-        for i in range(1, self.num_lc+1):
+        for i in range(1, self.num_lc + 1):
             self.wait_write("configure card {} card-type xcm-x20".format(i))
             self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
 
-        if self.mode != 'cli':
-            self.wait_write("configure system management-interface yang-modules no nokia-modules")
-            self.wait_write("configure system management-interface yang-modules nokia-combined-modules")
-            self.wait_write("configure system management-interface yang-modules no base-r13-modules")
-            self.wait_write("configure system management-interface configuration-mode {}".format(self.mode))
+        if self.mode != "cli":
+            self.wait_write(
+                "configure system management-interface yang-modules no nokia-modules"
+            )
+            self.wait_write(
+                "configure system management-interface yang-modules nokia-combined-modules"
+            )
+            self.wait_write(
+                "configure system management-interface yang-modules no base-r13-modules"
+            )
+            self.wait_write(
+                "configure system management-interface configuration-mode {}".format(
+                    self.mode
+                )
+            )
         self.wait_write("admin save")
         self.wait_write("logout")
 
 
-
-
 class SROS_lc(SROS_vm):
-    """ Line card for distributed VSR-SIM
-    """
+    """Line card for distributed VSR-SIM"""
+
     def __init__(self, slot=1):
         super(SROS_lc, self).__init__(None, None, num=slot)
         self.slot = slot
 
         self.num_nics = 6
-        self.smbios = ["type=1,product=TIMOS:chassis=XRS-20 chassis-topology=XRS-40 slot={} sfm=sfm-x20-b card=xcm-x20 mda/1=cx20-10g-sfp".format(slot)]
-
-
+        self.smbios = [
+            "type=1,product=TIMOS:chassis=XRS-20 chassis-topology=XRS-40 slot={} sfm=sfm-x20-b card=xcm-x20 mda/1=cx20-10g-sfp".format(
+                slot
+            )
+        ]
 
     def start(self):
         # use parent class start() function
         super(SROS_lc, self).start()
         # add interface to internal control plane bridge
-        vrnetlab.run_command(["brctl", "addif", "int_cp", "vfpc{}-int".format(self.slot)])
-        vrnetlab.run_command(["ip", "link", "set", "vfpc{}-int".format(self.slot), "up"])
-        vrnetlab.run_command(["ip", "link", "set", "dev", "vfpc{}-int".format(self.slot), "mtu", "10000"])
-
-
+        vrnetlab.run_command(
+            ["brctl", "addif", "int_cp", "vfpc{}-int".format(self.slot)]
+        )
+        vrnetlab.run_command(
+            ["ip", "link", "set", "vfpc{}-int".format(self.slot), "up"]
+        )
+        vrnetlab.run_command(
+            ["ip", "link", "set", "dev", "vfpc{}-int".format(self.slot), "mtu", "10000"]
+        )
 
     def gen_mgmt(self):
-        """ Generate mgmt interface
-        """
+        """Generate mgmt interface"""
         res = []
         # mgmt interface
         res.extend(["-device", "e1000,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)])
         res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
         # internal control plane interface to vFPC
-        res.extend(["-device", "e1000,netdev=vfpc-int,mac=%s" %
-                    vrnetlab.gen_mac(0)])
-        res.extend(["-netdev",
-                    "tap,ifname=vfpc{}-int,id=vfpc-int,script=no,downscript=no".format(self.slot)])
+        res.extend(["-device", "e1000,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)])
+        res.extend(
+            [
+                "-netdev",
+                "tap,ifname=vfpc{}-int,id=vfpc-int,script=no,downscript=no".format(
+                    self.slot
+                ),
+            ]
+        )
         return res
 
-
     def gen_nics(self):
-        """ Generate qemu args for the normal traffic carrying interface(s)
-        """
+        """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
         # TODO: should this offset business be put in the common vrnetlab?
-        offset = 6 * (self.slot-1)
+        offset = 6 * (self.slot - 1)
         for j in range(0, self.num_nics):
             i = offset + j + 1
             res.append("-device")
-            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': i, 'mac': vrnetlab.gen_mac(i) })
+            res.append(
+                self.nic_type
+                + ",netdev=p%(i)02d,mac=%(mac)s" % {"i": i, "mac": vrnetlab.gen_mac(i)}
+            )
             res.append("-netdev")
-            res.append("socket,id=p%(i)02d,listen=:100%(i)02d"
-                       % { 'i': i })
+            res.append("socket,id=p%(i)02d,listen=:100%(i)02d" % {"i": i})
         return res
 
-
-
     def bootstrap_spin(self):
-        """ We have nothing to do for VSR-SIM line cards
-        """
+        """We have nothing to do for VSR-SIM line cards"""
         self.running = True
         self.tn.close()
         return
-
 
 
 class SROS(vrnetlab.VR):
@@ -368,7 +409,7 @@ class SROS(vrnetlab.VR):
 
         # move files into place
         for e in os.listdir("/"):
-            match = re.match(r'[^0-9]+([0-9]+)\S+\.qcow2$', e)
+            match = re.match(r"[^0-9]+([0-9]+)\S+\.qcow2$", e)
             if match:
                 major_release = int(match.group(1))
             if re.search("\.qcow2$", e):
@@ -382,7 +423,11 @@ class SROS(vrnetlab.VR):
             self.license = True
 
         if num_nics > variant["max_nics"]:
-            self.logger.error("Requested number of nics '{}' exceeds the capacity of the '{}' variant: {} nics".format(num_nics, variant_name, variant["max_nics"]))
+            self.logger.error(
+                "Requested number of nics '{}' exceeds the capacity of the '{}' variant: {} nics".format(
+                    num_nics, variant_name, variant["max_nics"]
+                )
+            )
             sys.exit(1)
 
         self.logger.info("Number of NICS: " + str(num_nics))
@@ -390,35 +435,49 @@ class SROS(vrnetlab.VR):
         # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
         if variant["distributed"]:
             if not self.license:
-                self.logger.error("More than 5 NICs require distributed VSR which requires a license but no license is found")
+                self.logger.error(
+                    "More than 5 NICs require distributed VSR which requires a license but no license is found"
+                )
                 sys.exit(1)
 
             num_lc = math.ceil(num_nics / 6)
             self.logger.info("Number of linecards: " + str(num_lc))
-            self.vms = [ SROS_cp(username, password, mode, major_release, num_lc=num_lc) ]
-            for i in range(1, num_lc+1):
+            self.vms = [SROS_cp(username, password, mode, major_release, num_lc=num_lc)]
+            for i in range(1, num_lc + 1):
                 self.vms.append(SROS_lc(i))
             # set up bridge for connecting CP with LCs
             vrnetlab.run_command(["brctl", "addbr", "int_cp"])
             vrnetlab.run_command(["ip", "link", "set", "int_cp", "up"])
         # integrated mode
         else:
-            self.vms = [ SROS_integrated(hostname, username, password, mode, num_nics, variant) ]
+            self.vms = [
+                SROS_integrated(hostname, username, password, mode, num_nics, variant)
+            ]
 
 
-
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--hostname', default='vr-sros', help='Router hostname')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--num-nics', default=5, help='Number of NICs')
-    parser.add_argument('--mode', choices=['classic', 'mixed', 'model-driven'], default="model-driven", help='configuration mode of the system')
-    parser.add_argument('--variant', choices=['sr1'], default='sr1', help='Variant of SR OS platform to launch')
+
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--hostname", default="vr-sros", help="Router hostname")
+    parser.add_argument(
+        "--trace", action="store_true", help="enable trace level logging"
+    )
+    parser.add_argument("--username", default="vrnetlab", help="Username")
+    parser.add_argument("--password", default="VR-netlab9", help="Password")
+    parser.add_argument("--num-nics", default=5, help="Number of NICs")
+    parser.add_argument(
+        "--mode",
+        choices=["classic", "mixed", "model-driven"],
+        default="model-driven",
+        help="configuration mode of the system",
+    )
+    parser.add_argument(
+        "--variant",
+        choices=["sr1"],
+        default="sr1",
+        help="Variant of SR OS platform to launch",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -429,5 +488,12 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    ia = SROS(args.hostname, args.username, args.password, num_nics=int(args.num_nics), mode=args.mode, variant_name=args.variant)
+    ia = SROS(
+        args.hostname,
+        args.username,
+        args.password,
+        num_nics=int(args.num_nics),
+        mode=args.mode,
+        variant_name=args.variant,
+    )
     ia.start()

@@ -430,7 +430,7 @@ class SROS(vrnetlab.VR):
             )
             sys.exit(1)
 
-        self.logger.info("Number of NICS: " + str(num_nics))
+        self.logger.info("Number of NICs: " + str(num_nics))
         self.logger.info("Configuration mode: " + str(mode))
         # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
         if variant["distributed"]:

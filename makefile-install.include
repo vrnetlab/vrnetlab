@@ -24,6 +24,8 @@
 # of the built image and compare this to the ones of the previously built
 # image. If they are the same it means the docker build was entirely cached and
 # there's no need to run the image, otherwise if there's a change we do run it.
+# When comparing the hashes we omit the last layer of the previous build. It
+# contains the committed changes from the install phase of the previous build.
 # Include this makefile to have your image automatically do that dance.
 
 docker-pre-build:
@@ -32,14 +34,14 @@ docker-pre-build:
 	-docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION) $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build
 
 docker-build: docker-build-common
-	-docker inspect --format '{{.RootFS.Layers}}' $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build | tr -d '][' | awk '{ print $$(NF-1) }' > built-image-sha-previous
-	docker inspect --format '{{.RootFS.Layers}}' $(REGISTRY)vr-$(VR_NAME):$(VERSION) | tr -d '][' | awk '{ print $$(NF) }' > built-image-sha-current
-	if [ "$$(cat built-image-sha-previous)" = "$$(cat built-image-sha-current)" ]; then echo "Previous image is the same as current, retagging!"; \
+	-docker inspect --format '{{.RootFS.Layers}}' $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build | tr -d '][' | awk '{ $$(NF)=""; print }' > built-image-sha-previous
+	docker inspect --format '{{.RootFS.Layers}}' $(REGISTRY)vr-$(VR_NAME):$(VERSION) | tr -d '][' > built-image-sha-current
+	if [ "$$(cat built-image-sha-previous | sed -e 's/[[:space:]]*$$//')" = "$$(cat built-image-sha-current)" ]; then echo "Previous image is the same as current, retagging!"; \
 	docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build $(REGISTRY)vr-$(VR_NAME):$(VERSION) || true; \
 	else \
 	echo "Current build differ from previous, running install!"; \
 	docker run --cidfile cidfile --privileged $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install; \
-	docker commit --change='ENTRYPOINT ["/launch.py"]' $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION); \
+	docker commit $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION); \
 	docker rm -f $$(cat cidfile); \
 	fi
 	docker rmi -f $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build || true

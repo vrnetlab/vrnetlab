@@ -210,6 +210,9 @@ def run_topology(config, dry_run, with_trace=False):
     docker_registry = ""
     if os.getenv("DOCKER_REGISTRY"):
         docker_registry = os.getenv("DOCKER_REGISTRY") + "/"
+    else:
+        docker_registry = 'vrnetlab/'
+
     for router in sorted(config['routers']):
         val = config['routers'][router]
         if val["type"] == "dummy":
@@ -222,6 +225,8 @@ def run_topology(config, dry_run, with_trace=False):
         if 'docker_network' in val:
             cmd.append('--network ' + val['docker_network'])
             cmd.append('--network-alias ' + router)
+        if 'ip' in val:
+            cmd.append('--ip {}'.format(val['ip']))
 
         cmd.append("%svr-%s:%s" % (docker_registry, val["type"], val["version"]))
         if trace:
@@ -230,7 +235,7 @@ def run_topology(config, dry_run, with_trace=False):
             cmd.extend(val["run_args"].split())
 
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
-        if output.strip() == "true":
+        if not dry_run and output.strip() == "true":
             output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
             print("Container already running. Health: %s" % output.strip())
         else:
@@ -238,7 +243,7 @@ def run_topology(config, dry_run, with_trace=False):
 
     if 'links' in config:
         name = "%svr-xcon" % args.prefix
-        cmd = ["docker", "run", "--privileged", "-d", "--name", name]
+        cmd = ["docker", "run", "--rm", "--privileged", "-d", "--name", name]
 
         if docker_network:
             cmd.extend(["--network", docker_network])
@@ -253,7 +258,7 @@ def run_topology(config, dry_run, with_trace=False):
                                            link["right"]["router"],
                                            link["right"]["numeric"]) for link in config['links']])
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
-        if output.strip() == "true":
+        if not dry_run and output.strip() == "true":
             output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])
             print("Container already running. Health: %s" % output.strip())
         else:

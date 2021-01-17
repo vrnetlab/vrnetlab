@@ -37,7 +37,7 @@ logging.Logger.trace = trace
 
 SROS_VARIANTS = {
     "sr1": {
-        "distributed": False,
+        "deployment_model": "integrated",
         "min_ram": 5120,  # minimum RAM requirements
         "max_nics": 10,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28",
@@ -444,7 +444,7 @@ class SROS(vrnetlab.VR):
         self.logger.info("Number of NICs: " + str(num_nics))
         self.logger.info("Configuration mode: " + str(mode))
         # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
-        if variant["distributed"]:
+        if variant["deployment_model"] == "distributed":
             if not self.license:
                 self.logger.error(
                     "More than 5 NICs require distributed VSR which requires a license but no license is found"

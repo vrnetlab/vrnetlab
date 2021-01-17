@@ -36,7 +36,7 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 SROS_VARIANTS = {
-    "sr1": {
+    "sr-1": {
         "deployment_model": "integrated",
         "min_ram": 5120,  # minimum RAM requirements
         "max_nics": 10,
@@ -423,10 +423,19 @@ class SROS(vrnetlab.VR):
             match = re.match(r"[^0-9]+([0-9]+)\S+\.qcow2$", e)
             if match:
                 major_release = int(match.group(1))
+                self.qcow_name = match.group(0)
             if re.search("\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
             if re.search("\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.txt")
+
+        if not self.license:
+            self.logger.error(
+                "License is missing! Provide a license file with a {}.license name next to the qcow2 image.".format(
+                    self.qcow_name
+                )
+            )
+            sys.exit(1)
 
         self.license = False
         if os.path.isfile("/tftpboot/license.txt"):
@@ -445,12 +454,6 @@ class SROS(vrnetlab.VR):
         self.logger.info("Configuration mode: " + str(mode))
         # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
         if variant["deployment_model"] == "distributed":
-            if not self.license:
-                self.logger.error(
-                    "More than 5 NICs require distributed VSR which requires a license but no license is found"
-                )
-                sys.exit(1)
-
             num_lc = math.ceil(num_nics / 6)
             self.logger.info("Number of linecards: " + str(num_lc))
             self.vms = [SROS_cp(username, password, mode, major_release, num_lc=num_lc)]
@@ -485,8 +488,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--variant",
-        choices=["sr1"],
-        default="sr1",
+        choices=["sr-1"],
+        default="sr-1",
         help="Variant of SR OS platform to launch",
     )
     args = parser.parse_args()

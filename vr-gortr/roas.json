@@ -1,0 +1,6 @@
+{
+    "roas": [
+        { "asn": "AS1", "prefix": "1.0.0.0/23", "maxLength": 23, "ta": "arin" },
+        { "asn": "AS2", "prefix": "2.0.0.0/23", "maxLength": 23, "ta": "ripe" }
+    ]
+}

@@ -52,7 +52,6 @@ SROS_COMMON_CFG = """/configure system name {name}
 /configure system management-interface yang-modules no nokia-modules
 /configure system management-interface yang-modules nokia-combined-modules
 /configure system management-interface yang-modules no base-r13-modules
-/configure system management-interface configuration-mode {mode}
 /configure system grpc allow-unsecure-connection
 /configure system grpc gnmi auto-config-save
 /configure system grpc gnmi no shutdown
@@ -201,6 +200,15 @@ class SROS_integrated(SROS_vm):
         """
         # call parent function to generate first mgmt interface (e1000)
         res = super(SROS_integrated, self).gen_mgmt()
+
+        # append gNMI forwarding if it was not added by common lib
+        if "hostfwd=tcp::57400-10.0.0.15:57400" not in res[-1]:
+            res[-1] = res[-1] + ",hostfwd=tcp::17400-10.0.0.15:57400"
+            vrnetlab.run_command(
+                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
+                background=True,
+            )
+
         # add virtio NIC for internal control plane interface to vFPC
         res.append("-device")
         res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
@@ -212,9 +220,7 @@ class SROS_integrated(SROS_vm):
         """Do the actual bootstrap config"""
 
         # apply common configuration
-        for l in iter(
-            SROS_COMMON_CFG.format(name=self.hostname, mode=self.mode).splitlines()
-        ):
+        for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
             self.wait_write(l)
 
         if self.username and self.password:
@@ -236,6 +242,11 @@ class SROS_integrated(SROS_vm):
             self.wait_write(l)
 
         self.wait_write("/admin save")
+        self.wait_write(
+            "/configure system management-interface configuration-mode {mode}".format(
+                mode=self.mode
+            )
+        )
         self.wait_write("/logout")
 
 

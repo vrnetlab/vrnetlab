@@ -42,7 +42,25 @@ SROS_VARIANTS = {
         "max_nics": 10,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28",
         "card_config": "/configure card 1 card-type iom-1",
-    }
+    },
+    "sr-1e": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 20,
+        "cp": {
+            "min_ram": 4096,
+            "timos_line": "slot=A chassis=sr-1e card=cpm-e",
+        },
+        # line card (IOM/XCM)
+        "lc": {
+            "min_ram": 4096,
+            "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
+            "card_config": """/configure card 1 card-type iom-e
+            /configure card 1 mda 1 mda-type me40-1gb-csfp
+            /configure card 1 fp 1
+            """,
+        },
+    },
 }
 
 SROS_COMMON_CFG = """/configure system name {name}
@@ -253,22 +271,18 @@ class SROS_integrated(SROS_vm):
 class SROS_cp(SROS_vm):
     """Control plane for distributed VSR-SIM"""
 
-    def __init__(self, username, password, mode, major_release, num_lc=1):
-        super(SROS_cp, self).__init__(username, password)
-        self.num_lc = num_lc
+    def __init__(self, hostname, username, password, mode, major_release, variant):
+        super(SROS_cp, self).__init__(username, password, variant["cp"]["min_ram"])
         self.mode = mode
         self.num_nics = 0
-        if major_release >= 19:
-            self.logger.info(
-                "SROS release 19 or higher, use card xcm-x20 instead of cpm-x20"
+        self.hostname = hostname
+        self.variant = variant
+
+        self.smbios = [
+            "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt {}".format(
+                variant["cp"]["timos_line"]
             )
-            self.smbios = [
-                "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=xcm-x20"
-            ]
-        else:
-            self.smbios = [
-                "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt chassis=XRS-20 chassis-topology=XRS-40 slot=A sfm=sfm-x20-b card=cpm-x20"
-            ]
+        ]
 
     def start(self):
         # use parent class start() function
@@ -294,66 +308,45 @@ class SROS_cp(SROS_vm):
 
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
+        # apply common configuration
+        for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
+            self.wait_write(l)
+
         if self.username and self.password:
             self.wait_write(
-                'configure system security user "%s" password %s'
+                '/configure system security user "%s" password %s'
                 % (self.username, self.password)
             )
             self.wait_write(
-                'configure system security user "%s" access console netconf'
+                '/configure system security user "%s" access console netconf'
                 % (self.username)
             )
             self.wait_write(
-                'configure system security user "%s" console member "administrative" "default"'
+                '/configure system security user "%s" console member "administrative" "default"'
                 % (self.username)
             )
-        self.wait_write("configure system netconf no shutdown")
+
+        # configure card/mda of a given variant
+        for l in iter(self.variant["lc"]["card_config"].splitlines()):
+            self.wait_write(l)
+
+        self.wait_write("/admin save")
         self.wait_write(
-            'configure system security profile "administrative" netconf base-op-authorization lock'
+            "/configure system management-interface configuration-mode {mode}".format(
+                mode=self.mode
+            )
         )
-        self.wait_write("configure system login-control ssh inbound-max-sessions 30")
-
-        # configure SFMs
-        for i in range(1, 17):
-            self.wait_write("configure sfm {} sfm-type sfm-x20-b".format(i))
-
-        # configure line card & MDAs
-        for i in range(1, self.num_lc + 1):
-            self.wait_write("configure card {} card-type xcm-x20".format(i))
-            self.wait_write("configure card {} mda 1 mda-type cx20-10g-sfp".format(i))
-
-        if self.mode != "cli":
-            self.wait_write(
-                "configure system management-interface yang-modules no nokia-modules"
-            )
-            self.wait_write(
-                "configure system management-interface yang-modules nokia-combined-modules"
-            )
-            self.wait_write(
-                "configure system management-interface yang-modules no base-r13-modules"
-            )
-            self.wait_write(
-                "configure system management-interface configuration-mode {}".format(
-                    self.mode
-                )
-            )
-        self.wait_write("admin save")
-        self.wait_write("logout")
+        self.wait_write("/logout")
 
 
 class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
-    def __init__(self, slot=1):
-        super(SROS_lc, self).__init__(None, None, num=slot)
-        self.slot = slot
+    def __init__(self, variant, slot=1):
+        super(SROS_lc, self).__init__(None, None, variant["lc"]["min_ram"], num=slot)
 
-        self.num_nics = 6
-        self.smbios = [
-            "type=1,product=TIMOS:chassis=XRS-20 chassis-topology=XRS-40 slot={} sfm=sfm-x20-b card=xcm-x20 mda/1=cx20-10g-sfp".format(
-                slot
-            )
-        ]
+        self.smbios = ["type=1,product=TIMOS:{}".format(variant["lc"]["timos_line"])]
+        self.slot = slot
 
     def start(self):
         # use parent class start() function
@@ -429,18 +422,17 @@ class SROS(vrnetlab.VR):
             if re.search("\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.txt")
 
-        if not self.license:
+        self.license = False
+        if os.path.isfile("/tftpboot/license.txt"):
+            self.logger.info("License found")
+            self.license = True
+        else:
             self.logger.error(
                 "License is missing! Provide a license file with a {}.license name next to the qcow2 image.".format(
                     self.qcow_name
                 )
             )
             sys.exit(1)
-
-        self.license = False
-        if os.path.isfile("/tftpboot/license.txt"):
-            self.logger.info("License found")
-            self.license = True
 
         if num_nics > variant["max_nics"]:
             self.logger.error(
@@ -450,15 +442,16 @@ class SROS(vrnetlab.VR):
             )
             sys.exit(1)
 
+        self.logger.info("SR OS Variant: " + variant_name)
         self.logger.info("Number of NICs: " + str(num_nics))
         self.logger.info("Configuration mode: " + str(mode))
-        # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
+
         if variant["deployment_model"] == "distributed":
-            num_lc = math.ceil(num_nics / 6)
-            self.logger.info("Number of linecards: " + str(num_lc))
-            self.vms = [SROS_cp(username, password, mode, major_release, num_lc=num_lc)]
-            for i in range(1, num_lc + 1):
-                self.vms.append(SROS_lc(i))
+            self.vms = [
+                SROS_cp(hostname, username, password, mode, major_release, variant),
+                SROS_lc(variant),
+            ]
+
             # set up bridge for connecting CP with LCs
             vrnetlab.run_command(["brctl", "addbr", "int_cp"])
             vrnetlab.run_command(["ip", "link", "set", "int_cp", "up"])
@@ -488,7 +481,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--variant",
-        choices=["sr-1"],
+        choices=["sr-1", "sr-1e"],
         default="sr-1",
         help="Variant of SR OS platform to launch",
     )

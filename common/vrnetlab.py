@@ -292,9 +292,7 @@ class VM:
                 fd = os.open("/dev/tap{}".format(tapidx), os.O_RDWR)
 
                 res.append("-netdev")
-                res.append(
-                    "tap,id=p%(i)02d,fd=%(fd)s" % {"i": i, "fd": fd, "tapidx": tapidx}
-                )
+                res.append("tap,id=p%(i)02d,fd=%(fd)s" % {"i": i, "fd": fd})
             else:
                 res.append("-netdev")
                 res.append(

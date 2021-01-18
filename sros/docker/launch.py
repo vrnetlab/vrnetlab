@@ -39,10 +39,10 @@ SROS_VARIANTS = {
     "sr-1": {
         "deployment_model": "integrated",
         "min_ram": 5120,  # minimum RAM requirements
-        "max_nics": 12,
+        "max_nics": 6,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28",
         "card_config": """/configure card 1 card-type iom-1
-        /configure card 1 mda 1 mda-type me12-100gb-qsfp28
+        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
         """,
     },
     "sr-1e": {

@@ -230,12 +230,6 @@ class SROS_integrated(SROS_vm):
                 ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
                 background=True,
             )
-
-        # add virtio NIC for internal control plane interface to vFPC
-        res.append("-device")
-        res.append("e1000,netdev=dummy0,mac=%s" % vrnetlab.gen_mac(1))
-        res.append("-netdev")
-        res.append("tap,ifname=dummy0,id=dummy0,script=no,downscript=no")
         return res
 
     def bootstrap_config(self):

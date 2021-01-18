@@ -179,6 +179,44 @@ class VM:
         except:
             pass
 
+    def create_macvtaps(self):
+        """
+        Create Macvtap interfaces for each non dataplane interface
+        """
+        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
+        self.data_ifaces = intfs
+        intfs.sort()
+
+        for idx, intf in enumerate(intfs):
+            self.logger.debug("Creating macvtap interfaces for link: %s" % intf)
+            run_command(
+                [
+                    "ip",
+                    "link",
+                    "add",
+                    "link",
+                    intf,
+                    "name",
+                    "macvtap{}".format(idx + 1),
+                    "type",
+                    "macvtap",
+                    "mode",
+                    "passthru",
+                ],
+                background=True,
+            )
+            run_command(
+                [
+                    "ip",
+                    "link",
+                    "set",
+                    "dev",
+                    "macvtap{}".format(idx + 1),
+                    "up",
+                ],
+                background=True,
+            )
+
     def gen_mgmt(self):
         """Generate qemu args for the mgmt interface(s)"""
         res = []
@@ -207,6 +245,8 @@ class VM:
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
+        if self.conn_mode == "macvtap":
+            self.create_macvtaps()
         # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
         if "vEOS-lab" in self.image:
             range_start = 2
@@ -217,6 +257,16 @@ class VM:
             pci_bus = math.floor(i / self.nics_per_pci_bus) + 1
             addr = (i % self.nics_per_pci_bus) + 1
 
+            mac = ""
+            if self.conn_mode == "macvtap":
+                # get macvtap interface mac that will be used in qemu nic config
+                if not os.path.exists("/sys/class/net/macvtap{}/address".format(i)):
+                    continue
+                with open("/sys/class/net/macvtap%s/address" % i, "r") as f:
+                    mac = f.readline().strip("\n")
+            else:
+                mac = gen_mac(i)
+
             res.append("-device")
             res.append(
                 "%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x"
@@ -225,11 +275,31 @@ class VM:
                     "i": i,
                     "pci_bus": pci_bus,
                     "addr": addr,
-                    "mac": gen_mac(i),
+                    "mac": mac,
                 }
             )
-            res.append("-netdev")
-            res.append("socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000})
+            if self.conn_mode == "macvtap":
+                # if required number of nics exceeds the number of attached interfaces
+                # we skip excessive ones
+                if not os.path.exists("/sys/class/net/macvtap{}/ifindex".format(i)):
+                    continue
+                # init value of macvtap ifindex
+                tapidx = 0
+                with open("/sys/class/net/macvtap%s/ifindex" % i, "r") as f:
+                    tapidx = f.readline().strip("\n")
+
+                # open tap device and get it's fd
+                fd = os.open("/dev/tap{}".format(tapidx), os.O_RDWR)
+
+                res.append("-netdev")
+                res.append(
+                    "tap,id=p%(i)02d,fd=%(fd)s" % {"i": i, "fd": fd, "tapidx": tapidx}
+                )
+            else:
+                res.append("-netdev")
+                res.append(
+                    "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}
+                )
         return res
 
     def stop(self):

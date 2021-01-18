@@ -115,11 +115,11 @@ def uuid_rev_part(part):
 
 
 class SROS_vm(vrnetlab.VM):
-    def __init__(self, username, password, ram, num=0):
+    def __init__(self, username, password, ram, conn_mode, num=0):
         super(SROS_vm, self).__init__(
             username, password, disk_image="/sros.qcow2", num=num, ram=ram
         )
-
+        self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
 
@@ -196,9 +196,11 @@ class SROS_vm(vrnetlab.VM):
 class SROS_integrated(SROS_vm):
     """Integrated VSR-SIM"""
 
-    def __init__(self, hostname, username, password, mode, num_nics, variant):
+    def __init__(
+        self, hostname, username, password, mode, num_nics, variant, conn_mode
+    ):
         super(SROS_integrated, self).__init__(
-            username, password, ram=variant["min_ram"]
+            username, password, ram=variant["min_ram"], conn_mode=conn_mode
         )
         self.mode = mode
         self.num_nics = num_nics
@@ -404,7 +406,9 @@ class SROS_lc(SROS_vm):
 
 
 class SROS(vrnetlab.VR):
-    def __init__(self, hostname, username, password, num_nics, mode, variant_name):
+    def __init__(
+        self, hostname, username, password, num_nics, mode, variant_name, conn_mode
+    ):
         super(SROS, self).__init__(username, password)
 
         variant = SROS_VARIANTS[variant_name]
@@ -458,7 +462,15 @@ class SROS(vrnetlab.VR):
         # integrated mode
         else:
             self.vms = [
-                SROS_integrated(hostname, username, password, mode, num_nics, variant)
+                SROS_integrated(
+                    hostname,
+                    username,
+                    password,
+                    mode,
+                    num_nics,
+                    variant,
+                    conn_mode=conn_mode,
+                )
             ]
 
 
@@ -485,6 +497,12 @@ if __name__ == "__main__":
         default="sr-1",
         help="Variant of SR OS platform to launch",
     )
+    parser.add_argument(
+        "--connection-mode",
+        choices=["vrxcon", "macvtap"],
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -502,5 +520,6 @@ if __name__ == "__main__":
         num_nics=int(args.num_nics),
         mode=args.mode,
         variant_name=args.variant,
+        conn_mode=args.connection_mode,
     )
     ia.start()

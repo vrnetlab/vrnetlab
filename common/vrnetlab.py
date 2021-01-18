@@ -203,7 +203,6 @@ class VM:
                     "mode",
                     "passthru",
                 ],
-                background=True,
             )
             run_command(
                 [
@@ -214,7 +213,6 @@ class VM:
                     "macvtap{}".format(idx + 1),
                     "up",
                 ],
-                background=True,
             )
 
     def gen_mgmt(self):
@@ -288,11 +286,10 @@ class VM:
                 with open("/sys/class/net/macvtap%s/ifindex" % i, "r") as f:
                     tapidx = f.readline().strip("\n")
 
-                # open tap device and get it's fd
-                fd = os.open("/dev/tap{}".format(tapidx), os.O_RDWR)
-
                 res.append("-netdev")
-                res.append("tap,id=p%(i)02d,fd=%(fd)s" % {"i": i, "fd": fd})
+                res.append(
+                    "tap,id=p%(i)02d,ifname=tap%(tapidx)s" % {"i": i, "tapidx": tapidx}
+                )
             else:
                 res.append("-netdev")
                 res.append(

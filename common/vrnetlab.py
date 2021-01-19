@@ -9,39 +9,38 @@ import re
 import subprocess
 import telnetlib
 import time
+import sys
 
-MAX_RETRIES=60
+MAX_RETRIES = 60
+
 
 def gen_mac(last_octet=None):
-    """ Generate a random MAC address that is in the qemu OUI space and that
-        has the given last octet.
+    """Generate a random MAC address that is in the qemu OUI space and that
+    has the given last octet.
     """
     return "52:54:00:%02x:%02x:%02x" % (
-            random.randint(0x00, 0xff),
-            random.randint(0x00, 0xff),
-            last_octet
-        )
+        random.randint(0x00, 0xFF),
+        random.randint(0x00, 0xFF),
+        last_octet,
+    )
 
 
-
-def run_command(cmd, cwd=None, background=False):
+def run_command(cmd, cwd=None, background=False, shell=False):
     res = None
     try:
         if background:
-            p = subprocess.Popen(cmd, cwd=cwd)
+            p = subprocess.Popen(cmd, cwd=cwd, shell=shell)
         else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd, shell=shell)
             res = p.communicate()
     except:
         pass
     return res
 
 
-
 class VM:
     def __str__(self):
         return self.__class__.__name__
-
 
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
@@ -63,24 +62,46 @@ class VM:
         self.fake_start_date = None
         self.nic_type = "e1000"
         self.num_nics = 0
-        self.nics_per_pci_bus = 26 # tested to work with XRv
+        self.nics_per_pci_bus = 26  # tested to work with XRv
         self.smbios = []
-        overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
+        overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
+        # append role to overlay name to have different overlay images for control and data plane images
+        if hasattr(self, "role"):
+            tokens = overlay_disk_image.split(".")
+            tokens[0] = tokens[0] + "-" + self.role
+            overlay_disk_image = ".".join(tokens)
 
         if not os.path.exists(overlay_disk_image):
             self.logger.debug("Creating overlay disk image")
-            run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
+            run_command(
+                [
+                    "qemu-img",
+                    "create",
+                    "-f",
+                    "qcow2",
+                    "-b",
+                    disk_image,
+                    overlay_disk_image,
+                ]
+            )
 
-        self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
-        self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
-        self.qemu_args.extend(["-m", str(ram),
-                               "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
-                               "-drive", "if=ide,file=%s" % overlay_disk_image])
+        self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc"]
+        self.qemu_args.extend(
+            ["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num]
+        )
+        self.qemu_args.extend(
+            [
+                "-m",
+                str(ram),
+                "-serial",
+                "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
+                "-drive",
+                "if=ide,file=%s" % overlay_disk_image,
+            ]
+        )
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
-            self.qemu_args.insert(1, '-enable-kvm')
-
-
+            self.qemu_args.insert(1, "-enable-kvm")
 
     def start(self):
         self.logger.info("Starting %s" % self.__class__.__name__)
@@ -111,8 +132,9 @@ class VM:
 
         self.logger.debug(cmd)
 
-        self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE, universal_newlines=True)
+        self.p = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
+        )
 
         try:
             outs, errs = self.p.communicate(timeout=2)
@@ -121,25 +143,41 @@ class VM:
         except:
             pass
 
-        for i in range(1, MAX_RETRIES+1):
+        for i in range(1, MAX_RETRIES + 1):
             try:
                 self.qm = telnetlib.Telnet("127.0.0.1", 4000 + self.num)
                 break
             except:
-                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(4000 + self.num, i))
+                self.logger.info(
+                    "Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(
+                        4000 + self.num, i
+                    )
+                )
                 time.sleep(1)
             if i == MAX_RETRIES:
-                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(4000 + self.num))
+                raise QemuBroken(
+                    "Unable to connect to qemu monitor on port {}".format(
+                        4000 + self.num
+                    )
+                )
 
-        for i in range(1, MAX_RETRIES+1):
+        for i in range(1, MAX_RETRIES + 1):
             try:
                 self.tn = telnetlib.Telnet("127.0.0.1", 5000 + self.num)
                 break
             except:
-                self.logger.info("Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(5000 + self.num, i))
+                self.logger.info(
+                    "Unable to connect to qemu monitor (port {}), retrying in a second (attempt {})".format(
+                        5000 + self.num, i
+                    )
+                )
                 time.sleep(1)
             if i == MAX_RETRIES:
-                raise QemuBroken("Unable to connect to qemu monitor on port {}".format(5000 + self.num))
+                raise QemuBroken(
+                    "Unable to connect to qemu monitor on port {}".format(
+                        5000 + self.num
+                    )
+                )
         try:
             outs, errs = self.p.communicate(timeout=2)
             self.logger.info("STDOUT: %s" % outs)
@@ -147,58 +185,175 @@ class VM:
         except:
             pass
 
+    def create_bridges(self):
+        """Create a linux bridge for every attached eth interface
+        Returns list of bridge names
+        """
+        # based on https://github.com/plajjan/vrnetlab/pull/188
+        run_command(["mkdir", "-p", "/etc/qemu"])  # This is to whitlist all bridges
+        run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+
+        bridges = list()
+        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
+        intfs.sort()
+
+        self.logger.info("Creating bridges for interfaces: %s" % intfs)
+
+        for idx, intf in enumerate(intfs):
+            run_command(
+                ["ip", "link", "add", "name", "br-%s" % idx, "type", "bridge"],
+                background=True,
+            )
+            run_command(["ip", "link", "set", "br-%s" % idx, "up"])
+            run_command(["ip", "link", "set", intf, "master", "br-%s" % idx])
+            run_command(
+                ["echo 16384 > /sys/class/net/br-%s/bridge/group_fwd_mask" % idx],
+                shell=True,
+            )
+            bridges.append("br-%s" % idx)
+        return bridges
+
+    def create_macvtaps(self):
+        """
+        Create Macvtap interfaces for each non dataplane interface
+        """
+        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
+        self.data_ifaces = intfs
+        intfs.sort()
+
+        for idx, intf in enumerate(intfs):
+            self.logger.debug("Creating macvtap interfaces for link: %s" % intf)
+            run_command(
+                [
+                    "ip",
+                    "link",
+                    "add",
+                    "link",
+                    intf,
+                    "name",
+                    "macvtap{}".format(idx + 1),
+                    "type",
+                    "macvtap",
+                    "mode",
+                    "passthru",
+                ],
+            )
+            run_command(
+                [
+                    "ip",
+                    "link",
+                    "set",
+                    "dev",
+                    "macvtap{}".format(idx + 1),
+                    "up",
+                ],
+            )
 
     def gen_mgmt(self):
-        """ Generate qemu args for the mgmt interface(s)
-        """
+        """Generate qemu args for the mgmt interface(s)"""
         res = []
         # mgmt interface is special - we use qemu user mode network
         res.append("-device")
         # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it
-        if 'vEOS-lab' in self.image:
-            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s,bus=pci.1,addr=0x2"
-                       % { 'i': 0, 'mac': gen_mac(0) })
+        if "vEOS-lab" in self.image:
+            res.append(
+                self.nic_type
+                + ",netdev=p%(i)02d,mac=%(mac)s,bus=pci.1,addr=0x2"
+                % {"i": 0, "mac": gen_mac(0)}
+            )
         else:
-            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': 0, 'mac': gen_mac(0) })
+            res.append(
+                self.nic_type
+                + ",netdev=p%(i)02d,mac=%(mac)s" % {"i": 0, "mac": gen_mac(0)}
+            )
         res.append("-netdev")
-        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443" % { 'i': 0 })
+        res.append(
+            "user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443"
+            % {"i": 0}
+        )
 
         return res
 
-
     def gen_nics(self):
-        """ Generate qemu args for the normal traffic carrying interface(s)
-        """
+        """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
+        bridges = []
+        if self.conn_mode == "macvtap":
+            self.create_macvtaps()
+        elif self.conn_mode == "bridge":
+            bridges = self.create_bridges()
+            if len(bridges) > self.num_nics:
+                self.logger.error(
+                    "Number of dataplane interfaces '{}' exceeds the requested number of links '{}'".format(
+                        len(bridges), self.num_nics
+                    )
+                )
+                sys.exit(1)
         # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
-        if 'vEOS-lab' in self.image:
+        if "vEOS-lab" in self.image:
             range_start = 2
         else:
             range_start = 1
-        for i in range(range_start, self.num_nics+1):
+        for i in range(range_start, self.num_nics + 1):
             # calc which PCI bus we are on and the local add on that PCI bus
-            pci_bus = math.floor(i/self.nics_per_pci_bus) + 1
+            pci_bus = math.floor(i / self.nics_per_pci_bus) + 1
             addr = (i % self.nics_per_pci_bus) + 1
 
+            mac = ""
+            if self.conn_mode == "macvtap":
+                # get macvtap interface mac that will be used in qemu nic config
+                if not os.path.exists("/sys/class/net/macvtap{}/address".format(i)):
+                    continue
+                with open("/sys/class/net/macvtap%s/address" % i, "r") as f:
+                    mac = f.readline().strip("\n")
+            else:
+                mac = gen_mac(i)
+
             res.append("-device")
-            res.append("%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x" % {
-                       'nic_type': self.nic_type,
-                       'i': i,
-                       'pci_bus': pci_bus,
-                       'addr': addr,
-                       'mac': gen_mac(i)
-                    })
-            res.append("-netdev")
-            res.append("socket,id=p%(i)02d,listen=:%(j)02d"
-                       % { 'i': i, 'j': i + 10000 })
+            res.append(
+                "%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x"
+                % {
+                    "nic_type": self.nic_type,
+                    "i": i,
+                    "pci_bus": pci_bus,
+                    "addr": addr,
+                    "mac": mac,
+                }
+            )
+            if self.conn_mode == "macvtap":
+                # if required number of nics exceeds the number of attached interfaces
+                # we skip excessive ones
+                if not os.path.exists("/sys/class/net/macvtap{}/ifindex".format(i)):
+                    continue
+                # init value of macvtap ifindex
+                tapidx = 0
+                with open("/sys/class/net/macvtap%s/ifindex" % i, "r") as f:
+                    tapidx = f.readline().strip("\n")
+
+                res.append("-netdev")
+                res.append(
+                    "tap,id=p%(i)02d,ifname=tap%(tapidx)s" % {"i": i, "tapidx": tapidx}
+                )
+
+            if self.conn_mode == "bridge":
+                if i <= len(bridges):
+                    bridge = bridges[i - 1]  # We're starting from 0
+                    res.append("-netdev")
+                    res.append(
+                        "bridge,id=p%(i)02d,br=%(bridge)s" % {"i": i, "bridge": bridge}
+                    )
+                else:  # We don't create more interfaces than we have bridges
+                    del res[-2:]  # Removing recently added interface
+
+            if self.conn_mode == "vrxcon":
+                res.append("-netdev")
+                res.append(
+                    "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}
+                )
         return res
 
-
-
     def stop(self):
-        """ Stop this VM
-        """
+        """Stop this VM"""
         self.running = False
 
         try:
@@ -221,30 +376,25 @@ class VM:
                 # just assume it's dead or will die?
                 self.p.wait(timeout=10)
 
-
-
     def restart(self):
-        """ Restart this VM
-        """
+        """Restart this VM"""
         self.stop()
         self.start()
 
+    def wait_write(self, cmd, wait="#", con=None):
+        """Wait for something on the serial port and then send command
 
-
-    def wait_write(self, cmd, wait='#', con=None):
-        """ Wait for something on the serial port and then send command
-
-            Defaults to using self.tn as connection but this can be overridden
-            by passing a telnetlib.Telnet object in the con argument.
+        Defaults to using self.tn as connection but this can be overridden
+        by passing a telnetlib.Telnet object in the con argument.
         """
-        con_name = 'custom con'
+        con_name = "custom con"
         if con is None:
             con = self.tn
 
         if con == self.tn:
-            con_name = 'serial console'
+            con_name = "serial console"
         if con == self.qm:
-            con_name = 'qemu monitor'
+            con_name = "qemu monitor"
 
         if wait:
             self.logger.trace("waiting for '%s' on %s" % (wait, con_name))
@@ -252,7 +402,6 @@ class VM:
             self.logger.trace("read from %s: %s" % (con_name, res.decode()))
         self.logger.debug("writing to %s: %s" % (con_name, cmd))
         con.write("{}\r".format(cmd).encode())
-
 
     def work(self):
         self.check_qemu()
@@ -263,11 +412,9 @@ class VM:
                 self.logger.error("Telnet session was disconncted, restarting")
                 self.restart()
 
-
-
     def check_qemu(self):
-        """ Check health of qemu. This is mostly just seeing if there's error
-            output on STDOUT from qemu which means we restart it.
+        """Check health of qemu. This is mostly just seeing if there's error
+        output on STDOUT from qemu which means we restart it.
         """
         if self.p is None:
             self.logger.debug("VM not started; starting!")
@@ -287,7 +434,6 @@ class VM:
             self.start()
 
 
-
 class VR:
     def __init__(self, username, password):
         self.logger = logging.getLogger()
@@ -297,24 +443,30 @@ class VR:
         except:
             pass
 
-
     def update_health(self, exit_status, message):
         health_file = open("/health", "w")
         health_file.write("%d %s" % (exit_status, message))
         health_file.close()
 
-
-
     def start(self):
-        """ Start the virtual router
-        """
+        """Start the virtual router"""
         self.logger.debug("Starting vrnetlab %s" % self.__class__.__name__)
         self.logger.debug("VMs: %s" % self.vms)
-        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
-        run_command(["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True)
-        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        run_command(["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True)
-        run_command(["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True)
+        run_command(
+            ["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True
+        )
+        run_command(
+            ["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True
+        )
+        run_command(
+            ["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True
+        )
+        run_command(
+            ["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True
+        )
+        run_command(
+            ["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True
+        )
 
         started = False
         while True:
@@ -335,5 +487,4 @@ class VR:
 
 
 class QemuBroken(Exception):
-    """ Our Qemu instance is somehow broken
-    """
+    """Our Qemu instance is somehow broken"""

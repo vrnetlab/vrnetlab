@@ -9,6 +9,7 @@ import re
 import subprocess
 import telnetlib
 import time
+import sys
 
 MAX_RETRIES = 60
 
@@ -24,13 +25,13 @@ def gen_mac(last_octet=None):
     )
 
 
-def run_command(cmd, cwd=None, background=False):
+def run_command(cmd, cwd=None, background=False, shell=False):
     res = None
     try:
         if background:
-            p = subprocess.Popen(cmd, cwd=cwd)
+            p = subprocess.Popen(cmd, cwd=cwd, shell=shell)
         else:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd)
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, cwd=cwd, shell=shell)
             res = p.communicate()
     except:
         pass
@@ -64,6 +65,11 @@ class VM:
         self.nics_per_pci_bus = 26  # tested to work with XRv
         self.smbios = []
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
+        # append role to overlay name to have different overlay images for control and data plane images
+        if hasattr(self, "role"):
+            tokens = overlay_disk_image.split(".")
+            tokens[0] = tokens[0] + "-" + self.role
+            overlay_disk_image = ".".join(tokens)
 
         if not os.path.exists(overlay_disk_image):
             self.logger.debug("Creating overlay disk image")
@@ -179,6 +185,34 @@ class VM:
         except:
             pass
 
+    def create_bridges(self):
+        """Create a linux bridge for every attached eth interface
+        Returns list of bridge names
+        """
+        # based on https://github.com/plajjan/vrnetlab/pull/188
+        run_command(["mkdir", "-p", "/etc/qemu"])  # This is to whitlist all bridges
+        run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+
+        bridges = list()
+        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
+        intfs.sort()
+
+        self.logger.info("Creating bridges for interfaces: %s" % intfs)
+
+        for idx, intf in enumerate(intfs):
+            run_command(
+                ["ip", "link", "add", "name", "br-%s" % idx, "type", "bridge"],
+                background=True,
+            )
+            run_command(["ip", "link", "set", "br-%s" % idx, "up"])
+            run_command(["ip", "link", "set", intf, "master", "br-%s" % idx])
+            run_command(
+                ["echo 16384 > /sys/class/net/br-%s/bridge/group_fwd_mask" % idx],
+                shell=True,
+            )
+            bridges.append("br-%s" % idx)
+        return bridges
+
     def create_macvtaps(self):
         """
         Create Macvtap interfaces for each non dataplane interface
@@ -243,8 +277,18 @@ class VM:
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
+        bridges = []
         if self.conn_mode == "macvtap":
             self.create_macvtaps()
+        elif self.conn_mode == "bridge":
+            bridges = self.create_bridges()
+            if len(bridges) > self.num_nics:
+                self.logger.error(
+                    "Number of dataplane interfaces '{}' exceeds the requested number of links '{}'".format(
+                        len(bridges), self.num_nics
+                    )
+                )
+                sys.exit(1)
         # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
         if "vEOS-lab" in self.image:
             range_start = 2
@@ -290,7 +334,18 @@ class VM:
                 res.append(
                     "tap,id=p%(i)02d,ifname=tap%(tapidx)s" % {"i": i, "tapidx": tapidx}
                 )
-            else:
+
+            if self.conn_mode == "bridge":
+                if i <= len(bridges):
+                    bridge = bridges[i - 1]  # We're starting from 0
+                    res.append("-netdev")
+                    res.append(
+                        "bridge,id=p%(i)02d,br=%(bridge)s" % {"i": i, "bridge": bridge}
+                    )
+                else:  # We don't create more interfaces than we have bridges
+                    del res[-2:]  # Removing recently added interface
+
+            if self.conn_mode == "vrxcon":
                 res.append("-netdev")
                 res.append(
                     "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}

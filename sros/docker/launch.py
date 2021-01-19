@@ -269,8 +269,14 @@ class SROS_integrated(SROS_vm):
 class SROS_cp(SROS_vm):
     """Control plane for distributed VSR-SIM"""
 
-    def __init__(self, hostname, username, password, mode, major_release, variant):
-        super(SROS_cp, self).__init__(username, password, variant["cp"]["min_ram"])
+    def __init__(
+        self, hostname, username, password, mode, major_release, variant, conn_mode
+    ):
+        # cp - control plane. role is used to create a separate overlay image name
+        self.role = "cp"
+        super(SROS_cp, self).__init__(
+            username, password, variant["cp"]["min_ram"], conn_mode
+        )
         self.mode = mode
         self.num_nics = 0
         self.hostname = hostname
@@ -289,6 +295,13 @@ class SROS_cp(SROS_vm):
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vcp-int"])
         vrnetlab.run_command(["ip", "link", "set", "vcp-int", "up"])
         vrnetlab.run_command(["ip", "link", "set", "dev", "vcp-int", "mtu", "10000"])
+
+    def gen_nics(self):
+        """
+        Override the parent's gen_nic function,
+        since dataplane interfaces are not to be created for CPM
+        """
+        return []
 
     def gen_mgmt(self):
         """Generate mgmt interface(s)
@@ -340,11 +353,16 @@ class SROS_cp(SROS_vm):
 class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
-    def __init__(self, variant, slot=1):
-        super(SROS_lc, self).__init__(None, None, variant["lc"]["min_ram"], num=slot)
+    def __init__(self, variant, conn_mode, num_nics, slot=1):
+        # cp - control plane. role is used to create a separate overlay image name
+        self.role = "lc"
+        super(SROS_lc, self).__init__(
+            None, None, variant["lc"]["min_ram"], conn_mode, num=slot
+        )
 
         self.smbios = ["type=1,product=TIMOS:{}".format(variant["lc"]["timos_line"])]
         self.slot = slot
+        self.num_nics = num_nics
 
     def start(self):
         # use parent class start() function
@@ -376,22 +394,6 @@ class SROS_lc(SROS_vm):
                 ),
             ]
         )
-        return res
-
-    def gen_nics(self):
-        """Generate qemu args for the normal traffic carrying interface(s)"""
-        res = []
-        # TODO: should this offset business be put in the common vrnetlab?
-        offset = 6 * (self.slot - 1)
-        for j in range(0, self.num_nics):
-            i = offset + j + 1
-            res.append("-device")
-            res.append(
-                self.nic_type
-                + ",netdev=p%(i)02d,mac=%(mac)s" % {"i": i, "mac": vrnetlab.gen_mac(i)}
-            )
-            res.append("-netdev")
-            res.append("socket,id=p%(i)02d,listen=:100%(i)02d" % {"i": i})
         return res
 
     def bootstrap_spin(self):
@@ -448,8 +450,16 @@ class SROS(vrnetlab.VR):
 
         if variant["deployment_model"] == "distributed":
             self.vms = [
-                SROS_cp(hostname, username, password, mode, major_release, variant),
-                SROS_lc(variant),
+                SROS_cp(
+                    hostname,
+                    username,
+                    password,
+                    mode,
+                    major_release,
+                    variant,
+                    conn_mode,
+                ),
+                SROS_lc(variant, conn_mode, num_nics),
             ]
 
             # set up bridge for connecting CP with LCs
@@ -495,7 +505,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--connection-mode",
-        choices=["vrxcon", "macvtap"],
+        choices=["vrxcon", "macvtap", "bridge"],
         default="vrxcon",
         help="Connection mode to use in the datapath",
     )

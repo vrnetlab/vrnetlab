@@ -1,8 +1,7 @@
-FROM debian:stretch
+FROM ubuntu:20.04
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
-ENV DEBIAN_FRONTEND=noninteractive
-
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
  && apt-get upgrade -qy \
  && apt-get install -y \
@@ -11,6 +10,7 @@ RUN apt-get update -qy \
     python3-ipy \
     socat \
     qemu-kvm \
+    tcpdump \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

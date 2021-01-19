@@ -1,32 +1,29 @@
-vrnetlab / Nokia VSR SROS
-=========================
+# vrnetlab / Nokia VSR SROS
+
 This is the vrnetlab docker image for Nokia VSR / SROS.
 
-Ask your Nokia representative for the VSR image.  Put the sros.qcow2 file in
-this directory and run `make docker-image` and you should be good to go. The
-resulting image is called `vr-sros`. You can tag it with something else if you
-want, like `my-repo.example.com/vr-sros` and then push it to your repo.
+> Originally developed by Kristian Larsson (@plajjan), forked by @hellt to be adapted to work with docker-based networking dataplane.  
+> Refer to ["Added in this fork"](#added-in-this-fork) section to read on the differences between this fork and the upstream version.
+
+## Building the docker image
+Ask your Nokia representative for the VSR/VSIM image.
+Copy the `sros-vm.qcow2` file in `vrnetlab/sros` directory and rename the file by appending the SR OS version to it.  
+For example, for SR OS version 20.10.r1 make sure that the qcow2 file will be named as `sros-vm-20.10.R1.qcow2`. The version (20.10.R1) will be used as a container image tag.
+
+Apart from the qcow file itself, the license 
+
+Run `make docker-image` to start the build process. The resulting image is called `vrnetlab/vr-sros:<version>`. You can tag it with something else if needed, like `vr-sros:<version>`.
 
 Please note that you will always need to specify version when starting your
 router as the "latest" tag is not added to any images since it has no meaning
 in this context.
 
-It's been tested to at least boot with:
+It's been tested to run with the following versions:
 
- * 12.0.R6
- * 13.0.R7
- * 14.0.R4
- * 14.0.R5
- * 16.0.R1
- * 16.0.R2
- * 16.0.R2-1
- * 16.0.R3
- * 16.0.R3-1
- * 16.0.R4
- * 16.0.R4-1
+ * 20.10.R1
 
-Usage
------
+## Usage (not updated yet)
+
 The container must be `--privileged` to start KVM.
 ```
 docker run -d --privileged --name my-sros-router vr-sros
@@ -62,8 +59,8 @@ run and you'll get an interactive terminal, do note that docker will terminate
 as soon as you close it though. Use `-d` for long running routers.
 
 
-License handling
-----------------
+## License handling
+
 You can feed a license file into SROS by putting a text file containing the
 license in this directory next to your .qcow2 image.  Name the license file the
 same as your .qcow2 file but append ".license", e.g. if you have
@@ -99,3 +96,5 @@ argument. If you specify more than 5 the router will be started in
 ##### Q: Why 6GB of RAM? It says only 4GB is required.
 A: SROS 16 seems to require 6GB and we don't build with different amount of
 CPU/RAM per versions so that's why every version gets the same.
+
+# Added in this fork

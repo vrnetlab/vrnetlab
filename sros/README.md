@@ -29,7 +29,7 @@ To give vrnetlab users flexibility of choice, this fork provides a number of suc
 
 By selecting a certain variant (referred by its `name`) the VSIM will start with the certain configuraion as per the following table:
 
-| Name  |    mode     | Control plane |    Line card     |    RAM    | Mac NICs |
+| Name  |    mode     | Control plane |    Line card     |    RAM    | Max NICs |
 | :---: | :---------: | :-----------: | :--------------: | :-------: | :------: |
 | sr-1  | integrated  |     cpm-1     | me6-100gb-qsfp28 |   5120    |    6     |
 | sr-1e | distributed |     cpm-e     |  me40-1gb-csfp   | 4096+4096 |    20    |

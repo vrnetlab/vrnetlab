@@ -42,7 +42,14 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, install_mode=False):
+    def __init__(
+        self,
+        username,
+        password,
+        image,
+        conn_mode,
+        install_mode=False,
+    ):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
         self.install_mode = install_mode
         self.num_nics = 0
@@ -62,6 +69,7 @@ class VMX_vcp(vrnetlab.VM):
                     "usb-storage,drive=my_usb_disk",
                 ]
             )
+        self.conn_mode = conn_mode
 
     def start(self):
         # use parent class start() function
@@ -109,7 +117,17 @@ class VMX_vcp(vrnetlab.VM):
             if ridx == 1:
                 if self.install_mode:
                     self.logger.info("requesting power-off")
-                    self.wait_write("cli", None)
+                    # this witchery comes from networkop https://github.com/plajjan/vrnetlab/issues/183#issuecomment-452022357
+                    self.wait_write(
+                        '/usr/sbin/mgd "-ZS" "intialsetup-commit" "ex_series_auto_config"',
+                        None,
+                    )
+                    time.sleep(10)
+                    self.wait_write("cli", "root@(%|:~ #)")
+                    self.wait_write("configure", ">", 10)
+                    self.wait_write("delete chassis auto-image-upgrade")
+                    self.wait_write("commit")
+                    self.wait_write("exit")
                     self.wait_write("request system power-off", ">")
                     self.wait_write("yes", "Power Off the system")
                     self.running = True
@@ -175,7 +193,7 @@ class VMX_vcp(vrnetlab.VM):
 
 
 class VMX_vfpc(vrnetlab.VM):
-    def __init__(self, version):
+    def __init__(self, version, conn_mode):
         super(VMX_vfpc, self).__init__(None, None, disk_image="/vmx/vfpc.img", num=1)
         self.version = version
         self.num_nics = 96
@@ -193,6 +211,7 @@ class VMX_vfpc(vrnetlab.VM):
                     "usb-storage,drive=fpc_usb_disk",
                 ]
             )
+        self.conn_mode = conn_mode
 
     def gen_mgmt(self):
         res = []
@@ -250,7 +269,7 @@ class VMX_vfpc(vrnetlab.VM):
 class VMX(vrnetlab.VR):
     """Juniper vMX router"""
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, conn_mode):
         self.version = None
         self.version_info = []
         self.read_version()
@@ -258,8 +277,8 @@ class VMX(vrnetlab.VR):
         super(VMX, self).__init__(username, password)
 
         self.vms = [
-            VMX_vcp(username, password, "/vmx/" + self.vcp_image),
-            VMX_vfpc(self.version),
+            VMX_vcp(username, password, "/vmx/" + self.vcp_image, conn_mode=conn_mode),
+            VMX_vfpc(self.version, conn_mode=conn_mode),
         ]
 
         # set up bridge for connecting VCP with vFPC
@@ -293,7 +312,7 @@ class VMX_installer(VMX):
     normal startup time of the vMX.
     """
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, conn_mode):
         self.version = None
         self.version_info = []
         self.read_version()
@@ -301,7 +320,13 @@ class VMX_installer(VMX):
         super(VMX, self).__init__(username, password)
 
         self.vms = [
-            VMX_vcp(username, password, "/vmx/" + self.vcp_image, install_mode=True)
+            VMX_vcp(
+                username,
+                password,
+                "/vmx/" + self.vcp_image,
+                install_mode=True,
+                conn_mode=conn_mode,
+            )
         ]
 
     def install(self):
@@ -351,6 +376,12 @@ if __name__ == "__main__":
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument("--install", action="store_true", help="Install vMX")
+    parser.add_argument(
+        "--connection-mode",
+        choices=["vrxcon", "macvtap", "bridge"],
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -361,9 +392,15 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
+    logger.debug(
+        "acting flags: username '{}', password '{}', install '{}', connection-mode '{}'".format(
+            args.username, args.password, args.install, args.connection_mode
+        )
+    )
+
     if args.install:
-        vr = VMX_installer(args.username, args.password)
+        vr = VMX_installer(args.username, args.password, conn_mode=args.connection_mode)
         vr.install()
     else:
-        vr = VMX(args.username, args.password)
+        vr = VMX(args.username, args.password, conn_mode=args.connection_mode)
         vr.start()

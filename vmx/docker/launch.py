@@ -44,6 +44,7 @@ logging.Logger.trace = trace
 class VMX_vcp(vrnetlab.VM):
     def __init__(
         self,
+        hostname,
         username,
         password,
         image,
@@ -51,6 +52,7 @@ class VMX_vcp(vrnetlab.VM):
         install_mode=False,
     ):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
+        self.hostname = hostname
         self.install_mode = install_mode
         self.num_nics = 0
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
@@ -88,6 +90,13 @@ class VMX_vcp(vrnetlab.VM):
         # call parent function to generate first mgmt interface (e1000)
         res = super(VMX_vcp, self).gen_mgmt()
         if not self.install_mode:
+            # append gNMI forwarding if it was not added by common lib
+            if "hostfwd=tcp::57400-10.0.0.15:57400" not in res[-1]:
+                res[-1] = res[-1] + ",hostfwd=tcp::17400-10.0.0.15:57400"
+                vrnetlab.run_command(
+                    ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
+                    background=True,
+                )
             # add virtio NIC for internal control plane interface to vFPC
             res.append("-device")
             res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
@@ -156,9 +165,16 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("cli", None)
         self.wait_write("configure", ">", 10)
         self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
+        self.wait_write("set system host-name {}".format(self.hostname))
         self.wait_write("set system services ssh")
         self.wait_write("set system services netconf ssh")
         self.wait_write("set system services netconf rfc-compliant")
+        self.wait_write(
+            "set system services extension-service request-response grpc clear-text port 57400"
+        )
+        self.wait_write(
+            "set system services extension-service request-response grpc max-connections 4"
+        )
         self.wait_write(
             "set system login user %s class super-user authentication plain-text-password"
             % self.username
@@ -269,7 +285,7 @@ class VMX_vfpc(vrnetlab.VM):
 class VMX(vrnetlab.VR):
     """Juniper vMX router"""
 
-    def __init__(self, username, password, conn_mode):
+    def __init__(self, hostname, username, password, conn_mode):
         self.version = None
         self.version_info = []
         self.read_version()
@@ -277,7 +293,13 @@ class VMX(vrnetlab.VR):
         super(VMX, self).__init__(username, password)
 
         self.vms = [
-            VMX_vcp(username, password, "/vmx/" + self.vcp_image, conn_mode=conn_mode),
+            VMX_vcp(
+                hostname,
+                username,
+                password,
+                "/vmx/" + self.vcp_image,
+                conn_mode=conn_mode,
+            ),
             VMX_vfpc(self.version, conn_mode=conn_mode),
         ]
 
@@ -321,6 +343,7 @@ class VMX_installer(VMX):
 
         self.vms = [
             VMX_vcp(
+                "install",
                 username,
                 password,
                 "/vmx/" + self.vcp_image,
@@ -370,6 +393,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--hostname", default="vr-vmx", help="Router hostname")
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
@@ -402,5 +426,7 @@ if __name__ == "__main__":
         vr = VMX_installer(args.username, args.password, conn_mode=args.connection_mode)
         vr.install()
     else:
-        vr = VMX(args.username, args.password, conn_mode=args.connection_mode)
+        vr = VMX(
+            args.hostname, args.username, args.password, conn_mode=args.connection_mode
+        )
         vr.start()

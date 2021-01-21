@@ -104,6 +104,13 @@ class VMX_vcp(vrnetlab.VM):
             res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
         return res
 
+    def gen_nics(self):
+        """
+        Override the parent's gen_nic function,
+        since dataplane interfaces are not to be created for VCP
+        """
+        return []
+
     def bootstrap_spin(self):
         """This function should be called periodically to do work.
 
@@ -131,9 +138,10 @@ class VMX_vcp(vrnetlab.VM):
                         '/usr/sbin/mgd "-ZS" "intialsetup-commit" "ex_series_auto_config"',
                         None,
                     )
-                    time.sleep(10)
-                    self.wait_write("cli", "root@(%|:~ #)")
-                    self.wait_write("configure", ">", 10)
+                    time.sleep(15)
+                    self.wait_write("cli", None)
+                    time.sleep(20)
+                    self.wait_write("configure", ">", 20)
                     self.wait_write("delete chassis auto-image-upgrade")
                     self.wait_write("commit")
                     self.wait_write("exit")
@@ -164,6 +172,8 @@ class VMX_vcp(vrnetlab.VM):
         """Do the actual bootstrap config"""
         self.wait_write("cli", None)
         self.wait_write("configure", ">", 10)
+        self.wait_write("delete chassis auto-image-upgrade")
+        self.wait_write("commit")
         self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
         self.wait_write("set system host-name {}".format(self.hostname))
         self.wait_write("set system services ssh")
@@ -244,7 +254,7 @@ class VMX_vfpc(vrnetlab.VM):
             ["-netdev", "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"]
         )
 
-        if self.version in ("15.1F6.9", "16.1R2.11", "17.2R1.13"):
+        if self.version not in ("vmx-14.1R6.4"):
             # dummy interface for some vMX versions - not sure why vFPC wants
             # it but without it we get a misalignment
             res.extend(

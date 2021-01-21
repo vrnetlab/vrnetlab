@@ -133,20 +133,13 @@ class VMX_vcp(vrnetlab.VM):
             if ridx == 1:
                 if self.install_mode:
                     self.logger.info("requesting power-off")
-                    # this witchery comes from networkop https://github.com/plajjan/vrnetlab/issues/183#issuecomment-452022357
-                    self.wait_write(
-                        '/usr/sbin/mgd "-ZS" "intialsetup-commit" "ex_series_auto_config"',
-                        None,
-                    )
-                    time.sleep(15)
                     self.wait_write("cli", None)
-                    time.sleep(20)
-                    self.wait_write("configure", ">", 20)
-                    self.wait_write("delete chassis auto-image-upgrade")
+                    self.wait_write("edit exclusive", ">", 10)
+                    self.disable_img_upgrade()
                     self.wait_write("commit")
                     self.wait_write("exit")
-                    self.wait_write("request system power-off", ">")
-                    self.wait_write("yes", "Power Off the system")
+                    # self.wait_write("request system power-off", ">")
+                    # self.wait_write("yes", "Power Off the system")
                     self.running = True
                     return
                 # run main config!
@@ -171,7 +164,7 @@ class VMX_vcp(vrnetlab.VM):
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
         self.wait_write("cli", None)
-        self.wait_write("configure", ">", 10)
+        self.wait_write("edit exclusive", ">", 10)
         self.wait_write("delete chassis auto-image-upgrade")
         self.wait_write("commit")
         self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
@@ -203,7 +196,7 @@ class VMX_vcp(vrnetlab.VM):
     def wait_write(self, cmd, wait="#", timeout=None):
         """Wait for something and then send command"""
         if wait:
-            self.logger.trace("Waiting for %s" % wait)
+            self.logger.trace("Waiting for {} before writing {}".format(wait, cmd))
             while True:
                 (ridx, match, res) = self.tn.expect(
                     [wait.encode(), b"Retry connection attempts"], timeout=timeout
@@ -216,6 +209,34 @@ class VMX_vcp(vrnetlab.VM):
             self.logger.trace("Read: %s" % res.decode())
         self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
+
+    def disable_img_upgrade(self):
+        """
+        Juniper will forcefully close the session to do image auto upgrade
+        the time it does that is unpredictable. Thus we need to disable it.
+        The problem is that the command to disable image upgrade is not available
+        from the start. For that we need this loop that will try to disable this functionality
+        until error "statement not found" does not occur anymore.
+        """
+        i = 1
+        self.logger.debug("Trying to disable auto-image-upgrade")
+        while True:
+            self.wait_write("delete chassis auto-image-upgrade")
+            (ridx, match, res) = self.tn.expect(
+                ["statement not found".encode()], timeout=10
+            )
+            if match:
+                self.logger.trace(
+                    "failed to disable image upgrade. Attempt {}\n Fetched result: {}".format(
+                        i, res
+                    )
+                )
+                i = i + 1
+                time.sleep(3)
+            else:
+                self.logger.trace("Error not found, found {}".format(res))
+                break
+        self.logger.trace("Auto image upgrade disabled")
 
 
 class VMX_vfpc(vrnetlab.VM):

@@ -2,6 +2,9 @@ vrnetlab / Juniper vMX
 ========================
 This is the vrnetlab docker image for Juniper vMX.
 
+> Originally developed by Kristian Larsson (@plajjan), forked by @hellt to be adapted to work with docker-based networking dataplane.  
+> Refer to ["Added in this fork"](#added-in-this-fork) section to read on the differences between this fork and the upstream version.
+
 Building the docker image
 -------------------------
 Download vMX from http://www.juniper.net/support/downloads/?p=vmx#sw
@@ -44,6 +47,7 @@ with the following images:
  * vmx-bundle-16.1R1.7.tgz  MD5:d96766848731c12c0492e3ae2349b426
  * vmx-bundle-16.1R2.11.tgz  MD5:24bc389420bf02fb6ede36afa79a0a19
  * vmx-bundle-17.2R1.13.tgz  MD5:64569e60a2fd671aad565c7bd3745e88
+ * vmx-bundle-20.2R1.10.tgz
 
 It is NOT working with the following images:
 
@@ -106,3 +110,8 @@ file?
 ##### Q: I'm getting this error: qemu-system-x86_64: /build/qemu-XXUWBP/qemu-2.1+dfsg/hw/usb/dev-storage.c:236: usb_msd_send_status: Assertion `s->csw.sig == cpu_to_le32(0x53425355)' failed.
 A: Get a newer kernel & qemu. I've seen this on Ubuntu 15.10. Upgrading to
 16.04 fixed it.
+
+# Added in this fork
+* docker networking using `--connection-mode` flag
+* hostname, username and password configuration via flags
+* fixes for auto image upgrade disrupted node config

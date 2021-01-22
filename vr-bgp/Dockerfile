@@ -12,7 +12,7 @@ RUN apt-get update -qy \
     python3-jinja2 \
     python3-flask \
     python3-pip \
-    sqlite3
+    sqlite3 \
     tcpdump \
     telnet \
     vim \

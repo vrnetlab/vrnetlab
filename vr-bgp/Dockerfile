@@ -16,7 +16,7 @@ RUN apt-get update -qy \
     tcpdump \
     telnet \
     vim \
-    wget \
+    wget
 RUN pip3 install exabgp
 
 

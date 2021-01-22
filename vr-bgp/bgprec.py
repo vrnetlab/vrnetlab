@@ -100,8 +100,8 @@ def parse_message(line):
             if 'withdraw' in update:
                 for afi, prefixes in update['withdraw'].items():
                     for prefix in prefixes:
-                        log("Withdraw {}".format(prefix))
-                        remove_prefix(afi, prefix)
+                        log("Withdraw {}".format(prefix['nlri']))
+                        remove_prefix(afi, prefix['nlri'])
         elif 'eor' in msg['neighbor']['message']:
             eor = msg['neighbor']['message']['eor']
             log("Received EOR for {} {}".format(eor['afi'], eor['safi']))

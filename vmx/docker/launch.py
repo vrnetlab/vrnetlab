@@ -216,34 +216,6 @@ class VMX_vcp(vrnetlab.VM):
         self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
-    def disable_img_upgrade(self):
-        """
-        Juniper will forcefully close the session to do image auto upgrade
-        the time it does that is unpredictable. Thus we need to disable it.
-        The problem is that the command to disable image upgrade is not available
-        from the start. For that we need this loop that will try to disable this functionality
-        until error "statement not found" does not occur anymore.
-        """
-        i = 1
-        self.logger.debug("Trying to disable auto-image-upgrade")
-        while True:
-            self.wait_write("delete chassis auto-image-upgrade")
-            (ridx, match, res) = self.tn.expect(
-                ["statement not found".encode()], timeout=10
-            )
-            if match:
-                self.logger.trace(
-                    "failed to disable image upgrade. Attempt {}\n Fetched result: {}".format(
-                        i, res
-                    )
-                )
-                i = i + 1
-                time.sleep(3)
-            else:
-                self.logger.trace("Error not found, found {}".format(res))
-                break
-        self.logger.trace("Auto image upgrade disabled")
-
 
 class VMX_vfpc(vrnetlab.VM):
     def __init__(self, version, conn_mode):

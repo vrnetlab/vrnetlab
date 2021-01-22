@@ -8,22 +8,18 @@ RUN apt-get update -qy \
  && apt-get upgrade -qy \
  && apt-get install -y \
     iputils-tracepath \
-    git \
-    golang \
     procps \
-    python \
-    python-setuptools \
     python3-jinja2 \
     python3-flask \
+    python3-pip \
+    sqlite3
     tcpdump \
     telnet \
+    vim \
     wget \
- && rm -rf /var/lib/apt/lists/* \
- && wget -O exabgp.tar.gz https://github.com/Exa-Networks/exabgp/archive/4.0.10.tar.gz \
- && tar zxvf exabgp.tar.gz \
- && cd /exabgp* && python setup.py install \
- && cd / && rm -rf exabgp*
+RUN pip3 install exabgp
 
-ADD . /
+
+ADD *bgp* /
 
 ENTRYPOINT ["/vr-bgp.py"]

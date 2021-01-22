@@ -67,7 +67,7 @@ def parse_message(line):
     timestamp = datetime.fromtimestamp(msg['time'])
 
     if msg['type'] == 'state':
-        neighbor_ip = msg['neighbor']['ip']
+        neighbor_ip = msg['neighbor']['address']['peer']
         state = msg['neighbor']['state']
         upsert_neighbor_state(neighbor_ip, state, timestamp)
 
@@ -88,13 +88,13 @@ def parse_message(line):
                                 # and parse GUA
                                 continue
                             for prefix in prefixes:
-                                log("announce {}".format(prefix))
+                                log("announce {}".format(prefix['nlri']))
                                 attributes = update['attribute']
                                 # store next-hop, which is NLRI information as
                                 # (path) attribute. this is not according to
                                 # RFC but gosh does it simplify things.
                                 attributes['next-hop'] = nexthop
-                                upsert_prefix(afi, prefix, attributes)
+                                upsert_prefix(afi, prefix['nlri'], attributes)
 
             # handle withdraws
             if 'withdraw' in update:

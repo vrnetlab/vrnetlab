@@ -12,11 +12,14 @@ import time
 
 import vrnetlab
 
+
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
+
 def handle_SIGTERM(signal, frame):
     sys.exit(0)
+
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
@@ -24,31 +27,34 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
+
+
 logging.Logger.trace = trace
 
 
-
 class XRV_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         for e in os.listdir("/"):
             if re.search(".vmdk", e):
                 disk_image = "/" + e
-        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=3072)
+        super(XRV_vm, self).__init__(
+            username, password, disk_image=disk_image, ram=3072
+        )
+        self.hostname = hostname
+        self.conn_mode = conn_mode
         self.num_nics = 128
-        self.credentials = [
-                ['admin', 'admin']
-            ]
+        self.credentials = [["admin", "admin"]]
 
         self.xr_ready = False
 
-
     def bootstrap_spin(self):
-        """ 
-        """
+        """"""
 
         if self.spins > 300:
             # too many spins with no result ->  give up
@@ -56,32 +62,43 @@ class XRV_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started",
-            b"SYSTEM CONFIGURATION COMPLETE",
-            b"Enter root-system username",
-            b"Username:", b"^[^ ]+#"], 1)
-        if match: # got a match!
-            if ridx == 0: # press return to get started, so we press return!
+        (ridx, match, res) = self.tn.expect(
+            [
+                b"Press RETURN to get started",
+                b"SYSTEM CONFIGURATION COMPLETE",
+                b"Enter root-system username",
+                b"Username:",
+                b"^[^ ]+#",
+            ],
+            1,
+        )
+        if match:  # got a match!
+            if ridx == 0:  # press return to get started, so we press return!
                 self.logger.debug("got 'press return to get started...'")
                 self.wait_write("", wait=None)
-            if ridx == 1: # system configuration complete
-                self.logger.info("IOS XR system configuration is complete, should be able to proceed with bootstrap configuration")
+            if ridx == 1:  # system configuration complete
+                self.logger.info(
+                    "IOS XR system configuration is complete, should be able to proceed with bootstrap configuration"
+                )
                 self.wait_write("", wait=None)
                 self.xr_ready = True
-            if ridx == 2: # initial user config
+            if ridx == 2:  # initial user config
                 self.logger.info("Creating initial user")
+                time.sleep(15)
                 self.wait_write(self.username, wait=None)
                 self.wait_write(self.password, wait="Enter secret:")
                 self.wait_write(self.password, wait="Enter secret again:")
                 self.credentials.insert(0, [self.username, self.password])
-            if ridx == 3: # matched login prompt, so should login
+            if ridx == 3:  # matched login prompt, so should login
                 self.logger.debug("matched login prompt")
                 try:
                     username, password = self.credentials.pop(0)
                 except IndexError as exc:
                     self.logger.error("no more credentials to try")
                     return
-                self.logger.debug("trying to log in with %s / %s" % (username, password))
+                self.logger.debug(
+                    "trying to log in with %s / %s" % (username, password)
+                )
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
             if self.xr_ready == True and ridx == 4:
@@ -98,7 +115,7 @@ class XRV_vm(vrnetlab.VM):
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
-        if res != b'':
+        if res != b"":
             self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
@@ -107,11 +124,8 @@ class XRV_vm(vrnetlab.VM):
 
         return
 
-
-
     def bootstrap_config(self):
-        """ Do the actual bootstrap config
-        """
+        """Do the actual bootstrap config"""
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
 
@@ -119,13 +133,18 @@ class XRV_vm(vrnetlab.VM):
 
         self.wait_write("crypto key generate rsa")
         # check if we are prompted to overwrite current keys
-        (ridx, match, res) = self.tn.expect([b"How many bits in the modulus",
-            b"Do you really want to replace them",
-            b"^[^ ]+#"], 10)
-        if match: # got a match!
+        (ridx, match, res) = self.tn.expect(
+            [
+                b"How many bits in the modulus",
+                b"Do you really want to replace them",
+                b"^[^ ]+#",
+            ],
+            10,
+        )
+        if match:  # got a match!
             if ridx == 0:
                 self.wait_write("2048", None)
-            elif ridx == 1: # press return to get started, so we press return!
+            elif ridx == 1:  # press return to get started, so we press return!
                 self.wait_write("no", None)
 
         # make sure we get our prompt back
@@ -143,13 +162,16 @@ class XRV_vm(vrnetlab.VM):
 
         self.wait_write("show interface description")
         self.wait_write("configure")
+        self.wait_write("hostname {}".format(self.hostname))
         # configure netconf
         self.wait_write("ssh server v2")
-        self.wait_write("ssh server netconf port 830") # for 5.1.1
-        self.wait_write("ssh server netconf vrf default") # for 5.3.3
-        self.wait_write("netconf agent ssh") # for 5.1.1
-        self.wait_write("netconf-yang agent ssh") # for 5.3.3
-
+        self.wait_write("ssh server netconf port 830")  # for 5.1.1
+        self.wait_write("ssh server netconf vrf default")  # for 5.3.3
+        self.wait_write("netconf agent ssh")  # for 5.1.1
+        self.wait_write("netconf-yang agent ssh")  # for 5.3.3
+        # configure gNMI
+        self.wait_write("grpc port 57400")
+        self.wait_write("grpc no-tls")
         # configure xml agent
         self.wait_write("xml agent tty")
 
@@ -161,21 +183,45 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("commit")
         self.wait_write("exit")
 
+    def gen_mgmt(self):
+        """
+        Augment the parent class function to add gNMI port forwarding
+        """
+        # call parent function to generate first mgmt interface (e1000)
+        res = super(XRV_vm, self).gen_mgmt()
+
+        # append gNMI forwarding if it was not added by common lib
+        if "hostfwd=tcp::57400-10.0.0.15:57400" not in res[-1]:
+            res[-1] = res[-1] + ",hostfwd=tcp::17400-10.0.0.15:57400"
+            vrnetlab.run_command(
+                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
+                background=True,
+            )
+        return res
 
 
 class XRV(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         super(XRV, self).__init__(username, password)
-        self.vms = [ XRV_vm(username, password) ]
+        self.vms = [XRV_vm(hostname, username, password, conn_mode)]
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
+
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--hostname", default="vr-xrv", help="Router hostname")
+    parser.add_argument(
+        "--trace", action="store_true", help="enable trace level logging"
+    )
+    parser.add_argument("--username", default="vrnetlab", help="Username")
+    parser.add_argument("--password", default="VR-netlab9", help="Password")
+    parser.add_argument(
+        "--connection-mode",
+        choices=["vrxcon", "macvtap", "bridge"],
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -186,5 +232,11 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = XRV(args.username, args.password)
+    logger.debug(
+        "acting flags: username '{}', password '{}', connection-mode '{}'".format(
+            args.username, args.password, args.connection_mode
+        )
+    )
+
+    vr = XRV(args.hostname, args.username, args.password, args.connection_mode)
     vr.start()

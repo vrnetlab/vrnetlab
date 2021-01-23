@@ -39,13 +39,15 @@ logging.Logger.trace = trace
 
 
 class XRV_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         for e in os.listdir("/"):
             if re.search(".vmdk", e):
                 disk_image = "/" + e
         super(XRV_vm, self).__init__(
             username, password, disk_image=disk_image, ram=3072
         )
+        self.hostname = hostname
+        self.conn_mode = conn_mode
         self.num_nics = 128
         self.credentials = [["admin", "admin"]]
 
@@ -82,6 +84,7 @@ class XRV_vm(vrnetlab.VM):
                 self.xr_ready = True
             if ridx == 2:  # initial user config
                 self.logger.info("Creating initial user")
+                time.sleep(15)
                 self.wait_write(self.username, wait=None)
                 self.wait_write(self.password, wait="Enter secret:")
                 self.wait_write(self.password, wait="Enter secret again:")
@@ -159,13 +162,16 @@ class XRV_vm(vrnetlab.VM):
 
         self.wait_write("show interface description")
         self.wait_write("configure")
+        self.wait_write("hostname {}".format(self.hostname))
         # configure netconf
         self.wait_write("ssh server v2")
         self.wait_write("ssh server netconf port 830")  # for 5.1.1
         self.wait_write("ssh server netconf vrf default")  # for 5.3.3
         self.wait_write("netconf agent ssh")  # for 5.1.1
         self.wait_write("netconf-yang agent ssh")  # for 5.3.3
-
+        # configure gNMI
+        self.wait_write("grpc port 57400")
+        self.wait_write("grpc no-tls")
         # configure xml agent
         self.wait_write("xml agent tty")
 
@@ -177,22 +183,45 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("commit")
         self.wait_write("exit")
 
+    def gen_mgmt(self):
+        """
+        Augment the parent class function to add gNMI port forwarding
+        """
+        # call parent function to generate first mgmt interface (e1000)
+        res = super(XRV_vm, self).gen_mgmt()
+
+        # append gNMI forwarding if it was not added by common lib
+        if "hostfwd=tcp::57400-10.0.0.15:57400" not in res[-1]:
+            res[-1] = res[-1] + ",hostfwd=tcp::17400-10.0.0.15:57400"
+            vrnetlab.run_command(
+                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
+                background=True,
+            )
+        return res
+
 
 class XRV(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         super(XRV, self).__init__(username, password)
-        self.vms = [XRV_vm(username, password)]
+        self.vms = [XRV_vm(hostname, username, password, conn_mode)]
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--hostname", default="vr-xrv", help="Router hostname")
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
+    parser.add_argument(
+        "--connection-mode",
+        choices=["vrxcon", "macvtap", "bridge"],
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -203,5 +232,11 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
-    vr = XRV(args.username, args.password)
+    logger.debug(
+        "acting flags: username '{}', password '{}', connection-mode '{}'".format(
+            args.username, args.password, args.connection_mode
+        )
+    )
+
+    vr = XRV(args.hostname, args.username, args.password, args.connection_mode)
     vr.start()

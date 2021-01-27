@@ -313,12 +313,19 @@ class SROS_cp(SROS_vm):
         return []
 
     def gen_mgmt(self):
-        """Generate mgmt interface(s)
-
-        We override the default function since we want a NIC to the vFPC
         """
-        # call parent function to generate first mgmt interface (e1000)
-        res = super(SROS_cp, self).gen_mgmt()
+        Generate mgmt interface(s)
+        """
+        res = []
+
+        res.append("-device")
+
+        res.append(
+            self.nic_type + ",netdev=br-mgmt,mac=%(mac)s" % {"mac": vrnetlab.gen_mac(0)}
+        )
+        res.append("-netdev")
+        res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
+
         # add virtio NIC for internal control plane interface to vFPC
         res.append("-device")
         res.append("e1000,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
@@ -460,6 +467,10 @@ class SROS(vrnetlab.VR):
 
         # set up bridge for management interface to a localhost
         self.logger.info("Creating br-mgmt bridge for management interface")
+        self.logger.info("Creating br-mgmt bridge for management interface")
+        # This is to whitlist all bridges
+        vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
+        vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
         vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
         vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
         vrnetlab.run_command(

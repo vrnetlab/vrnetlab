@@ -39,10 +39,11 @@ SROS_VARIANTS = {
     "sr-1": {
         "deployment_model": "integrated",
         "min_ram": 5120,  # minimum RAM requirements
-        "max_nics": 6,
-        "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28",
+        "max_nics": 24,
+        "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me12-100gb-qsfp28 mda/2=me12-100gb-qsfp28",
         "card_config": """/configure card 1 card-type iom-1
-        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
+        /configure card 1 mda 1 mda-type me12-100gb-qsfp28
+        /configure card 1 mda 2 mda-type me12-100gb-qsfp28
         """,
     },
     "sr-1e": {
@@ -133,6 +134,7 @@ class SROS_vm(vrnetlab.VM):
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
+        self.qemu_args.extend(["-cpu", "host", "-smp", "2"])
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -421,9 +423,7 @@ class SROS_lc(SROS_vm):
 
 
 class SROS(vrnetlab.VR):
-    def __init__(
-        self, hostname, username, password, num_nics, mode, variant_name, conn_mode
-    ):
+    def __init__(self, hostname, username, password, mode, variant_name, conn_mode):
         super(SROS, self).__init__(username, password)
 
         variant = SROS_VARIANTS[variant_name]
@@ -453,16 +453,8 @@ class SROS(vrnetlab.VR):
             )
             sys.exit(1)
 
-        if num_nics > variant["max_nics"]:
-            self.logger.error(
-                "Requested number of nics '{}' exceeds the capacity of the '{}' variant: {} nics".format(
-                    num_nics, variant_name, variant["max_nics"]
-                )
-            )
-            sys.exit(1)
-
         self.logger.info("SR OS Variant: " + variant_name)
-        self.logger.info("Number of NICs: " + str(num_nics))
+        self.logger.info(f"Number of NICs: {variant['max_nics']}")
         self.logger.info("Configuration mode: " + str(mode))
 
         # set up bridge for management interface to a localhost
@@ -488,7 +480,7 @@ class SROS(vrnetlab.VR):
                     variant,
                     conn_mode,
                 ),
-                SROS_lc(variant, conn_mode, num_nics),
+                SROS_lc(variant, conn_mode, variant["max_nics"]),
             ]
 
             # set up bridge for connecting CP with LCs
@@ -502,7 +494,7 @@ class SROS(vrnetlab.VR):
                     username,
                     password,
                     mode,
-                    num_nics,
+                    variant["max_nics"],
                     variant,
                     conn_mode=conn_mode,
                 )
@@ -519,7 +511,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
-    parser.add_argument("--num-nics", default=5, help="Number of NICs")
     parser.add_argument(
         "--mode",
         choices=["classic", "mixed", "model-driven"],
@@ -599,7 +590,6 @@ if __name__ == "__main__":
         args.hostname,
         args.username,
         args.password,
-        num_nics=int(args.num_nics),
         mode=args.mode,
         variant_name=args.variant,
         conn_mode=args.connection_mode,

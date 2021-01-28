@@ -25,6 +25,11 @@ def gen_mac(last_octet=None):
     )
 
 
+# sorting function to naturally sort interfaces by names
+def natural_sort_key(s, _nsre=re.compile("([0-9]+)")):
+    return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
+
+
 def run_command(cmd, cwd=None, background=False, shell=False):
     res = None
     try:
@@ -195,7 +200,7 @@ class VM:
 
         bridges = list()
         intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
-        intfs.sort()
+        intfs.sort(key=natural_sort_key)
 
         self.logger.info("Creating bridges for interfaces: %s" % intfs)
 

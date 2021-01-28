@@ -7,7 +7,7 @@ import os
 import re
 import signal
 import sys
-
+import time
 import vrnetlab
 
 
@@ -90,6 +90,15 @@ SROS_COMMON_CFG = """/configure system name {name}
 /configure system security user "admin" access snmp
 /configure system security user "admin" access ftp
 """
+
+# to allow writing config to tftp location we needed to spin up a normal
+# tftp server in container host system. To access the host from qemu VM
+# we needed to put SR OS management interface in the container host network namespace
+# this is done by putting SR OS management interface with into a br-mgmt bridge
+# the bridge and SR OS mgmt interfaces will be addressed as follows
+BRIDGE_ADDR = "172.31.255.29"
+SROS_MGMT_ADDR = "172.31.255.30"
+PREFIX_LENGTH = "30"
 
 
 def mangle_uuid(uuid):
@@ -207,9 +216,7 @@ class SROS_integrated(SROS_vm):
         self.mode = mode
         self.num_nics = num_nics
         self.smbios = [
-            "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt {}".format(
-                variant["timos_line"]
-            )
+            f"type=1,product=TIMOS:address={SROS_MGMT_ADDR}/{PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_ADDR}/license.txt primary-config=tftp://{BRIDGE_ADDR}/config.txt {variant['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
         self.variant = variant
@@ -220,50 +227,54 @@ class SROS_integrated(SROS_vm):
 
         We override the default function since we want a fake NIC in there
         """
-        # call parent function to generate first mgmt interface (e1000)
-        res = super(SROS_integrated, self).gen_mgmt()
 
-        # append gNMI forwarding if it was not added by common lib
-        if "hostfwd=tcp::57400-10.0.0.15:57400" not in res[-1]:
-            res[-1] = res[-1] + ",hostfwd=tcp::17400-10.0.0.15:57400"
-            vrnetlab.run_command(
-                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
-                background=True,
-            )
+        """Generate qemu args for the mgmt interface(s)"""
+        res = []
+
+        res.append("-device")
+
+        res.append(
+            self.nic_type + ",netdev=br-mgmt,mac=%(mac)s" % {"mac": vrnetlab.gen_mac(0)}
+        )
+        res.append("-netdev")
+        res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
+
         return res
 
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
 
-        # apply common configuration
-        for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
-            self.wait_write(l)
+        # apply common configuration if config file was not provided
+        if not os.path.isfile("/tftpboot/config.txt"):
+            self.logger.info("Applying basic SR OS configuration...")
+            for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
+                self.wait_write(l)
 
-        if self.username and self.password:
-            self.wait_write(
-                '/configure system security user "%s" password %s'
-                % (self.username, self.password)
-            )
-            self.wait_write(
-                '/configure system security user "%s" access console netconf'
-                % (self.username)
-            )
-            self.wait_write(
-                '/configure system security user "%s" console member "administrative" "default"'
-                % (self.username)
-            )
+            if self.username and self.password:
+                self.wait_write(
+                    '/configure system security user "%s" password %s'
+                    % (self.username, self.password)
+                )
+                self.wait_write(
+                    '/configure system security user "%s" access console netconf'
+                    % (self.username)
+                )
+                self.wait_write(
+                    '/configure system security user "%s" console member "administrative" "default"'
+                    % (self.username)
+                )
 
-        # configure card/mda of a given variant
-        for l in iter(self.variant["card_config"].splitlines()):
-            self.wait_write(l)
+            # configure card/mda of a given variant
+            for l in iter(self.variant["card_config"].splitlines()):
+                self.wait_write(l)
 
-        self.wait_write("/admin save")
-        self.wait_write(
-            "/configure system management-interface configuration-mode {mode}".format(
-                mode=self.mode
+            self.wait_write("/admin save")
+            self.wait_write(
+                "/configure system management-interface configuration-mode {mode}".format(
+                    mode=self.mode
+                )
             )
-        )
-        self.wait_write("/logout")
+            self.wait_write("/logout")
 
 
 class SROS_cp(SROS_vm):
@@ -283,9 +294,7 @@ class SROS_cp(SROS_vm):
         self.variant = variant
 
         self.smbios = [
-            "type=1,product=TIMOS:address=10.0.0.15/24@active license-file=tftp://10.0.0.2/license.txt {}".format(
-                variant["cp"]["timos_line"]
-            )
+            f"type=1,product=TIMOS:address={SROS_MGMT_ADDR}/{PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_ADDR}/license.txt primary-config=tftp://{BRIDGE_ADDR}/config.txt {variant['cp']['timos_line']}"
         ]
 
     def start(self):
@@ -304,12 +313,19 @@ class SROS_cp(SROS_vm):
         return []
 
     def gen_mgmt(self):
-        """Generate mgmt interface(s)
-
-        We override the default function since we want a NIC to the vFPC
         """
-        # call parent function to generate first mgmt interface (e1000)
-        res = super(SROS_cp, self).gen_mgmt()
+        Generate mgmt interface(s)
+        """
+        res = []
+
+        res.append("-device")
+
+        res.append(
+            self.nic_type + ",netdev=br-mgmt,mac=%(mac)s" % {"mac": vrnetlab.gen_mac(0)}
+        )
+        res.append("-netdev")
+        res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
+
         # add virtio NIC for internal control plane interface to vFPC
         res.append("-device")
         res.append("e1000,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
@@ -319,35 +335,36 @@ class SROS_cp(SROS_vm):
 
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
-        # apply common configuration
-        for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
-            self.wait_write(l)
+        # apply common configuration if config file was not provided
+        if not os.path.isfile("/tftpboot/config.txt"):
+            for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
+                self.wait_write(l)
 
-        if self.username and self.password:
-            self.wait_write(
-                '/configure system security user "%s" password %s'
-                % (self.username, self.password)
-            )
-            self.wait_write(
-                '/configure system security user "%s" access console netconf'
-                % (self.username)
-            )
-            self.wait_write(
-                '/configure system security user "%s" console member "administrative" "default"'
-                % (self.username)
-            )
+            if self.username and self.password:
+                self.wait_write(
+                    '/configure system security user "%s" password %s'
+                    % (self.username, self.password)
+                )
+                self.wait_write(
+                    '/configure system security user "%s" access console netconf'
+                    % (self.username)
+                )
+                self.wait_write(
+                    '/configure system security user "%s" console member "administrative" "default"'
+                    % (self.username)
+                )
 
-        # configure card/mda of a given variant
-        for l in iter(self.variant["lc"]["card_config"].splitlines()):
-            self.wait_write(l)
+            # configure card/mda of a given variant
+            for l in iter(self.variant["lc"]["card_config"].splitlines()):
+                self.wait_write(l)
 
-        self.wait_write("/admin save")
-        self.wait_write(
-            "/configure system management-interface configuration-mode {mode}".format(
-                mode=self.mode
+            self.wait_write("/admin save")
+            self.wait_write(
+                "/configure system management-interface configuration-mode {mode}".format(
+                    mode=self.mode
+                )
             )
-        )
-        self.wait_write("/logout")
+            self.wait_write("/logout")
 
 
 class SROS_lc(SROS_vm):
@@ -448,6 +465,18 @@ class SROS(vrnetlab.VR):
         self.logger.info("Number of NICs: " + str(num_nics))
         self.logger.info("Configuration mode: " + str(mode))
 
+        # set up bridge for management interface to a localhost
+        self.logger.info("Creating br-mgmt bridge for management interface")
+        self.logger.info("Creating br-mgmt bridge for management interface")
+        # This is to whitlist all bridges
+        vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
+        vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+        vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
+        vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
+        vrnetlab.run_command(
+            ["ip", "addr", "add", "dev", "br-mgmt", f"{BRIDGE_ADDR}/{PREFIX_LENGTH}"]
+        )
+
         if variant["deployment_model"] == "distributed":
             self.vms = [
                 SROS_cp(
@@ -518,6 +547,53 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     if args.trace:
         logger.setLevel(1)
+
+    # vrnetlab.run_command(["apt", "update"])
+    # vrnetlab.run_command(["apt", "install", "-y", "tftpd-hpa"])
+    vrnetlab.run_command(
+        [
+            "in.tftpd",
+            "--listen",
+            "--user",
+            "tftp",
+            "-a",
+            "0.0.0.0:69",
+            "-s",
+            "-c",
+            "-v",
+            "/tftpboot",
+        ]
+    )
+
+    # make tftpboot writable for saving SR OS config
+    vrnetlab.run_command(["chmod", "-R", "777", "/tftpboot"])
+
+    # kill origin socats since we use bridge interface
+    # for SR OS management interface
+    # thus we need to forward connections to a different address
+    vrnetlab.run_command(["pkill", "socat"])
+    time.sleep(5)
+
+    # forwarding rules
+    vrnetlab.run_command(
+        ["socat", "TCP-LISTEN:22,fork", f"TCP:{SROS_MGMT_ADDR}:22"], background=True
+    )
+    vrnetlab.run_command(
+        ["socat", "UDP-LISTEN:161,fork", f"UDP:{SROS_MGMT_ADDR}:161"], background=True
+    )
+    vrnetlab.run_command(
+        ["socat", "TCP-LISTEN:830,fork", f"TCP:{SROS_MGMT_ADDR}:830"], background=True
+    )
+    vrnetlab.run_command(
+        ["socat", "TCP-LISTEN:80,fork", f"TCP:{SROS_MGMT_ADDR}:80"], background=True
+    )
+    vrnetlab.run_command(
+        ["socat", "TCP-LISTEN:443,fork", f"TCP:{SROS_MGMT_ADDR}:443"], background=True
+    )
+    vrnetlab.run_command(
+        ["socat", "TCP-LISTEN:57400,fork", f"TCP:{SROS_MGMT_ADDR}:57400"],
+        background=True,
+    )
 
     ia = SROS(
         args.hostname,

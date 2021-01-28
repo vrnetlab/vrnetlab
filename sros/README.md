@@ -27,12 +27,12 @@ Nokia SR OS virtualized simulator (VSIM) can be configured to emulate many chass
 
 To give vrnetlab users flexibility of choice, this fork provides a number of such combinations, which are called _variants_.
 
-By selecting a certain variant (referred by its `name`) the VSIM will start with the certain configuraion as per the following table:
+By selecting a certain variant (referred by its `name`) the VSIM will start with the certain configuration as per the following table:
 
-| Name  |    mode     | Control plane |    Line card     |    RAM    | Max NICs |
-| :---: | :---------: | :-----------: | :--------------: | :-------: | :------: |
-| sr-1  | integrated  |     cpm-1     | me6-100gb-qsfp28 |   5120    |    6     |
-| sr-1e | distributed |     cpm-e     |  me40-1gb-csfp   | 4096+4096 |    20    |
+| Name  |    mode     | Control plane |     Line card     |    RAM    | Max NICs |
+| :---: | :---------: | :-----------: | :---------------: | :-------: | :------: |
+| sr-1  | integrated  |     cpm-1     | me12-100gb-qsfp28 |   5120    |    12    |
+| sr-1e | distributed |     cpm-e     |   me40-1gb-csfp   | 4096+4096 |    20    |
 
 The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf70a9a9f2f060a68797a7ec29ce6aea96acb779/sros/docker/launch.py#L38-L66) as a dictionary. If a new variant is needed, feel free to adjust the data structure and build an image.
 

@@ -25,7 +25,7 @@ def gen_mac(last_octet=None):
     )
 
 
-# sorting function to natually sort interfaces by names
+# sorting function to naturally sort interfaces by names
 def natural_sort_key(s, _nsre=re.compile("([0-9]+)")):
     return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
 

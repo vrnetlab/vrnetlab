@@ -231,6 +231,7 @@ class VMX_vfpc(vrnetlab.VM):
         return
 
 
+
 class VMX(vrnetlab.VR):
     """ Juniper vMX router
     """

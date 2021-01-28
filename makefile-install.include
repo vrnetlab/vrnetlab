@@ -41,7 +41,7 @@ docker-build: docker-build-common
 	else \
 	echo "Current build differ from previous, running install!"; \
 	docker run --cidfile cidfile --privileged $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace --install; \
-	docker commit $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION); \
+	docker commit --change='ENTRYPOINT ["/launch.py"]' $$(cat cidfile) $(REGISTRY)vr-$(VR_NAME):$(VERSION); \
 	docker rm -f $$(cat cidfile); \
 	fi
 	docker rmi -f $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build || true

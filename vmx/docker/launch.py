@@ -274,13 +274,18 @@ class VMX_vfpc(vrnetlab.VM):
 
     def bootstrap_spin(self):
         (ridx, match, res) = self.tn.expect(
-            [b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1
+            [
+                b"localhost login",
+                b"qemux86-64 login",
+                b"mounting /dev/sda2 on /mnt failed",
+            ],
+            1,
         )
         if match:
-            if ridx == 0:  # got login - vFPC start succeeded!
+            if ridx == 0 or ridx == 1:  # got login - vFPC start succeeded!
                 self.logger.info("vFPC successfully started")
                 self.running = True
-            if ridx == 1:  # vFPC start failed - restart it
+            if ridx == 2:  # vFPC start failed - restart it
                 self.logger.info("vFPC start failed, restarting")
                 self.stop()
                 self.start()

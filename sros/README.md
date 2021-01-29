@@ -29,10 +29,17 @@ To give vrnetlab users flexibility of choice, this fork provides a number of suc
 
 By selecting a certain variant (referred by its `name`) the VSIM will start with the certain configuration as per the following table:
 
-| Name  |    mode     | Control plane |     Line card     |    RAM    | Max NICs |
-| :---: | :---------: | :-----------: | :---------------: | :-------: | :------: |
-| sr-1  | integrated  |     cpm-1     | me12-100gb-qsfp28 |   5120    |    12    |
-| sr-1e | distributed |     cpm-e     |   me40-1gb-csfp   | 4096+4096 |    20    |
+|    Name     |    mode     |     Control plane      |         Line card         | RAM (GB) | Max NICs |
+| :---------: | :---------: | :--------------------: | :-----------------------: | :------: | :------: |
+|    sr-1     | integrated  |         cpm-1          |     me12-100gb-qsfp28     |    5     |    12    |
+|    sr-1e    | distributed |         cpm-e          |       me40-1gb-csfp       |   4+4    |    40    |
+|    sr-1s    | integrated  |         xcm-1s         |     s36-100gb-qsfp28      |    5     |    36    |
+|    sr-1s    | integrated  |         xcm-1s         |     s36-100gb-qsfp28      |    5     |    36    |
+|   sr-14s    | distributed |     sfm-s+xcm-14s      |     s36-100gb-qsfp28      |   4+6    |    36    |
+| ixr-e-small | distributed | imm14-10g-sfp++4-1g-tx |   m14-10g-sfp++4-1g-tx    |   3+4    |    18    |
+|  ixr-e-big  | distributed |       cpm-ixr-e        | m24-sfp++8-sfp28+2-qsfp28 |   3+4    |    34    |
+|   ixr-r6    | integrated  |      cpiom-ixr-r6      |  m6-10g-sfp++4-25g-sfp28  |    6     |    10    |
+|    ixr-s    | integrated  |       cpm-ixr-s        |     m48-sfp++6-qsfp28     |   3+4    |    54    |
 
 The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf70a9a9f2f060a68797a7ec29ce6aea96acb779/sros/docker/launch.py#L38-L66) as a dictionary. If a new variant is needed, feel free to adjust the data structure and build an image.
 
@@ -112,3 +119,7 @@ A: SROS 16 seems to require 6GB and we don't build with different amount of
 CPU/RAM per versions so that's why every version gets the same.
 
 # Added in this fork
+This fork packs a lot of changes related to SR OS.
+Fist it uses a notion of variants, which is a code name of a SR OS emulated hardware. See [variants](#variants).
+
+Next it exposes the management interface of the SR OS VM as an interface connected to the bridge `br-mgmt` and runs its own tftpd server so that SR OS VMs can write their config to this tftpd location.

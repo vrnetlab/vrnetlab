@@ -1,12 +1,14 @@
-vrnetlab / Cisco IOS XRv9k
-==========================
+# vrnetlab / Cisco IOS XRv9k
 This is the vrnetlab docker image for Cisco IOS XRv9k.
+
+> Originally developed by Kristian Larsson (@plajjan), forked by @hellt to be adapted to work with docker-based networking dataplane.  
+> Refer to ["Added in this fork"](#added-in-this-fork) section to read on the differences between this fork and the upstream version.
 
 There are two flavours of virtual XR routers, XRv and XRv9k where the latter
 has a much more complete forwarding plane. This is for XRv9k if you have the
 non-9k see the 'xrv' directory instead.
 
-I've not tested XRv9k with less than 4 cores and 8G of RAM.
+The XRv9k image version 7.2.1 were tested with 2vCPU and 14 GB RAM.
 
 Building the docker image
 -------------------------
@@ -29,9 +31,7 @@ in this context.
 
 It's been tested to boot and respond to SSH with:
 
- * 6.1.3 (xrv9k-fullk9-x.vrr-6.1.3.qcow2)
- * 6.2.1 (xrv9k-fullk9-x.vrr-6.2.1.qcow2)
- * xrv9k-fullk9-x-6.4.2.qcow2	MD5:6958763192c7bb59a1b8049d377de1b4
+ * xrv9k-fullk9-x-7.2.1.qcow2
 
 Usage
 -----
@@ -76,3 +76,11 @@ A: CVAC uses a virtual CD-ROM drive to feed an initial configuration into XR.
 Unfortuately it doesn't support generating crypto keys, which is required for
 SSH, and so it cannot replace the serial approach to 100% and therefore I opted
 to do everything over the serial interface.
+
+## Added in this fork
+
+1. added docker networking using linux bridge driver. The connection mode is set with `connection_mode` flag.
+2. With `vcpu` and `ram` flags it is possible to tune the resources allocated to XRv VM
+3. The qemu arguments were augmented with `-machine smm=off` and `-boot order=c` values to allow XRv 7 to boot.
+4. With `hostname` flag we set the hostname of the booted VM.
+5. Unsecured gNMI on port 57400 will be configured by default.

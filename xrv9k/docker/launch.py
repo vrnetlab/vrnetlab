@@ -3,12 +3,10 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import sys
-import telnetlib
-import time
+
 
 import vrnetlab
 
@@ -39,20 +37,25 @@ logging.Logger.trace = trace
 
 
 class XRV_vm(vrnetlab.VM):
-    def __init__(self, username, password, nics):
+    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
+        disk_image = ""
         for e in os.listdir("/"):
             if re.search(".qcow2", e):
                 disk_image = "/" + e
-        super(XRV_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=12288
-        )
+        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=ram)
+        self.hostname = hostname
+        self.conn_mode = conn_mode
         self.num_nics = nics
         self.qemu_args.extend(
             [
                 "-cpu",
                 "host",
                 "-smp",
-                "cores=4,threads=1,sockets=1",
+                f"cores={vcpu},threads=1,sockets=1",
+                "-machine",
+                "smm=off",
+                "-boot",
+                "order=c",
                 "-serial",
                 "telnet:0.0.0.0:50%02d,server,nowait" % (self.num + 1),
                 "-serial",
@@ -75,7 +78,7 @@ class XRV_vm(vrnetlab.VM):
         res.extend(
             [
                 "-netdev",
-                "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830",
+                "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::17400-10.0.0.15:57400",
             ]
         )
         # dummy interface for xrv9k ctrl interface
@@ -98,14 +101,22 @@ class XRV_vm(vrnetlab.VM):
                 "tap,ifname=dev-dummy,id=dev-dummy,script=no,downscript=no",
             ]
         )
+        # add socat for gNMI port we added on L76, since it's not part of vrnetlab core lib
+        vrnetlab.run_command(
+            ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
+            background=True,
+        )
 
         return res
 
     def bootstrap_spin(self):
         """"""
 
-        if self.spins > 300:
+        if self.spins > 600:
             # too many spins with no result ->  give up
+            self.logger.debug(
+                "node is failing to boot or we can't catch the right prompt. Restarting..."
+            )
             self.stop()
             self.start()
             return
@@ -114,7 +125,7 @@ class XRV_vm(vrnetlab.VM):
             [
                 b"Press RETURN to get started",
                 b"Not settable: Success",  # no SYSTEM CONFIGURATION COMPLETE in xrv9k?
-                b"Enter root-system username",
+                b"Enter root-system [U|u]sername",
                 b"Username:",
                 b"ios#",
             ],
@@ -140,7 +151,7 @@ class XRV_vm(vrnetlab.VM):
                 self.logger.debug("matched login prompt")
                 try:
                     username, password = self.credentials.pop(0)
-                except IndexError as exc:
+                except IndexError:
                     self.logger.error("no more credentials to try")
                     return
                 self.logger.debug(
@@ -149,7 +160,7 @@ class XRV_vm(vrnetlab.VM):
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
                 self.logger.debug("logged in with %s / %s" % (username, password))
-            if self.xr_ready == True and ridx == 4:
+            if self.xr_ready is True and ridx == 4:
                 # run main config!
                 if not self.bootstrap_config():
                     # main config failed :/
@@ -213,12 +224,16 @@ class XRV_vm(vrnetlab.VM):
             return False
 
         self.wait_write("configure")
+        self.wait_write(f"hostname {self.hostname}")
         # configure netconf
         self.wait_write("ssh server v2")
         self.wait_write("ssh server netconf port 830")  # for 5.1.1
         self.wait_write("ssh server netconf vrf default")  # for 5.3.3
         self.wait_write("netconf agent ssh")  # for 5.1.1
         self.wait_write("netconf-yang agent ssh")  # for 5.3.3
+        # configure gNMI
+        self.wait_write("grpc port 57400")
+        self.wait_write("grpc no-tls")
 
         # configure xml agent
         self.wait_write("xml agent tty")
@@ -253,9 +268,9 @@ class XRV_vm(vrnetlab.VM):
 
 
 class XRV(vrnetlab.VR):
-    def __init__(self, username, password, nics):
+    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
         super(XRV, self).__init__(username, password)
-        self.vms = [XRV_vm(username, password, nics)]
+        self.vms = [XRV_vm(hostname, username, password, nics, conn_mode, vcpu, ram)]
 
 
 if __name__ == "__main__":
@@ -265,9 +280,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
+    parser.add_argument("--hostname", default="vr-xrv9k", help="Router hostname")
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument("--nics", type=int, default=128, help="Number of NICS")
+    parser.add_argument(
+        "--vcpu", type=int, default=2, help="Number of cpu cores to use"
+    )
+    parser.add_argument(
+        "--ram", type=int, default=12228, help="Number RAM to use in MB"
+    )
+    parser.add_argument(
+        "--connection-mode",
+        choices=["vrxcon", "bridge"],
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -278,5 +306,13 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
-    vr = XRV(args.username, args.password, args.nics)
+    vr = XRV(
+        args.hostname,
+        args.username,
+        args.password,
+        args.nics,
+        args.connection_mode,
+        args.vcpu,
+        args.ram,
+    )
     vr.start()

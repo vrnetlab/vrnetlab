@@ -20,7 +20,7 @@ machine comes in.
 You write a high level topology definition which topology machine can convert
 into a low level topology definition through --build:
 ```
-topo --build hltopo.json > lltopo.json
+topomachine --build hltopo.json > lltopo.json
 ```
 The output is printed to stdout so you can view it, pipe or redirect to a file
 if you want. You only need to run the build the low level topology from the
@@ -38,14 +38,24 @@ topology machine is able to run the machines for you, i.e. execute docker run
 for the routers defined in the configuration file and start vr-xcon with the
 relevant arguments to complete the topology:
 ```
-topo --run lltopo.json
+topomachine --run lltopo.json
 ```
 which will then start the docker containers based on the computed topology.
-There's a --dry-run option if you just want to see what commands would be
-executed. If you want to run multiple topologies at the same time you can
+If you want to run multiple topologies at the same time you can
 specify a prefix for the docker container names using `--prefix` which prevents
 collisions if you use the same name for the virtual routers in the different
 topology configurations. Note how 
+
+topology machine is also able to use the docker api to start/stop+remove
+containers on a remote host. this is achieved using the docker-py module.
+to start a topology run:
+```
+topomachine --api 'tcp://172.17.0.1:2375' --run lltopo.json
+```
+to stop a topology and clean up run:
+```
+topomachine --api 'tcp://172.17.0.1:2375' --stop lltopo.json
+```
 
 Last but not least, there is a template mode which you can use to produce
 configuration for your mangement system, which in turn is provisioning the
@@ -172,35 +182,15 @@ And you should now have a docker container named topomachine
 
 Use docker container
 --------------------
-The topomachine docker container can be used to generate the low level topology 
-(--build), to generate the docker run commands (--dry-run), to start the 
-topology (--run), and to generate custom output using a jinja2 template 
-(--template).
+The topomachine docker container can be used to generate the low level topology
+(--build), to start the topology (--run), and to generate custom output using a
+jinja2 template (--template).
 
 For example:
 
 generate the low level topology:
 ```
 $ docker run -t -v $(pwd):/data topomachine --build /data/example-hltopo.json > example-lltopo.json
-```
-
-generate the docker run commands:
-```
-$ docker run -v $(pwd):/data topomachine --run /data/example-lltopo.json --dry-run
-The following commands would be executed:
-docker run --privileged -d --name ams-core-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name ams-core-2 vr-xrv:5.1.1.54U
-docker run --privileged -d --name ams-edge-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name fra-core-1 vr-vmx:16.1R1.7
-docker run --privileged -d --name fra-core-2 vr-vmx:16.1R1.7
-docker run --privileged -d --name fra-edge-1 vr-vmx:16.1R1.7
-docker run --privileged -d --name kul-core-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name par-core-1 vr-sros:13.0.B1-4281
-docker run --privileged -d --name par-core-2 vr-sros:13.0.B1-4281
-docker run --privileged -d --name par-edge-1 vr-sros:13.0.B1-4281
-docker run --privileged -d --name png-edge-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name sgp-core-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name vr-xcon --link ams-core-1:ams-core-1 --link ams-core-2:ams-core-2 --link ams-edge-1:ams-edge-1 --link fra-core-1:fra-core-1 --link fra-core-2:fra-core-2 --link fra-edge-1:fra-edge-1 --link kul-core-1:kul-core-1 --link par-core-1:par-core-1 --link par-core-2:par-core-2 --link par-edge-1:par-edge-1 --link png-edge-1:png-edge-1 --link sgp-core-1:sgp-core-1 vr-xcon --p2p ams-edge-1/1--ams-core-1/1 ams-edge-1/2--ams-core-2/1 fra-core-2/1--sgp-core-1/1 fra-core-2/2--kul-core-1/1 fra-edge-1/1--fra-core-1/1 fra-edge-1/2--fra-core-2/3 par-core-1/1--sgp-core-1/2 par-core-1/2--kul-core-1/2 par-edge-1/1--par-core-1/3 par-edge-1/2--par-core-2/1 png-edge-1/1--sgp-core-1/3 png-edge-1/2--kul-core-1/3 kul-core-1/4--sgp-core-1/4 ams-core-1/2--ams-core-2/2 ams-core-1/3--fra-core-1/2 ams-core-1/4--fra-core-2/4 ams-core-1/5--par-core-1/4 ams-core-1/6--par-core-2/2 ams-core-2/3--fra-core-1/3 ams-core-2/4--fra-core-2/5 ams-core-2/5--par-core-1/5 ams-core-2/6--par-core-2/3 fra-core-1/4--fra-core-2/6 fra-core-1/5--par-core-1/6 fra-core-1/6--par-core-2/4 fra-core-2/7--par-core-1/7 fra-core-2/8--par-core-2/5 par-core-1/8--par-core-2/6
 ```
 
 start the topology:

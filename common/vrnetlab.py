@@ -39,6 +39,12 @@ def run_command(cmd, cwd=None, background=False):
 
 
 
+def argparse_type_uuid(arg_value):
+    uuid.UUID(str(arg_value))
+    return arg_value
+
+
+
 class VM:
     def __str__(self):
         return self.__class__.__name__

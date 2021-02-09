@@ -2,7 +2,6 @@
 
 import datetime
 import logging
-import math
 import os
 import re
 import signal
@@ -577,9 +576,9 @@ class SROS(vrnetlab.VR):
             if match:
                 major_release = int(match.group(1))
                 self.qcow_name = match.group(0)
-            if re.search("\.qcow2$", e):
+            if re.search(r"\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
-            if re.search("\.license$", e):
+            if re.search(r"\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.txt")
 
         self.license = False

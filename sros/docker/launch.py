@@ -200,7 +200,6 @@ SROS_VARIANTS = {
             "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
             "card_config": """/configure card 1 card-type iom-e
             /configure card 1 mda 1 mda-type me40-1gb-csfp
-            /configure card 1 fp 1
             """,
         },
     },

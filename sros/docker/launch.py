@@ -656,7 +656,6 @@ class SROS(vrnetlab.VR):
 
         # set up bridge for management interface to a localhost
         self.logger.info("Creating br-mgmt bridge for management interface")
-        self.logger.info("Creating br-mgmt bridge for management interface")
         # This is to whitlist all bridges
         vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
         vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)

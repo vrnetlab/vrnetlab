@@ -263,7 +263,7 @@ def parse_custom_variant(self, cfg):
                 obj["min_ram"] = elem.split("=")[1]
                 continue
             if not skip_nics and "max_nics=" in elem:
-                obj["max_nics"] = elem.split("=")[1]
+                obj["max_nics"] = int(elem.split("=")[1])
                 continue
             timos_line.append(elem)
         obj["timos_line"] = " ".join(timos_line)
@@ -281,7 +281,7 @@ def parse_custom_variant(self, cfg):
             elif "lc: " in hw_part:
                 variant["lc"] = _parse(hw_part.strip(), None)
                 if "max_nics" in variant["lc"]:
-                    variant["max_nics"] = variant["lc"]["max_nics"]
+                    variant["max_nics"] = int(variant["lc"]["max_nics"])
                     variant["lc"].pop("max_nics")
 
     else:

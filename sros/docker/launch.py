@@ -2,7 +2,6 @@
 
 import datetime
 import logging
-import math
 import os
 import re
 import signal
@@ -41,12 +40,12 @@ SROS_VARIANTS = {
         # control plane (CPM)
         "max_nics": 34,
         "cp": {
-            "min_ram": 3072,
+            "min_ram": 3,
             "timos_line": "slot=A chassis=ixr-e card=cpm-ixr-e",
         },
         # line card (IOM/XCM)
         "lc": {
-            "min_ram": 4096,
+            "min_ram": 4,
             "timos_line": "chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28",
             "card_config": """/configure card 1 card-type imm24-sfp++8-sfp28+2-qsfp28
             /configure card 1 mda 1 mda-type m24-sfp++8-sfp28+2-qsfp28
@@ -58,12 +57,12 @@ SROS_VARIANTS = {
     #        # control plane (CPM)
     #        "max_nics": 36,
     #        "cp": {
-    #            "min_ram": 3072,
+    #            "min_ram": 3,
     #            "timos_line": "slot=A chassis=ixr-6 card=cpm-ixr",
     #        },
     #        # line card (IOM/XCM)
     #        "lc": {
-    #            "min_ram": 6144,
+    #            "min_ram": 6,
     #            "timos_line": "chassis=ixr-6 slot=1 card=imm36-100g-qsfp28 mda/1=m36-100g-qsfp28",
     #            "card_config": """/configure chassis router chassis-number 1 power-module 1 power-module-type ixr-dc-3000
     #            /configure chassis router chassis-number 1 power-module 2 power-module-type ixr-dc-3000
@@ -78,7 +77,7 @@ SROS_VARIANTS = {
     #    },
     "ixr-r6": {
         "deployment_model": "integrated",
-        "min_ram": 6144,  # minimum RAM requirements
+        "min_ram": 6,  # minimum RAM requirements
         "max_nics": 10,
         "timos_line": "slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28",
         "card_config": """/configure card 1 mda 1 mda-type m6-10g-sfp++4-25g-sfp28
@@ -89,12 +88,12 @@ SROS_VARIANTS = {
         # control plane (CPM)
         "max_nics": 54,
         "cp": {
-            "min_ram": 3072,
+            "min_ram": 3,
             "timos_line": "slot=A chassis=ixr-s card=cpm-ixr-s",
         },
         # line card (IOM/XCM)
         "lc": {
-            "min_ram": 4096,
+            "min_ram": 4,
             "timos_line": "chassis=ixr-s slot=1 card=imm48-sfp++6-qsfp28 mda/1=m48-sfp++6-qsfp28",
             "card_config": """/configure card 1 card-type m48-sfp++6-qsfp28
             /configure card 1 mda 1 mda-type m48-sfp++6-qsfp28
@@ -106,12 +105,12 @@ SROS_VARIANTS = {
         # control plane (CPM)
         "max_nics": 18,
         "cp": {
-            "min_ram": 3072,
+            "min_ram": 3,
             "timos_line": "slot=A chassis=ixr-e card=imm14-10g-sfp++4-1g-tx",
         },
         # line card (IOM/XCM)
         "lc": {
-            "min_ram": 4096,
+            "min_ram": 4,
             "timos_line": "chassis=ixr-e slot=1 card=imm14-10g-sfp++4-1g-tx mda/1=m14-10g-sfp++4-1g-tx",
             "card_config": """
             """,
@@ -119,7 +118,7 @@ SROS_VARIANTS = {
     },
     "sr-1s": {
         "deployment_model": "integrated",
-        "min_ram": 5120,  # minimum RAM requirements
+        "min_ram": 5,  # minimum RAM requirements
         "max_nics": 36,
         "timos_line": "chassis=sr-1s slot=A card=xcm-1s mda/1=s36-100gb-qsfp28",
         "card_config": """/configure system power-shelf 1 power-shelf-type ps-a4-shelf-dc
@@ -136,12 +135,12 @@ SROS_VARIANTS = {
         # control plane (CPM)
         "max_nics": 36,
         "cp": {
-            "min_ram": 4096,
+            "min_ram": 4,
             "timos_line": "slot=A chassis=SR-14s sfm=sfm-s card=cpm2-s",
         },
         # line card (IOM/XCM)
         "lc": {
-            "min_ram": 6144,
+            "min_ram": 6,
             "timos_line": "slot=1 chassis=SR-14s sfm=sfm-s card=xcm-14s mda/1=s36-100gb-qsfp28",
             "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
             /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
@@ -180,7 +179,7 @@ SROS_VARIANTS = {
     },
     "sr-1": {
         "deployment_model": "integrated",
-        "min_ram": 5120,  # minimum RAM requirements
+        "min_ram": 5,  # minimum RAM requirements
         "max_nics": 12,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me12-100gb-qsfp28",
         "card_config": """/configure card 1 card-type iom-1
@@ -192,16 +191,15 @@ SROS_VARIANTS = {
         # control plane (CPM)
         "max_nics": 40,
         "cp": {
-            "min_ram": 4096,
+            "min_ram": 4,
             "timos_line": "slot=A chassis=sr-1e card=cpm-e",
         },
         # line card (IOM/XCM)
         "lc": {
-            "min_ram": 4096,
+            "min_ram": 4,
             "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
             "card_config": """/configure card 1 card-type iom-e
             /configure card 1 mda 1 mda-type me40-1gb-csfp
-            /configure card 1 fp 1
             """,
         },
     },
@@ -243,6 +241,57 @@ SROS_MGMT_ADDR = "172.31.255.30"
 PREFIX_LENGTH = "30"
 
 
+def parse_custom_variant(self, cfg):
+    """Parse custom variant definition from a users input returning a variant dict
+    an example of user defined variant configuration
+    1) integrated:  cpu=2 ram=4 max_nics=6 chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28
+    2) distributed: cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___ lc: cpu=2 ram=4 max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28
+    """
+
+    def _parse(cfg, obj, skip_nics=False):
+        if not obj:
+            obj = {}
+        timos_line = []
+        for elem in cfg.split():
+            # skip cp: lc: markers
+            if elem in ["cp:", "lc:"]:
+                continue
+            if "cpu=" in elem:
+                obj["cpu"] = elem.split("=")[1]
+                continue
+            if "ram=" in elem:
+                obj["min_ram"] = elem.split("=")[1]
+                continue
+            if not skip_nics and "max_nics=" in elem:
+                obj["max_nics"] = int(elem.split("=")[1])
+                continue
+            timos_line.append(elem)
+        obj["timos_line"] = " ".join(timos_line)
+        return obj
+
+    # init variant
+    variant = {
+        "max_nics": 40
+    }  # some default value for num nics if it is not provided in user cfg
+    if "___" in cfg:
+        variant["deployment_model"] = "distributed"
+        for hw_part in cfg.split("___"):
+            if "cp: " in hw_part:
+                variant["cp"] = _parse(hw_part.strip(), None, skip_nics=True)
+            elif "lc: " in hw_part:
+                variant["lc"] = _parse(hw_part.strip(), None)
+                if "max_nics" in variant["lc"]:
+                    variant["max_nics"] = int(variant["lc"]["max_nics"])
+                    variant["lc"].pop("max_nics")
+
+    else:
+        # parsing integrated mode config
+        variant["deployment_model"] = "integrated"
+        variant = _parse(cfg, obj=variant)
+
+    return variant
+
+
 def mangle_uuid(uuid):
     """Mangle the UUID to fix endianness mismatch on first part"""
     parts = uuid.split("-")
@@ -268,14 +317,15 @@ def uuid_rev_part(part):
 
 
 class SROS_vm(vrnetlab.VM):
-    def __init__(self, username, password, ram, conn_mode, num=0):
+    def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
         super(SROS_vm, self).__init__(
             username, password, disk_image="/sros.qcow2", num=num, ram=ram
         )
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
-        self.qemu_args.extend(["-cpu", "host", "-smp", "2"])
+        self.cpu = cpu
+        self.qemu_args.extend(["-cpu", "host", "-smp", f"{cpu}"])
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -354,7 +404,7 @@ class SROS_integrated(SROS_vm):
         self, hostname, username, password, mode, num_nics, variant, conn_mode
     ):
         super(SROS_integrated, self).__init__(
-            username, password, ram=variant["min_ram"], conn_mode=conn_mode
+            username, password, ram=1024 * int(variant["min_ram"]), conn_mode=conn_mode
         )
         self.mode = mode
         self.num_nics = num_nics
@@ -408,8 +458,9 @@ class SROS_integrated(SROS_vm):
                 )
 
             # configure card/mda of a given variant
-            for l in iter(self.variant["card_config"].splitlines()):
-                self.wait_write(l)
+            if "card_config" in self.variant:
+                for l in iter(self.variant["card_config"].splitlines()):
+                    self.wait_write(l)
 
             self.wait_write("/admin save")
             self.wait_write(
@@ -429,7 +480,7 @@ class SROS_cp(SROS_vm):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "cp"
         super(SROS_cp, self).__init__(
-            username, password, variant["cp"]["min_ram"], conn_mode
+            username, password, 1024 * int(variant["cp"]["min_ram"]), conn_mode
         )
         self.mode = mode
         self.num_nics = 0
@@ -498,8 +549,9 @@ class SROS_cp(SROS_vm):
                 )
 
             # configure card/mda of a given variant
-            for l in iter(self.variant["lc"]["card_config"].splitlines()):
-                self.wait_write(l)
+            if "card_config" in self.variant["lc"]:
+                for l in iter(self.variant["lc"]["card_config"].splitlines()):
+                    self.wait_write(l)
 
             self.wait_write("/admin save")
             self.wait_write(
@@ -517,7 +569,7 @@ class SROS_lc(SROS_vm):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "lc"
         super(SROS_lc, self).__init__(
-            None, None, variant["lc"]["min_ram"], conn_mode, num=slot
+            None, None, 1024 * int(variant["lc"]["min_ram"]), conn_mode, num=slot
         )
 
         self.smbios = ["type=1,product=TIMOS:{}".format(variant["lc"]["timos_line"])]
@@ -567,7 +619,10 @@ class SROS(vrnetlab.VR):
     def __init__(self, hostname, username, password, mode, variant_name, conn_mode):
         super(SROS, self).__init__(username, password)
 
-        variant = SROS_VARIANTS[variant_name]
+        if variant_name in SROS_VARIANTS:
+            variant = SROS_VARIANTS[variant_name]
+        else:
+            variant = parse_custom_variant(self, variant_name)
 
         major_release = 0
 
@@ -577,9 +632,9 @@ class SROS(vrnetlab.VR):
             if match:
                 major_release = int(match.group(1))
                 self.qcow_name = match.group(0)
-            if re.search("\.qcow2$", e):
+            if re.search(r"\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
-            if re.search("\.license$", e):
+            if re.search(r"\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.txt")
 
         self.license = False
@@ -599,7 +654,6 @@ class SROS(vrnetlab.VR):
         self.logger.info("Configuration mode: " + str(mode))
 
         # set up bridge for management interface to a localhost
-        self.logger.info("Creating br-mgmt bridge for management interface")
         self.logger.info("Creating br-mgmt bridge for management interface")
         # This is to whitlist all bridges
         vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
@@ -660,17 +714,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--variant",
-        choices=[
-            "sr-1",
-            "sr-1e",
-            "sr-1s",
-            "sr-14s",
-            "ixr-e-big",
-            "ixr-e-small",
-            # "ixr-6",
-            "ixr-r6",
-            "ixr-s",
-        ],
         default="sr-1",
         help="Variant of SR OS platform to launch",
     )

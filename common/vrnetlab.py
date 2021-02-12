@@ -335,9 +335,26 @@ class VM:
                 with open("/sys/class/net/macvtap%s/ifindex" % i, "r") as f:
                     tapidx = f.readline().strip("\n")
 
+                fd = 100 + i  # fd start number for tap iface
+
+                # run_command(
+                #     [f"{100 + i}<>/dev/tap{tapidx} 400<>/dev/vhost-net"],
+                #     background=True,
+                #     shell=True,
+                # )
+
+                # open tap device and get it's fd
+                fd = os.open("/dev/tap{}".format(tapidx), os.O_RDWR)
+                vhfd = os.open("/dev/vhost-net", os.O_RDWR)
+
                 res.append("-netdev")
+                # res.append(
+                #     "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=400 %(fd)s<>/dev/tap%(tapidx)s 400<>/dev/vhost-net"
+                #     % {"i": i, "fd": fd, "tapidx": tapidx}
+                # )
                 res.append(
-                    "tap,id=p%(i)02d,ifname=tap%(tapidx)s" % {"i": i, "tapidx": tapidx}
+                    "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=%(vhfd)s"
+                    % {"i": i, "fd": fd, "tapidx": tapidx, "vhfd": vhfd}
                 )
 
             if self.conn_mode == "bridge":

@@ -343,11 +343,12 @@ class VM:
                     tapidx = f.readline().strip("\n")
 
                 fd = 100 + i  # fd start number for tap iface
+                vhfd = 400 + i  # vhost fd start number
 
                 res.append("-netdev")
                 res.append(
-                    "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=400 %(fd)s<>/dev/tap%(tapidx)s 400<>/dev/vhost-net"
-                    % {"i": i, "fd": fd, "tapidx": tapidx}
+                    "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=%(vhfd)s %(fd)s<>/dev/tap%(tapidx)s %(vhfd)s<>/dev/vhost-net"
+                    % {"i": i, "fd": fd, "vhfd": vhfd, "tapidx": tapidx}
                 )
 
             if self.conn_mode == "bridge":

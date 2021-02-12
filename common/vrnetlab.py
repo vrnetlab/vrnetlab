@@ -224,7 +224,7 @@ class VM:
         """
         intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
         self.data_ifaces = intfs
-        intfs.sort()
+        intfs.sort(key=natural_sort_key)
 
         for idx, intf in enumerate(intfs):
             self.logger.debug("Creating macvtap interfaces for link: %s" % intf)

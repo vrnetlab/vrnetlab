@@ -321,6 +321,7 @@ class SROS_vm(vrnetlab.VM):
         super(SROS_vm, self).__init__(
             username, password, disk_image="/sros.qcow2", num=num, ram=ram
         )
+        self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()

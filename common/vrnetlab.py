@@ -123,8 +123,9 @@ class VM:
             cmd.extend(["-rtc", "base=" + self.fake_start_date])
 
         # smbios
-        for e in self.smbios:
-            cmd.extend(["-smbios", e])
+        # adding quotes to smbios value so it can be processed by bash shell
+        quoted_smbios = '"' + " ".join(self.smbios) + '"'
+        cmd.extend(["-smbios", quoted_smbios])
 
         # setup PCI buses
         for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
@@ -136,9 +137,15 @@ class VM:
         cmd.extend(self.gen_nics())
 
         self.logger.debug(cmd)
+        self.logger.debug("joined cmd: {}".format(" ".join(cmd)))
 
         self.p = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
+            " ".join(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            shell=True,
+            executable="/bin/bash",
         )
 
         try:
@@ -337,24 +344,10 @@ class VM:
 
                 fd = 100 + i  # fd start number for tap iface
 
-                # run_command(
-                #     [f"{100 + i}<>/dev/tap{tapidx} 400<>/dev/vhost-net"],
-                #     background=True,
-                #     shell=True,
-                # )
-
-                # open tap device and get it's fd
-                fd = os.open("/dev/tap{}".format(tapidx), os.O_RDWR)
-                vhfd = os.open("/dev/vhost-net", os.O_RDWR)
-
                 res.append("-netdev")
-                # res.append(
-                #     "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=400 %(fd)s<>/dev/tap%(tapidx)s 400<>/dev/vhost-net"
-                #     % {"i": i, "fd": fd, "tapidx": tapidx}
-                # )
                 res.append(
-                    "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=%(vhfd)s"
-                    % {"i": i, "fd": fd, "tapidx": tapidx, "vhfd": vhfd}
+                    "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=400 %(fd)s<>/dev/tap%(tapidx)s 400<>/dev/vhost-net"
+                    % {"i": i, "fd": fd, "tapidx": tapidx}
                 )
 
             if self.conn_mode == "bridge":

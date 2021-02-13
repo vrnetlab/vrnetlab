@@ -58,7 +58,7 @@ class VMX_vcp(vrnetlab.VM):
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
         self.smbios = [
             "type=0,vendor=Juniper",
-            "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
+            "type=1,manufacturer=VMX,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
         ]
         # add metadata image if it exists
         if os.path.exists("/vmx/metadata-usb-re.img"):

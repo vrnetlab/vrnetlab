@@ -225,6 +225,58 @@ class VM:
             bridges.append("br-%s" % idx)
         return bridges
 
+    def create_ovs_bridges(self):
+        """Create a OvS bridges for every attached eth interface
+        Returns list of bridge names
+        """
+
+        ifup_script = """#!/bin/sh
+
+        switch="ovs-$1"
+        ip link set $1 up
+        ovs-vsctl add-port ${switch} $1"""
+
+        with open("/etc/ovs-ifup", "w") as f:
+            f.write(ifup_script)
+        os.chmod("/etc/ovs-ifup", 0o777)
+
+        # start ovs services
+        # system-id doesn't mean anything here
+        run_command(
+            [
+                "/usr/share/openvswitch/scripts/ovs-ctl",
+                f"--system-id={random.randint(1000,50000)}",
+                "start",
+            ]
+        )
+
+        time.sleep(3)
+
+        bridges = list()
+        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
+        intfs.sort(key=natural_sort_key)
+
+        self.logger.info("Creating ovs bridges for interfaces: %s" % intfs)
+
+        for idx, intf in enumerate(intfs):
+            brname = f"ovs-tap{idx+1}"
+            run_command(["ovs-vsctl", "add-br", brname])
+            run_command(["ovs-vsctl", "set", "bridge", brname, "datapath_type=netdev"])
+            run_command(["ip", "link", "set", "dev", brname, "mtu", "9000"])
+            run_command(
+                [
+                    "ovs-vsctl",
+                    "set",
+                    "bridge",
+                    brname,
+                    "other-config:forward-bpdu=true",
+                ]
+            )
+            run_command(["ovs-vsctl", "add-port", brname, intf])
+            run_command(["ip", "link", "set", "dev", brname, "up"])
+            bridges.append(brname)
+        return bridges
+
     def create_macvtaps(self):
         """
         Create Macvtap interfaces for each non dataplane interface
@@ -290,7 +342,16 @@ class VM:
         """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
         bridges = []
-        if self.conn_mode == "macvtap":
+        if self.conn_mode == "ovs":
+            bridges = self.create_ovs_bridges()
+            if len(bridges) > self.num_nics:
+                self.logger.error(
+                    "Number of dataplane interfaces '{}' exceeds the requested number of links '{}'".format(
+                        len(bridges), self.num_nics
+                    )
+                )
+                sys.exit(1)
+        elif self.conn_mode == "macvtap":
             self.create_macvtaps()
         elif self.conn_mode == "bridge":
             bridges = self.create_bridges()
@@ -357,6 +418,15 @@ class VM:
                     res.append("-netdev")
                     res.append(
                         "bridge,id=p%(i)02d,br=%(bridge)s" % {"i": i, "bridge": bridge}
+                    )
+                else:  # We don't create more interfaces than we have bridges
+                    del res[-2:]  # Removing recently added interface
+
+            if self.conn_mode == "ovs":
+                if i <= len(bridges):
+                    res.append("-netdev")
+                    res.append(
+                        "tap,id=p%(i)02d,script=/etc/ovs-ifup,downscript=no" % {"i": i}
                     )
                 else:  # We don't create more interfaces than we have bridges
                     del res[-2:]  # Removing recently added interface

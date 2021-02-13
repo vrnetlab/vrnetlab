@@ -720,7 +720,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--connection-mode",
-        choices=["vrxcon", "macvtap", "bridge", "ovs"],
         default="vrxcon",
         help="Connection mode to use in the datapath",
     )

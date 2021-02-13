@@ -416,7 +416,6 @@ if __name__ == "__main__":
     parser.add_argument("--install", action="store_true", help="Install vMX")
     parser.add_argument(
         "--connection-mode",
-        choices=["vrxcon", "macvtap", "bridge"],
         default="vrxcon",
         help="Connection mode to use in the datapath",
     )

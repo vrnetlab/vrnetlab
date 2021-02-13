@@ -218,7 +218,6 @@ if __name__ == "__main__":
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument(
         "--connection-mode",
-        choices=["vrxcon", "macvtap", "bridge"],
         default="vrxcon",
         help="Connection mode to use in the datapath",
     )

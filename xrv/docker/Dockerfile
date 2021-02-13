@@ -13,6 +13,7 @@ RUN apt-get update -qy \
     qemu-kvm \
     tcpdump \
     procps \
+    openvswitch-switch \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

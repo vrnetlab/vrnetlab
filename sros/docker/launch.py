@@ -523,7 +523,7 @@ class SROS_cp(SROS_vm):
 
         # add virtio NIC for internal control plane interface to vFPC
         res.append("-device")
-        res.append("e1000,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
+        res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
         res.append("-netdev")
         res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
         return res
@@ -595,10 +595,14 @@ class SROS_lc(SROS_vm):
         """Generate mgmt interface"""
         res = []
         # mgmt interface
-        res.extend(["-device", "e1000,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)])
+        res.extend(
+            ["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)]
+        )
         res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
         # internal control plane interface to vFPC
-        res.extend(["-device", "e1000,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)])
+        res.extend(
+            ["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)]
+        )
         res.extend(
             [
                 "-netdev",

@@ -124,8 +124,9 @@ class VM:
 
         # smbios
         # adding quotes to smbios value so it can be processed by bash shell
-        quoted_smbios = '"' + " ".join(self.smbios) + '"'
-        cmd.extend(["-smbios", quoted_smbios])
+        for smbios_line in self.smbios:
+            quoted_smbios = '"' + smbios_line + '"'
+            cmd.extend(["-smbios", quoted_smbios])
 
         # setup PCI buses
         for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
@@ -260,6 +261,7 @@ class VM:
 
         for idx, intf in enumerate(intfs):
             brname = f"ovs-tap{idx+1}"
+            self.logger.debug(f"Creating bridge {brname}")
             run_command(["ovs-vsctl", "add-br", brname])
             run_command(["ovs-vsctl", "set", "bridge", brname, "datapath_type=netdev"])
             run_command(["ip", "link", "set", "dev", brname, "mtu", "9000"])
@@ -426,7 +428,8 @@ class VM:
                 if i <= len(bridges):
                     res.append("-netdev")
                     res.append(
-                        "tap,id=p%(i)02d,script=/etc/ovs-ifup,downscript=no" % {"i": i}
+                        "tap,id=p%(i)02d,ifname=tap%(i)s,script=/etc/ovs-ifup,downscript=no"
+                        % {"i": i}
                     )
                 else:  # We don't create more interfaces than we have bridges
                     del res[-2:]  # Removing recently added interface

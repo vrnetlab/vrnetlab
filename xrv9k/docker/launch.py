@@ -56,7 +56,7 @@ class XRV_vm(vrnetlab.VM):
         res = []
         # mgmt interface
         res.extend(["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)])
-        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830"])
+        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=tcp::2023-10.0.0.15:23,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830"])
         # dummy interface for xrv9k ctrl interface
         res.extend(["-device", "virtio-net-pci,netdev=ctrl-dummy,id=ctrl-dummy,mac=%s" % vrnetlab.gen_mac(0),
                     "-netdev", "tap,ifname=ctrl-dummy,id=ctrl-dummy,script=no,downscript=no"])
@@ -95,17 +95,11 @@ class XRV_vm(vrnetlab.VM):
                 self.wait_write(self.password, wait="Enter secret:")
                 self.wait_write(self.password, wait="Enter secret again:")
                 self.credentials.insert(0, [self.username, self.password])
-            if ridx == 3: # matched login prompt, so should login
-                self.logger.debug("matched login prompt")
-                try:
-                    username, password = self.credentials.pop(0)
-                except IndexError as exc:
-                    self.logger.error("no more credentials to try")
-                    return
-                self.logger.debug("trying to log in with %s / %s" % (username, password))
-                self.wait_write(username, wait=None)
-                self.wait_write(password, wait="Password:")
-                self.logger.debug("logged in with %s / %s" % (username, password))
+            if ridx == 3: # matched username prompt, so should login
+                self.logger.debug("trying to log in with %s / %s" % (self.credentials[0][0], self.credentials[0][1]))
+                self.wait_write(self.credentials[0][0], wait=None)
+                self.wait_write(self.credentials[0][1], wait="Password:")
+                self.logger.debug("logged in with %s / %s" % (self.credentials[0][0], self.credentials[0][1]))
             if self.xr_ready == True and ridx == 4:
                 # run main config!
                 if not self.bootstrap_config():

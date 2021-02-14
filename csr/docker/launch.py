@@ -47,6 +47,9 @@ class CSR_vm(vrnetlab.VM):
 
         super(CSR_vm, self).__init__(username, password, disk_image=disk_image)
 
+        # this may break older versions but newer versions seem to not like the e1000!
+        # older as in 16.0.4ish and newer as in 16.12.xish
+        self.nic_type = "virtio-net-pci"
         self.install_mode = install_mode
         self.num_nics = 9
 
@@ -73,6 +76,9 @@ class CSR_vm(vrnetlab.VM):
             cfg_file.write("yes\r\n")
             cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
 
+        # seems like this helps prevent nics from getting loaded up starting at like g11
+        # dont think it will hurt anyhing (may just not do anything) so leavin it in for now!
+        cfg_file.write("clear platform software vnic-if nvtable\r\n")
         cfg_file.write("platform console serial\r\n\r\n")
         cfg_file.write("do wr\r\n")
         cfg_file.write("do reload\r\n")
@@ -150,6 +156,10 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("line vty 0 4")
         self.wait_write("login local")
         self.wait_write("transport input all")
+        self.wait_write("exit")
+        self.wait_write("ip scp server enable")
+        self.wait_write("archive")
+        self.wait_write("path bootflash:")
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
         self.wait_write("\r", None)

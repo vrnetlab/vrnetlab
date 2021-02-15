@@ -233,13 +233,13 @@ class VM:
 
         ifup_script = """#!/bin/sh
 
-        switch="ovs-$1"
+        switch="vr-ovs-$1"
         ip link set $1 up
         ovs-vsctl add-port ${switch} $1"""
 
-        with open("/etc/ovs-ifup", "w") as f:
+        with open("/etc/vr-ovs-ifup", "w") as f:
             f.write(ifup_script)
-        os.chmod("/etc/ovs-ifup", 0o777)
+        os.chmod("/etc/vr-ovs-ifup", 0o777)
 
         # start ovs services
         # system-id doesn't mean anything here
@@ -260,7 +260,7 @@ class VM:
         self.logger.info("Creating ovs bridges for interfaces: %s" % intfs)
 
         for idx, intf in enumerate(intfs):
-            brname = f"ovs-tap{idx+1}"
+            brname = f"vr-ovs-tap{idx+1}"
             self.logger.debug(f"Creating bridge {brname}")
             run_command(["ovs-vsctl", "add-br", brname])
             run_command(["ovs-vsctl", "set", "bridge", brname, "datapath_type=netdev"])
@@ -428,7 +428,7 @@ class VM:
                 if i <= len(bridges):
                     res.append("-netdev")
                     res.append(
-                        "tap,id=p%(i)02d,ifname=tap%(i)s,script=/etc/ovs-ifup,downscript=no"
+                        "tap,id=p%(i)02d,ifname=tap%(i)s,script=/etc/vr-ovs-ifup,downscript=no"
                         % {"i": i}
                     )
                 else:  # We don't create more interfaces than we have bridges

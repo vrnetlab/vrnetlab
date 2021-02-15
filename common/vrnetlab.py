@@ -263,7 +263,10 @@ class VM:
             brname = f"vr-ovs-tap{idx+1}"
             self.logger.debug(f"Creating bridge {brname}")
             run_command(["ovs-vsctl", "add-br", brname])
-            run_command(["ovs-vsctl", "set", "bridge", brname, "datapath_type=netdev"])
+            if self.conn_mode == "ovs-user":
+                run_command(
+                    ["ovs-vsctl", "set", "bridge", brname, "datapath_type=netdev"]
+                )
             run_command(["ip", "link", "set", "dev", brname, "mtu", "9000"])
             run_command(
                 [

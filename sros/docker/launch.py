@@ -238,9 +238,11 @@ class SROS_cp(SROS_vm):
         """
         if self.username and self.password:
             self.wait_write("configure system security user \"%s\" password %s" % (self.username, self.password))
-            self.wait_write("configure system security user \"%s\" access console netconf" % (self.username))
+            self.wait_write("configure system security user \"%s\" access console netconf grpc" % (self.username))
             self.wait_write("configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
         self.wait_write("configure system netconf no shutdown")
+        self.wait_write("configure system grpc allow-unsecure-connection")
+        self.wait_write("configure system grpc no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure system login-control ssh inbound-max-sessions 30")
 

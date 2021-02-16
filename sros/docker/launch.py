@@ -55,6 +55,9 @@ def uuid_rev_part(part):
     return res
 
 
+# Add gNMI ports
+vrnetlab.HOST_FWDS.append(('tcp', 9339, 57400))
+vrnetlab.HOST_FWDS.append(('tcp', 57400, 57400))
 
 
 class SROS_vm(vrnetlab.VM):
@@ -63,8 +66,6 @@ class SROS_vm(vrnetlab.VM):
 
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
-
-
 
 
     def bootstrap_spin(self):
@@ -168,9 +169,11 @@ class SROS_integrated(SROS_vm):
         """
         if self.username and self.password:
             self.wait_write("configure system security user \"%s\" password %s" % (self.username, self.password))
-            self.wait_write("configure system security user \"%s\" access console netconf" % (self.username))
+            self.wait_write("configure system security user \"%s\" access console netconf grpc" % (self.username))
             self.wait_write("configure system security user \"%s\" console member \"administrative\" \"default\"" % (self.username))
         self.wait_write("configure system netconf no shutdown")
+        self.wait_write("configure system grpc allow-unsecure-connection")
+        self.wait_write("configure system grpc no shutdown")
         self.wait_write("configure system security profile \"administrative\" netconf base-op-authorization lock")
         self.wait_write("configure system login-control ssh inbound-max-sessions 30")
         self.wait_write("configure card 1 mda 1 shutdown")

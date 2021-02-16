@@ -198,6 +198,8 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("delete system processes dhcp-service")
         self.wait_write("commit")
         self.wait_write("exit")
+        # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes
+        self.wait_write("exit", wait=">")
 
     def wait_write(self, cmd, wait="#", timeout=None):
         """Wait for something and then send command"""

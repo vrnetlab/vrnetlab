@@ -261,11 +261,19 @@ class VM:
 
         for idx, intf in enumerate(intfs):
             brname = f"vr-ovs-tap{idx+1}"
-            self.logger.debug(f"Creating bridge {brname}")
-            run_command(["ovs-vsctl", "add-br", brname])
+            # generate a mac for ovs bridge, since this mac we will need
+            # to create a "drop flow" rule to filter grARP replies we can't have
+            # ref: https://mail.openvswitch.org/pipermail/ovs-discuss/2021-February/050951.html
+            brmac = gen_mac(0)
+            self.logger.debug(f"Creating bridge {brname} with {brmac} hw address")
+            run_command(
+                f"ovs-vsctl add-br {brname} -- set bridge {brname} other-config:hwaddr={brmac}",
+                shell=True,
+            )
             if self.conn_mode == "ovs-user":
                 run_command(
-                    ["ovs-vsctl", "set", "bridge", brname, "datapath_type=netdev"]
+                    f"ovs-vsctl add-br {brname} datapath_type=netdev -- set bridge {brname} other-config:hwaddr={brmac}",
+                    shell=True,
                 )
             run_command(["ip", "link", "set", "dev", brname, "mtu", "9000"])
             run_command(
@@ -279,6 +287,14 @@ class VM:
             )
             run_command(["ovs-vsctl", "add-port", brname, intf])
             run_command(["ip", "link", "set", "dev", brname, "up"])
+            run_command(
+                [
+                    "ovs-ofctl",
+                    "add-flow",
+                    brname,
+                    f"table=0,arp,dl_src={brmac} actions=drop",
+                ]
+            )
             bridges.append(brname)
         return bridges
 

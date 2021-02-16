@@ -321,6 +321,7 @@ class SROS_vm(vrnetlab.VM):
         super(SROS_vm, self).__init__(
             username, password, disk_image="/sros.qcow2", num=num, ram=ram
         )
+        self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
@@ -409,7 +410,7 @@ class SROS_integrated(SROS_vm):
         self.mode = mode
         self.num_nics = num_nics
         self.smbios = [
-            f"type=1,product=TIMOS:address={SROS_MGMT_ADDR}/{PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_ADDR}/license.txt primary-config=tftp://{BRIDGE_ADDR}/config.txt {variant['timos_line']}"
+            f"type=1,product=TIMOS:address={SROS_MGMT_ADDR}/{PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_ADDR}/license.txt primary-config=tftp://{BRIDGE_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
         self.variant = variant
@@ -488,7 +489,7 @@ class SROS_cp(SROS_vm):
         self.variant = variant
 
         self.smbios = [
-            f"type=1,product=TIMOS:address={SROS_MGMT_ADDR}/{PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_ADDR}/license.txt primary-config=tftp://{BRIDGE_ADDR}/config.txt {variant['cp']['timos_line']}"
+            f"type=1,product=TIMOS:address={SROS_MGMT_ADDR}/{PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_ADDR}/license.txt primary-config=tftp://{BRIDGE_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
         ]
 
     def start(self):
@@ -522,7 +523,7 @@ class SROS_cp(SROS_vm):
 
         # add virtio NIC for internal control plane interface to vFPC
         res.append("-device")
-        res.append("e1000,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
+        res.append("virtio-net-pci,netdev=vcp-int,mac=%s" % vrnetlab.gen_mac(1))
         res.append("-netdev")
         res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
         return res
@@ -594,10 +595,14 @@ class SROS_lc(SROS_vm):
         """Generate mgmt interface"""
         res = []
         # mgmt interface
-        res.extend(["-device", "e1000,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)])
+        res.extend(
+            ["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)]
+        )
         res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
         # internal control plane interface to vFPC
-        res.extend(["-device", "e1000,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)])
+        res.extend(
+            ["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)]
+        )
         res.extend(
             [
                 "-netdev",
@@ -719,7 +724,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--connection-mode",
-        choices=["vrxcon", "macvtap", "bridge"],
         default="vrxcon",
         help="Connection mode to use in the datapath",
     )
@@ -778,6 +782,10 @@ if __name__ == "__main__":
     vrnetlab.run_command(
         ["socat", "TCP-LISTEN:57400,fork", f"TCP:{SROS_MGMT_ADDR}:57400"],
         background=True,
+    )
+
+    logger.debug(
+        f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}', connection mode '{args.connection_mode}'"
     )
 
     ia = SROS(

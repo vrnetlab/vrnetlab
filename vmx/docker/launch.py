@@ -58,7 +58,7 @@ class VMX_vcp(vrnetlab.VM):
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
         self.smbios = [
             "type=0,vendor=Juniper",
-            "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
+            "type=1,manufacturer=VMX,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
         ]
         # add metadata image if it exists
         if os.path.exists("/vmx/metadata-usb-re.img"):
@@ -198,6 +198,8 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("delete system processes dhcp-service")
         self.wait_write("commit")
         self.wait_write("exit")
+        # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes
+        self.wait_write("exit", wait=">")
 
     def wait_write(self, cmd, wait="#", timeout=None):
         """Wait for something and then send command"""
@@ -416,7 +418,6 @@ if __name__ == "__main__":
     parser.add_argument("--install", action="store_true", help="Install vMX")
     parser.add_argument(
         "--connection-mode",
-        choices=["vrxcon", "macvtap", "bridge"],
         default="vrxcon",
         help="Connection mode to use in the datapath",
     )

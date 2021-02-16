@@ -16,6 +16,7 @@ RUN apt-get update -qy \
     ssh \
     inetutils-ping \
     dnsutils \
+    openvswitch-switch \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

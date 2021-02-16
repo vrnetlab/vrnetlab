@@ -17,6 +17,7 @@ RUN apt-get update -qy \
     telnet \
     inetutils-ping \
     dnsutils \
+    openvswitch-switch \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

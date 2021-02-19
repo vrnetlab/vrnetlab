@@ -796,4 +796,4 @@ if __name__ == "__main__":
         variant_name=args.variant,
         conn_mode=args.connection_mode,
     )
-    ia.start()
+    ia.start(add_fwd_rules=False)

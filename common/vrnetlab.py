@@ -266,13 +266,22 @@ class VM:
             # ref: https://mail.openvswitch.org/pipermail/ovs-discuss/2021-February/050951.html
             brmac = gen_mac(0)
             self.logger.debug(f"Creating bridge {brname} with {brmac} hw address")
-            run_command(
-                f"ovs-vsctl add-br {brname} -- set bridge {brname} other-config:hwaddr={brmac}",
-                shell=True,
-            )
+            if self.conn_mode == "ovs":
+                run_command(
+                    f"ovs-vsctl add-br {brname} -- set bridge {brname} other-config:hwaddr={brmac}",
+                    shell=True,
+                )
             if self.conn_mode == "ovs-user":
                 run_command(
-                    f"ovs-vsctl add-br {brname} datapath_type=netdev -- set bridge {brname} other-config:hwaddr={brmac}",
+                    f"ovs-vsctl add-br {brname}",
+                    shell=True,
+                )
+                run_command(
+                    f"ovs-vsctl set bridge {brname} datapath_type=netdev",
+                    shell=True,
+                )
+                run_command(
+                    f"ovs-vsctl set bridge {brname} other-config:hwaddr={brmac}",
                     shell=True,
                 )
             run_command(["ip", "link", "set", "dev", brname, "mtu", "9000"])
@@ -363,7 +372,7 @@ class VM:
         """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
         bridges = []
-        if self.conn_mode == "ovs":
+        if self.conn_mode in ["ovs", "ovs-user"]:
             bridges = self.create_ovs_bridges()
             if len(bridges) > self.num_nics:
                 self.logger.error(
@@ -443,7 +452,7 @@ class VM:
                 else:  # We don't create more interfaces than we have bridges
                     del res[-2:]  # Removing recently added interface
 
-            if self.conn_mode == "ovs":
+            if self.conn_mode in ["ovs", "ovs-user"]:
                 if i <= len(bridges):
                     res.append("-netdev")
                     res.append(
@@ -556,25 +565,26 @@ class VR:
         health_file.write("%d %s" % (exit_status, message))
         health_file.close()
 
-    def start(self):
+    def start(self, add_fwd_rules=True):
         """Start the virtual router"""
         self.logger.debug("Starting vrnetlab %s" % self.__class__.__name__)
         self.logger.debug("VMs: %s" % self.vms)
-        run_command(
-            ["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True
-        )
-        run_command(
-            ["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True
-        )
-        run_command(
-            ["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True
-        )
-        run_command(
-            ["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True
-        )
-        run_command(
-            ["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True
-        )
+        if add_fwd_rules:
+            run_command(
+                ["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True
+            )
+            run_command(
+                ["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True
+            )
+            run_command(
+                ["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True
+            )
+            run_command(
+                ["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True
+            )
+            run_command(
+                ["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True
+            )
 
         started = False
         while True:

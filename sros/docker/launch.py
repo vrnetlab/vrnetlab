@@ -664,6 +664,10 @@ class SROS(vrnetlab.VR):
         vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
         vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
         vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
+        vrnetlab.run_command(
+            ["echo 16384 > /sys/class/net/br-mgmt/bridge/group_fwd_mask"],
+            shell=True,
+        )
         vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
         vrnetlab.run_command(
             ["ip", "addr", "add", "dev", "br-mgmt", f"{BRIDGE_ADDR}/{PREFIX_LENGTH}"]

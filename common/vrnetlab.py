@@ -307,6 +307,30 @@ class VM:
             bridges.append(brname)
         return bridges
 
+    def create_tc_tap_ifup(self):
+        """Create tap ifup script that is used in tc datapath mode"""
+        ifup_script = """#!/bin/bash
+
+        TAP_IF=$1
+        # get interface index number up to 3 digits (everything after first three chars)
+        # tap0 -> 0
+        # tap123 -> 123
+        INDEX=${TAP_IF:3:3}
+
+        ip link set $TAP_IF up
+
+        # create tc eth<->tap redirect rules
+        tc qdisc add dev eth$INDEX ingress
+        tc filter add dev eth$INDEX parent ffff: protocol all u32 match u8 0 0 action mirred egress redirect dev tap1
+
+        tc qdisc add dev $TAP_IF ingress
+        tc filter add dev $TAP_IF parent ffff: protocol all u32 match u8 0 0 action mirred egress redirect dev eth1
+        """
+
+        with open("/etc/tc-tap-ifup", "w") as f:
+            f.write(ifup_script)
+        os.chmod("/etc/tc-tap-ifup", 0o777)
+
     def create_macvtaps(self):
         """
         Create Macvtap interfaces for each non dataplane interface
@@ -372,7 +396,9 @@ class VM:
         """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
         bridges = []
-        if self.conn_mode in ["ovs", "ovs-user"]:
+        if self.conn_mode == "tc":
+            self.create_tc_tap_ifup()
+        elif self.conn_mode in ["ovs", "ovs-user"]:
             bridges = self.create_ovs_bridges()
             if len(bridges) > self.num_nics:
                 self.logger.error(
@@ -398,6 +424,10 @@ class VM:
         else:
             range_start = 1
         for i in range(range_start, self.num_nics + 1):
+            # if the matching container interface ethX doesn't exist, we don't create a nic
+            if not os.path.exists(f"/sys/class/net/eth{i}"):
+                continue
+
             # calc which PCI bus we are on and the local add on that PCI bus
             pci_bus = math.floor(i / self.nics_per_pci_bus) + 1
             addr = (i % self.nics_per_pci_bus) + 1
@@ -423,6 +453,12 @@ class VM:
                     "mac": mac,
                 }
             )
+            if self.conn_mode == "tc":
+                res.append("-netdev")
+                res.append(
+                    "tap,id=p%(i)02d,ifname=tap%(i)s,script=/etc/tc-tap-ifup,downscript=no"
+                    % {"i": i}
+                )
             if self.conn_mode == "macvtap":
                 # if required number of nics exceeds the number of attached interfaces
                 # we skip excessive ones
@@ -442,7 +478,7 @@ class VM:
                     % {"i": i, "fd": fd, "vhfd": vhfd, "tapidx": tapidx}
                 )
 
-            if self.conn_mode == "bridge":
+            elif self.conn_mode == "bridge":
                 if i <= len(bridges):
                     bridge = bridges[i - 1]  # We're starting from 0
                     res.append("-netdev")
@@ -452,7 +488,7 @@ class VM:
                 else:  # We don't create more interfaces than we have bridges
                     del res[-2:]  # Removing recently added interface
 
-            if self.conn_mode in ["ovs", "ovs-user"]:
+            elif self.conn_mode in ["ovs", "ovs-user"]:
                 if i <= len(bridges):
                     res.append("-netdev")
                     res.append(
@@ -462,7 +498,7 @@ class VM:
                 else:  # We don't create more interfaces than we have bridges
                     del res[-2:]  # Removing recently added interface
 
-            if self.conn_mode == "vrxcon":
+            elif self.conn_mode == "vrxcon":
                 res.append("-netdev")
                 res.append(
                     "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}

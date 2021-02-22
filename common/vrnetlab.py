@@ -321,10 +321,10 @@ class VM:
 
         # create tc eth<->tap redirect rules
         tc qdisc add dev eth$INDEX ingress
-        tc filter add dev eth$INDEX parent ffff: protocol all u32 match u8 0 0 action mirred egress redirect dev tap1
+        tc filter add dev eth$INDEX parent ffff: protocol all u32 match u8 0 0 action mirred egress redirect dev tap$INDEX
 
         tc qdisc add dev $TAP_IF ingress
-        tc filter add dev $TAP_IF parent ffff: protocol all u32 match u8 0 0 action mirred egress redirect dev eth1
+        tc filter add dev $TAP_IF parent ffff: protocol all u32 match u8 0 0 action mirred egress redirect dev eth$INDEX
         """
 
         with open("/etc/tc-tap-ifup", "w") as f:

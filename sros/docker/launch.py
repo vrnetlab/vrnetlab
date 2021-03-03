@@ -741,8 +741,6 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
-    # vrnetlab.run_command(["apt", "update"])
-    # vrnetlab.run_command(["apt", "install", "-y", "tftpd-hpa"])
     vrnetlab.run_command(
         [
             "in.tftpd",
@@ -765,27 +763,51 @@ if __name__ == "__main__":
     # for SR OS management interface
     # thus we need to forward connections to a different address
     vrnetlab.run_command(["pkill", "socat"])
-    time.sleep(5)
 
-    # forwarding rules
+    # redirecting incoming to eth0 traffic on to SR management address
     vrnetlab.run_command(
-        ["socat", "TCP-LISTEN:22,fork", f"TCP:{SROS_MGMT_ADDR}:22"], background=True
+        [
+            "iptables",
+            "-t",
+            "nat",
+            "-A",
+            "PREROUTING",
+            "-i",
+            "eth0",
+            "-j",
+            "DNAT",
+            "--to-destination",
+            f"{SROS_MGMT_ADDR}",
+        ]
     )
+    # masquerading the incoming traffic so SR OS is able to reply back
     vrnetlab.run_command(
-        ["socat", "UDP-LISTEN:161,fork", f"UDP:{SROS_MGMT_ADDR}:161"], background=True
+        [
+            "iptables",
+            "-t",
+            "nat",
+            "-A",
+            "POSTROUTING",
+            "-o",
+            "br-mgmt",
+            "-j",
+            "MASQUERADE",
+        ]
     )
+
+    # allow sros breakout to management network by NATing via eth0
     vrnetlab.run_command(
-        ["socat", "TCP-LISTEN:830,fork", f"TCP:{SROS_MGMT_ADDR}:830"], background=True
-    )
-    vrnetlab.run_command(
-        ["socat", "TCP-LISTEN:80,fork", f"TCP:{SROS_MGMT_ADDR}:80"], background=True
-    )
-    vrnetlab.run_command(
-        ["socat", "TCP-LISTEN:443,fork", f"TCP:{SROS_MGMT_ADDR}:443"], background=True
-    )
-    vrnetlab.run_command(
-        ["socat", "TCP-LISTEN:57400,fork", f"TCP:{SROS_MGMT_ADDR}:57400"],
-        background=True,
+        [
+            "iptables",
+            "-t",
+            "nat",
+            "-A",
+            "POSTROUTING",
+            "-o",
+            "eth0",
+            "-j",
+            "MASQUERADE",
+        ]
     )
 
     logger.debug(

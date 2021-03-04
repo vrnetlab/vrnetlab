@@ -837,6 +837,8 @@ if __name__ == "__main__":
 
     logger.debug(f"Environment variables: {os.environ}")
 
+    vrnetlab.boot_delay()
+
     ia = SROS(
         args.hostname,
         args.username,

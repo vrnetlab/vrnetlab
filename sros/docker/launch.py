@@ -316,6 +316,19 @@ def uuid_rev_part(part):
     return res
 
 
+# generate bof configuration commands based on env vars
+# TODO: add ipv6 management support
+def gen_bof_config():
+    cmds = []
+    if "DOCKER_NET_V4_ADDR" in os.environ and os.getenv("DOCKER_NET_V4_ADDR") != "":
+        cmds.append(
+            f'/bof static-route {os.getenv("DOCKER_NET_V4_ADDR")} next-hop {BRIDGE_ADDR}'
+        )
+    # if "docker-net-v6-addr" in m:
+    #     cmds.append(f"/bof static-route {m[docker-net-v6-addr]} next-hop {BRIDGE_ADDR}")
+    return cmds
+
+
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
         super(SROS_vm, self).__init__(
@@ -463,6 +476,10 @@ class SROS_integrated(SROS_vm):
                 for l in iter(self.variant["card_config"].splitlines()):
                     self.wait_write(l)
 
+            # configure bof
+            for l in iter(gen_bof_config()):
+                self.wait_write(l)
+
             self.wait_write("/admin save")
             self.wait_write(
                 "/configure system management-interface configuration-mode {mode}".format(
@@ -553,6 +570,10 @@ class SROS_cp(SROS_vm):
             if "card_config" in self.variant["lc"]:
                 for l in iter(self.variant["lc"]["card_config"].splitlines()):
                     self.wait_write(l)
+
+            # configure bof
+            for l in iter(gen_bof_config()):
+                self.wait_write(l)
 
             self.wait_write("/admin save")
             self.wait_write(
@@ -813,6 +834,8 @@ if __name__ == "__main__":
     logger.debug(
         f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}', connection mode '{args.connection_mode}'"
     )
+
+    logger.debug(f"Environment variables: {os.environ}")
 
     ia = SROS(
         args.hostname,

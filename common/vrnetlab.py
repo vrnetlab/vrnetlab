@@ -43,6 +43,15 @@ def run_command(cmd, cwd=None, background=False, shell=False):
     return res
 
 
+# boot_delay delays the VM boot by number of seconds
+# set by BOOT_DELAY env var
+def boot_delay():
+    delay = os.getenv("BOOT_DELAY")
+    if delay and (delay != "" or delay != 0):
+        logging.getLogger().info(f"Delaying VM boot of by {delay} seconds")
+        time.sleep(int(delay))
+
+
 class VM:
     def __str__(self):
         return self.__class__.__name__

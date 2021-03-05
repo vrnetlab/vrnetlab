@@ -437,10 +437,13 @@ if __name__ == "__main__":
         )
     )
 
+    logger.debug(f"Environment variables: {os.environ}")
+
     if args.install:
         vr = VMX_installer(args.username, args.password, conn_mode=args.connection_mode)
         vr.install()
     else:
+        vrnetlab.boot_delay()
         vr = VMX(
             args.hostname, args.username, args.password, conn_mode=args.connection_mode
         )

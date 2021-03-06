@@ -6,6 +6,7 @@ import os
 import re
 import signal
 import sys
+import time
 
 import vrnetlab
 
@@ -36,16 +37,23 @@ logging.Logger.trace = trace
 
 
 class VEOS_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
+        disk_image = ""
+        boot_iso = ""
         for e in os.listdir("/"):
             if re.search(".vmdk$", e):
                 disk_image = "/" + e
         for e in os.listdir("/"):
             if re.search(".iso$", e):
                 boot_iso = "/" + e
+        if disk_image == "" or boot_iso == "":
+            logging.getLogger().info("Either disk image or boot ISO was not found")
+            exit(1)
         super(VEOS_vm, self).__init__(
             username, password, disk_image=disk_image, ram=2048
         )
+        self.hostname = hostname
+        self.conn_mode = conn_mode
         self.num_nics = 20
         self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
 
@@ -90,6 +98,8 @@ class VEOS_vm(vrnetlab.VM):
 
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
+        # give some time vEOS to boot before applying config
+        time.sleep(15)
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
         self.wait_write("enable", ">")
@@ -107,14 +117,59 @@ class VEOS_vm(vrnetlab.VM):
         self.wait_write("protocol unix-socket")
         self.wait_write("no shutdown")
         self.wait_write("exit")
+
+        # gnmic config
+        self.wait_write("management api gnmi")
+        self.wait_write("transport grpc default")
+        self.wait_write("no shutdown")
+        self.wait_write("exit")
+
+        # netconf config
+        self.wait_write("management api netconf")
+        self.wait_write("transport ssh default")
+        self.wait_write("exit")
+
+        self.wait_write(f"hostname {self.hostname}")
+
         self.wait_write("exit")
         self.wait_write("copy running-config startup-config")
 
+    def gen_mgmt(self):
+        """
+        Augment base gen_mgmt function to add gnmi and socat forwarding
+        """
+        res = []
+
+        # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it (addr 0x2)
+        res.append("-device")
+        res.append(
+            self.nic_type + f",netdev=p00,mac={vrnetlab.gen_mac(0)},bus=pci.1,addr=0x2"
+        )
+
+        res.append("-netdev")
+        res.append(
+            "user,id=p00,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443,hostfwd=tcp::16030-10.0.0.15:6030"
+        )
+        vrnetlab.run_command(
+            ["socat", "TCP-LISTEN:6030,fork", "TCP:127.0.0.1:16030"],
+            background=True,
+        )
+
+        return res
+
+    def gen_nics(self):
+        """
+        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
+        """
+        time.sleep(5)
+        res = super(VEOS_vm, self).gen_nics()
+        return res
+
 
 class VEOS(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         super(VEOS, self).__init__(username, password)
-        self.vms = [VEOS_vm(username, password)]
+        self.vms = [VEOS_vm(hostname, username, password, conn_mode)]
 
 
 if __name__ == "__main__":
@@ -124,8 +179,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
+    parser.add_argument("--hostname", default="vr-xrv9k", help="Router hostname")
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
+    parser.add_argument(
+        "--connection-mode",
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -136,5 +197,8 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
-    vr = VEOS(args.username, args.password)
+    logger.debug(f"Environment variables: {os.environ}")
+    vrnetlab.boot_delay()
+
+    vr = VEOS(args.hostname, args.username, args.password, args.connection_mode)
     vr.start()

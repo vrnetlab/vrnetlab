@@ -3,20 +3,20 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import sys
-import telnetlib
-import time
 
 import vrnetlab
+
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
+
 def handle_SIGTERM(signal, frame):
     sys.exit(0)
+
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
@@ -24,12 +24,15 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
-logging.Logger.trace = trace
 
+
+logging.Logger.trace = trace
 
 
 class VEOS_vm(vrnetlab.VM):
@@ -40,14 +43,14 @@ class VEOS_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".iso$", e):
                 boot_iso = "/" + e
-        super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
+        super(VEOS_vm, self).__init__(
+            username, password, disk_image=disk_image, ram=2048
+        )
         self.num_nics = 20
         self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
 
-
     def bootstrap_spin(self):
-        """ This function should be called periodically to do work.
-        """
+        """This function should be called periodically to do work."""
 
         if self.spins > 300:
             # too many spins with no result ->  give up
@@ -57,8 +60,8 @@ class VEOS_vm(vrnetlab.VM):
             return
 
         (ridx, match, res) = self.tn.expect([b"login:"], 1)
-        if match: # got a match!
-            if ridx == 0: # login
+        if match:  # got a match!
+            if ridx == 0:  # login
                 self.logger.debug("matched login prompt")
                 self.logger.debug("trying to log in with 'admin'")
                 self.wait_write("admin", wait=None)
@@ -76,7 +79,7 @@ class VEOS_vm(vrnetlab.VM):
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
-        if res != b'':
+        if res != b"":
             self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
@@ -85,16 +88,16 @@ class VEOS_vm(vrnetlab.VM):
 
         return
 
-
-
     def bootstrap_config(self):
-        """ Do the actual bootstrap config
-        """
+        """Do the actual bootstrap config"""
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
         self.wait_write("enable", ">")
         self.wait_write("configure")
-        self.wait_write("username %s secret 0 %s role network-admin" % (self.username, self.password))
+        self.wait_write(
+            "username %s secret 0 %s role network-admin"
+            % (self.username, self.password)
+        )
 
         # configure mgmt interface
         self.wait_write("interface Management 1")
@@ -108,19 +111,21 @@ class VEOS_vm(vrnetlab.VM):
         self.wait_write("copy running-config startup-config")
 
 
-
 class VEOS(vrnetlab.VR):
     def __init__(self, username, password):
         super(VEOS, self).__init__(username, password)
-        self.vms = [ VEOS_vm(username, password) ]
+        self.vms = [VEOS_vm(username, password)]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
+
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
+        "--trace", action="store_true", help="enable trace level logging"
+    )
+    parser.add_argument("--username", default="vrnetlab", help="Username")
+    parser.add_argument("--password", default="VR-netlab9", help="Password")
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

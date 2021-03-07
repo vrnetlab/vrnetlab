@@ -15,5 +15,11 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/.*-\([0-9]\.\([0-9]\+\.\)\{1,2\}[0-9]\
 -include ../makefile.include
 
 docker-pre-build:
-	echo "Disabling ZTP"
-	docker run --rm -it -e LIBGUESTFS_DEBUG=0 -v $$(pwd):/work cmattoon/guestfish -a $(IMAGE) -m /dev/sda2 write /zerotouch-config "DISABLE=True"
+	# checking if ZTP config contains a string (DISABLE=True) in the file /zerotouch-config
+	# if it does, we don't need to write this file
+	@echo Checking ZTP status
+	ZTPOFF=$(shell docker run --rm -it -e LIBGUESTFS_DEBUG=0 -v $$(pwd):/work cmattoon/guestfish --ro -a $(IMAGE) -m /dev/sda2 cat /zerotouch-config 2> /dev/null || echo "false"); \
+	echo "$@: ZTPOFF is $$ZTPOFF" && \
+    if [ "$$ZTPOFF" != "DISABLE=True" ]; then \
+      echo "Disabling ZTP" && docker run --rm -it -e LIBGUESTFS_DEBUG=0 -v $$(pwd):/work cmattoon/guestfish -a $(IMAGE) -m /dev/sda2 write /zerotouch-config "DISABLE=True"; \
+    fi

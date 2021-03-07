@@ -15,4 +15,5 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/.*-\([0-9]\.\([0-9]\+\.\)\{1,2\}[0-9]\
 -include ../makefile.include
 
 docker-pre-build:
-	cp *.iso docker/
+	echo "Disabling ZTP"
+	docker run --rm -it -e LIBGUESTFS_DEBUG=0 -v $$(pwd):/work cmattoon/guestfish -a $(IMAGE) -m /dev/sda2 write /zerotouch-config "DISABLE=True"

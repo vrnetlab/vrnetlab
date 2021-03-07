@@ -381,24 +381,11 @@ class VM:
         res = []
         # mgmt interface is special - we use qemu user mode network
         res.append("-device")
-        # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it
-        if "vEOS-lab" in self.image:
-            res.append(
-                self.nic_type
-                + ",netdev=p%(i)02d,mac=%(mac)s,bus=pci.1,addr=0x2"
-                % {"i": 0, "mac": gen_mac(0)}
-            )
-        else:
-            res.append(
-                self.nic_type
-                + ",netdev=p%(i)02d,mac=%(mac)s" % {"i": 0, "mac": gen_mac(0)}
-            )
+        res.append(self.nic_type + f",netdev=p00,mac={gen_mac(0)}")
         res.append("-netdev")
         res.append(
-            "user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443"
-            % {"i": 0}
+            "user,id=p00,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443"
         )
-
         return res
 
     def gen_nics(self):
@@ -427,19 +414,18 @@ class VM:
                     )
                 )
                 sys.exit(1)
-        # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
-        if "vEOS-lab" in self.image:
-            range_start = 2
-        else:
-            range_start = 1
-        for i in range(range_start, self.num_nics + 1):
+
+        for i in range(1, self.num_nics + 1):
             # if the matching container interface ethX doesn't exist, we don't create a nic
             if not os.path.exists(f"/sys/class/net/eth{i}"):
                 continue
 
             # calc which PCI bus we are on and the local add on that PCI bus
-            pci_bus = math.floor(i / self.nics_per_pci_bus) + 1
-            addr = (i % self.nics_per_pci_bus) + 1
+            x = i
+            if "vEOS" in self.image:
+                x = i + 1
+            pci_bus = math.floor(x / self.nics_per_pci_bus) + 1
+            addr = (x % self.nics_per_pci_bus) + 1
 
             mac = ""
             if self.conn_mode == "macvtap":
@@ -450,7 +436,6 @@ class VM:
                     mac = f.readline().strip("\n")
             else:
                 mac = gen_mac(i)
-
             res.append("-device")
             res.append(
                 "%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x"
@@ -465,8 +450,7 @@ class VM:
             if self.conn_mode == "tc":
                 res.append("-netdev")
                 res.append(
-                    "tap,id=p%(i)02d,ifname=tap%(i)s,script=/etc/tc-tap-ifup,downscript=no"
-                    % {"i": i}
+                    f"tap,id=p{i:02d},ifname=tap{i},script=/etc/tc-tap-ifup,downscript=no"
                 )
             if self.conn_mode == "macvtap":
                 # if required number of nics exceeds the number of attached interfaces

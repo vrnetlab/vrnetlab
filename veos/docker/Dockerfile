@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
-MAINTAINER Kristian Larsson <kristian@spritelink.net>
-MAINTAINER Roman Dodin <dodin.roman@gmail.com>
+LABEL maintainer="Kristian Larsson <kristian@spritelink.net>"
+LABEL maintainer="Roman Dodin <dodin.roman@gmail.com>"
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
@@ -23,7 +23,6 @@ RUN apt-get update -qy \
 
 ARG IMAGE
 COPY $IMAGE* /
-COPY *.iso /
 COPY *.py /
 
 EXPOSE 22 80 161/udp 443 830 5000 6030 10000-10099 57400

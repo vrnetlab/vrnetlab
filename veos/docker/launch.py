@@ -39,15 +39,11 @@ logging.Logger.trace = trace
 class VEOS_vm(vrnetlab.VM):
     def __init__(self, hostname, username, password, conn_mode):
         disk_image = ""
-        boot_iso = ""
         for e in os.listdir("/"):
             if re.search(".vmdk$", e):
                 disk_image = "/" + e
-        for e in os.listdir("/"):
-            if re.search(".iso$", e):
-                boot_iso = "/" + e
-        if disk_image == "" or boot_iso == "":
-            logging.getLogger().info("Either disk image or boot ISO was not found")
+        if disk_image == "":
+            logging.getLogger().info("Disk image was not found")
             exit(1)
         super(VEOS_vm, self).__init__(
             username, password, disk_image=disk_image, ram=2048
@@ -55,7 +51,8 @@ class VEOS_vm(vrnetlab.VM):
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = 20
-        self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
+        self.qemu_args.extend(["-cpu", "host,level=9"])
+        self.qemu_args.extend(["-smp", "2,sockets=1,cores=1"])
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -98,8 +95,6 @@ class VEOS_vm(vrnetlab.VM):
 
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
-        # give some time vEOS to boot before applying config
-        time.sleep(15)
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
         self.wait_write("enable", ">")

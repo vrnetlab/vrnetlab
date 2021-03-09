@@ -444,6 +444,13 @@ class SROS_integrated(SROS_vm):
         res.append("-netdev")
         res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
 
+        if "chassis=ixr-r6" in self.variant["timos_line"]:
+            logger.debug(
+                "detected ixr-r6 chassis, creating a dummy network device for SFM connection"
+            )
+            res.append(f"-device virtio-net-pci,netdev=dummy,mac={vrnetlab.gen_mac(0)}")
+            res.append(f"-netdev tap,ifname=sfm-dummy,id=dummy,script=no,downscript=no")
+
         return res
 
     def bootstrap_config(self):

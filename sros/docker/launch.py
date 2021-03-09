@@ -6,7 +6,6 @@ import os
 import re
 import signal
 import sys
-import time
 import vrnetlab
 
 
@@ -77,6 +76,7 @@ SROS_VARIANTS = {
     #    },
     "ixr-r6": {
         "deployment_model": "integrated",
+        "cpu": 4,
         "min_ram": 6,  # minimum RAM requirements
         "max_nics": 10,
         "timos_line": "slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28",
@@ -338,6 +338,8 @@ class SROS_vm(vrnetlab.VM):
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.read_license()
+        if not cpu or cpu == 0 or cpu == "0":
+            cpu = 2
         self.cpu = cpu
         self.qemu_args.extend(["-cpu", "host", "-smp", f"{cpu}"])
 
@@ -417,8 +419,13 @@ class SROS_integrated(SROS_vm):
     def __init__(
         self, hostname, username, password, mode, num_nics, variant, conn_mode
     ):
+        cpu = variant.get("cpu")
         super(SROS_integrated, self).__init__(
-            username, password, ram=1024 * int(variant["min_ram"]), conn_mode=conn_mode
+            username,
+            password,
+            cpu=cpu,
+            ram=1024 * int(variant["min_ram"]),
+            conn_mode=conn_mode,
         )
         self.mode = mode
         self.num_nics = num_nics
@@ -443,6 +450,13 @@ class SROS_integrated(SROS_vm):
         )
         res.append("-netdev")
         res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
+
+        if "chassis=ixr-r6" in self.variant["timos_line"]:
+            logger.debug(
+                "detected ixr-r6 chassis, creating a dummy network device for SFM connection"
+            )
+            res.append(f"-device virtio-net-pci,netdev=dummy,mac={vrnetlab.gen_mac(0)}")
+            res.append(f"-netdev tap,ifname=sfm-dummy,id=dummy,script=no,downscript=no")
 
         return res
 
@@ -495,8 +509,13 @@ class SROS_cp(SROS_vm):
     ):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "cp"
+        cpu = variant.get("cpu")
         super(SROS_cp, self).__init__(
-            username, password, 1024 * int(variant["cp"]["min_ram"]), conn_mode
+            username,
+            password,
+            cpu=cpu,
+            ram=1024 * int(variant["cp"]["min_ram"]),
+            conn_mode=conn_mode,
         )
         self.mode = mode
         self.num_nics = 0

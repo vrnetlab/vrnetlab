@@ -430,12 +430,10 @@ class SROS_integrated(SROS_vm):
         self.hostname = hostname
 
     def gen_mgmt(self):
-        """Generate mgmt interface(s)
-
-        We override the default function since we want a fake NIC in there
+        """
+        Generate SR OS MGMT interface connected to a mgmt bridge
         """
 
-        """Generate qemu args for the mgmt interface(s)"""
         res = []
 
         res.append("-device")

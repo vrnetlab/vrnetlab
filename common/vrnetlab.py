@@ -227,6 +227,7 @@ class VM:
                 background=True,
             )
             run_command(["ip", "link", "set", "br-%s" % idx, "up"])
+            run_command(["ip", "link", "set", intf, "mtu", "65000"])
             run_command(["ip", "link", "set", intf, "master", "br-%s" % idx])
             run_command(
                 ["echo 16384 > /sys/class/net/br-%s/bridge/group_fwd_mask" % idx],
@@ -244,6 +245,7 @@ class VM:
 
         switch="vr-ovs-$1"
         ip link set $1 up
+        ip link set $1 mtu 65000
         ovs-vsctl add-port ${switch} $1"""
 
         with open("/etc/vr-ovs-ifup", "w") as f:
@@ -327,6 +329,7 @@ class VM:
         INDEX=${TAP_IF:3:3}
 
         ip link set $TAP_IF up
+        ip link set $TAP_IF mtu 65000
 
         # create tc eth<->tap redirect rules
         tc qdisc add dev eth$INDEX ingress

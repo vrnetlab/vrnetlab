@@ -849,7 +849,7 @@ if __name__ == "__main__":
     )
 
     logger.debug(
-        f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}', connection mode '{args.connection_mode}'"
+        f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}'"
     )
 
     logger.debug(f"Environment variables: {os.environ}")

@@ -75,7 +75,7 @@ class VM:
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
-                               "-drive", "if=ide,file=%s" % overlay_disk_image])
+                               "-drive", "if=ide,file=%s,file.locking=off" % overlay_disk_image])
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             self.qemu_args.insert(1, '-enable-kvm')

@@ -36,7 +36,7 @@ class VMX_vcp(vrnetlab.VM):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
         self.install_mode = install_mode
         self.num_nics = 0
-        self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
+        self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img,file.locking=off"])
         self.smbios = ["type=0,vendor=Juniper",
                        "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"]
         # insert bootstrap config file into metadata image

@@ -817,51 +817,21 @@ if __name__ == "__main__":
     # thus we need to forward connections to a different address
     vrnetlab.run_command(["pkill", "socat"])
 
-    # redirecting incoming to eth0 traffic on to SR management address
+    # redirecting incoming tcp traffic (except serial port 5000) from eth0 to SR management interface
     vrnetlab.run_command(
-        [
-            "iptables",
-            "-t",
-            "nat",
-            "-A",
-            "PREROUTING",
-            "-i",
-            "eth0",
-            "-j",
-            "DNAT",
-            "--to-destination",
-            f"{SROS_MGMT_ADDR}",
-        ]
+        f"iptables -t nat -A PREROUTING -i eth0 -p tcp ! --dport 5000 -j DNAT --to-destination {SROS_MGMT_ADDR}".split()
+    )
+    # same redirection but for UDP
+    vrnetlab.run_command(
+        f"iptables -t nat -A PREROUTING -i eth0 -p udp -j DNAT --to-destination {SROS_MGMT_ADDR}".split()
     )
     # masquerading the incoming traffic so SR OS is able to reply back
     vrnetlab.run_command(
-        [
-            "iptables",
-            "-t",
-            "nat",
-            "-A",
-            "POSTROUTING",
-            "-o",
-            "br-mgmt",
-            "-j",
-            "MASQUERADE",
-        ]
+        "iptables -t nat -A POSTROUTING -o br-mgmt -j MASQUERADE".split()
     )
 
     # allow sros breakout to management network by NATing via eth0
-    vrnetlab.run_command(
-        [
-            "iptables",
-            "-t",
-            "nat",
-            "-A",
-            "POSTROUTING",
-            "-o",
-            "eth0",
-            "-j",
-            "MASQUERADE",
-        ]
-    )
+    vrnetlab.run_command("iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
 
     logger.debug(
         f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}'"

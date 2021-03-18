@@ -1,2 +1,3 @@
 .vscode
 *.qcow2
+*.vmdk

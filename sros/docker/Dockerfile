@@ -18,6 +18,7 @@ RUN apt-get update -qy \
     dnsutils \
     openvswitch-switch \
     iptables \
+    telnet \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

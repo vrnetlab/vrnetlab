@@ -82,7 +82,7 @@ class VM:
         # append role to overlay name to have different overlay images for control and data plane images
         if hasattr(self, "role"):
             tokens = overlay_disk_image.split(".")
-            tokens[0] = tokens[0] + "-" + self.role
+            tokens[0] = tokens[0] + "-" + self.role + str(self.num)
             overlay_disk_image = ".".join(tokens)
 
         if not os.path.exists(overlay_disk_image):

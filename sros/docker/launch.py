@@ -257,12 +257,19 @@ def parse_custom_variant(self, cfg):
             # skip cp: lc: markers
             if elem in ["cp:", "lc:"]:
                 continue
+
             if "cpu=" in elem:
                 obj["cpu"] = elem.split("=")[1]
                 continue
+            else:
+                obj["cpu"] = 2
+
             if "ram=" in elem:
                 obj["min_ram"] = elem.split("=")[1]
                 continue
+            else:
+                obj["min_ram"] = 4
+
             if not skip_nics and "max_nics=" in elem:
                 obj["max_nics"] = int(elem.split("=")[1])
                 continue
@@ -677,8 +684,8 @@ class SROS(vrnetlab.VR):
     def __init__(self, hostname, username, password, mode, variant_name, conn_mode):
         super(SROS, self).__init__(username, password)
 
-        if variant_name in SROS_VARIANTS:
-            variant = SROS_VARIANTS[variant_name]
+        if variant_name.lower() in SROS_VARIANTS:
+            variant = SROS_VARIANTS[variant_name.lower()]
         else:
             variant = parse_custom_variant(self, variant_name)
 

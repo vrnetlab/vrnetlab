@@ -36,13 +36,14 @@ logging.Logger.trace = trace
 
 
 class ROS_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         for e in os.listdir("/"):
             if re.search(".vmdk$", e):
                 disk_image = "/" + e
         super(ROS_vm, self).__init__(username, password, disk_image=disk_image, ram=256)
         self.qemu_args.extend(["-boot", "n"])
-
+        self.hostname = hostname
+        self.conn_mode = conn_mode
         self.num_nics = 31
 
     def bootstrap_spin(self):
@@ -104,25 +105,34 @@ class ROS_vm(vrnetlab.VM):
             % (self.username, self.password),
             "[admin@MikroTik] > ",
         )
-        self.wait_write("\r", "[admin@MikroTik] > ")
+        self.wait_write(
+            f"/system identity set name={self.hostname}", "[admin@MikroTik] > "
+        )
+        self.wait_write("\r", f"[admin@{self.hostname}] > ")
         self.logger.info("completed bootstrap configuration")
 
 
 class ROS(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         super(ROS, self).__init__(username, password)
-        self.vms = [ROS_vm(username, password)]
+        self.vms = [ROS_vm(hostname, username, password, conn_mode)]
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--hostname", default="vr-sros", help="Router hostname")
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
+    parser.add_argument(
+        "--connection-mode",
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -133,5 +143,18 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
-    vr = ROS(args.username, args.password)
+    logger.debug(
+        f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}'"
+    )
+
+    logger.debug(f"Environment variables: {os.environ}")
+
+    vrnetlab.boot_delay()
+
+    vr = ROS(
+        args.hostname,
+        args.username,
+        args.password,
+        conn_mode=args.connection_mode,
+    )
     vr.start()

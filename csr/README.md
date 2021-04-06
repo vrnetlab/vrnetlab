@@ -22,11 +22,11 @@ This is unorthodox but works and saves us a lot of time.
 Building the docker image
 -------------------------
 Put the .qcow2 file in this directory and run `make docker-image` and
-you should be good to go. The resulting image is called `vr-csr`. You can tag
+you should be good to go. The resulting image is called `vrnetlab\vr-csr`. You can tag
 it with something else if you want, like `my-repo.example.com/vr-csr` and then
 push it to your repo. The tag is the same as the version of the CSR image, so
-if you have csr1000v-universalk9.16.04.01.qcow2 your final docker image will be called
-vr-csr:16.04.01
+if you have `csr1000v-universalk9.17.04.03-serial.qcow2` your final docker image will be 
+called `vrnetlab\vr-csr:17.07.03`
 
 Please note that you will always need to specify version when starting your
 router as the "latest" tag is not added to any images since it has no meaning
@@ -34,37 +34,18 @@ in this context.
 
 It's been tested to boot and respond to SSH with:
 
- * 16.03.01a (csr1000v-universalk9.16.03.01a.qcow2)
- * 16.04.01 (csr1000v-universalk9.16.04.01.qcow2)
+ * 17.03.02 (csr1000v-universalk9.17.03.02-serial.qcow2)
 
 Usage
 -----
 ```
-docker run -d --privileged --name my-csr-router vr-csr
+docker run -d --privileged --name my-csr-router vrnetlab/vr-csr
 ```
 
 Interface mapping
 -----------------
-IOS XE 16.03.01 and 16.04.01 does only support 10 interfaces, GigabitEthernet1 is always configured
-as a management interface and then we can only use 9 interfaces for traffic. If you configure vrnetlab
-to use more then 10 the interfaces will be mapped like the table below. 
-
-The following images have been verified to NOT exhibit this behavior
-- csr1000v-universalk9.03.16.02.S.155-3.S2-ext.qcow2
-- csr1000v-universalk9.03.17.02.S.156-1.S2-std.qcow2
-
-| vr-csr | vr-xcon |
-| :---:  |  :---:  |
-| Gi2    | 10      |
-| Gi3    | 1       |
-| Gi4    | 2       |
-| Gi5    | 3       |
-| Gi6    | 4       |
-| Gi7    | 5       |
-| Gi8    | 6       |
-| Gi9    | 7       |
-| Gi10   | 8       |
-| Gi11   | 9       |
+IOS XE 17.03.02 supports a maximum of 26 interfaces, GigabitEthernet1 is always configured
+as a management interface leaving upto 25 interfaces for traffic. 
 
 System requirements
 -------------------
@@ -79,8 +60,8 @@ License handling
 You can feed a license file into CSR1000V by putting a text file containing the
 license in this directory next to your .qcow2 image. Name the license file the
 same as your .qcow2 file but append ".license", e.g. if you have
-"csr1000v-universalk9.16.04.01.qcow2" you would name the license file
-"csr1000v-universalk9.16.04.01.qcow2.license".
+"csr1000v-universalk9.17.03.02.qcow2" you would name the license file
+"csr1000v-universalk9.16.03.03.qcow2.license".
 
 The license is bound to a specific UDI and usually expires within a given time.
 To make sure that everything works out smoothly we configure the clock to

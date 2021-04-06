@@ -12,11 +12,14 @@ import time
 
 import vrnetlab
 
+
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
+
 def handle_SIGTERM(signal, frame):
     sys.exit(0)
+
 
 signal.signal(signal.SIGINT, handle_SIGTERM)
 signal.signal(signal.SIGTERM, handle_SIGTERM)
@@ -24,12 +27,15 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 
 TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
+
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
-logging.Logger.trace = trace
 
+
+logging.Logger.trace = trace
 
 
 class CSR_vm(vrnetlab.VM):
@@ -55,14 +61,12 @@ class CSR_vm(vrnetlab.VM):
             self.image_name = "config.iso"
             self.create_boot_image()
 
-            self.qemu_args.extend(["-cdrom", "/" +self.image_name]) 
-
+            self.qemu_args.extend(["-cdrom", "/" + self.image_name])
 
     def create_boot_image(self):
-        """ Creates a iso image with a bootstrap configuration
-        """
+        """Creates a iso image with a bootstrap configuration"""
 
-        cfg_file = open('/iosxe_config.txt', 'w')
+        cfg_file = open("/iosxe_config.txt", "w")
         if self.license:
             cfg_file.write("do clock set 13:33:37 1 Jan 2010\r\n")
             cfg_file.write("interface GigabitEthernet1\r\n")
@@ -78,14 +82,18 @@ class CSR_vm(vrnetlab.VM):
         cfg_file.write("do reload\r\n")
         cfg_file.close()
 
-        genisoimage_args = ["genisoimage", "-l", "-o", "/" + self.image_name, "/iosxe_config.txt"]
+        genisoimage_args = [
+            "genisoimage",
+            "-l",
+            "-o",
+            "/" + self.image_name,
+            "/iosxe_config.txt",
+        ]
 
         subprocess.Popen(genisoimage_args)
 
-
     def bootstrap_spin(self):
-        """ This function should be called periodically to do work.
-        """
+        """This function should be called periodically to do work."""
 
         if self.spins > 300:
             # too many spins with no result ->  give up
@@ -94,8 +102,8 @@ class CSR_vm(vrnetlab.VM):
             return
 
         (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!"], 1)
-        if match: # got a match!
-            if ridx == 0: # login
+        if match:  # got a match!
+            if ridx == 0:  # login
                 if self.install_mode:
                     self.running = True
                     return
@@ -116,7 +124,7 @@ class CSR_vm(vrnetlab.VM):
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
-        if res != b'':
+        if res != b"":
             self.logger.trace("OUTPUT: %s" % res.decode())
             # reset spins if we saw some output
             self.spins = 0
@@ -125,10 +133,8 @@ class CSR_vm(vrnetlab.VM):
 
         return
 
-
     def bootstrap_config(self):
-        """ Do the actual bootstrap config
-        """
+        """Do the actual bootstrap config"""
         self.logger.info("applying bootstrap configuration")
 
         self.wait_write("", None)
@@ -136,7 +142,9 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("configure terminal", wait=">")
 
         self.wait_write("hostname csr1000v")
-        self.wait_write("username %s privilege 15 password %s" % (self.username, self.password))
+        self.wait_write(
+            "username %s privilege 15 password %s" % (self.username, self.password)
+        )
         self.wait_write("ip domain-name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
 
@@ -158,18 +166,19 @@ class CSR_vm(vrnetlab.VM):
 class CSR(vrnetlab.VR):
     def __init__(self, username, password):
         super(CSR, self).__init__(username, password)
-        self.vms = [ CSR_vm(username, password) ]
+        self.vms = [CSR_vm(username, password)]
 
 
 class CSR_installer(CSR):
-    """ CSR installer
-        
-        Will start the CSR with a mounted iso to make sure that we get
-        console output on serial, not vga.
+    """CSR installer
+
+    Will start the CSR with a mounted iso to make sure that we get
+    console output on serial, not vga.
     """
+
     def __init__(self, username, password):
         super(CSR, self).__init__(username, password)
-        self.vms = [ CSR_vm(username, password, install_mode=True)  ]
+        self.vms = [CSR_vm(username, password, install_mode=True)]
 
     def install(self):
         self.logger.info("Installing CSR")
@@ -181,13 +190,16 @@ class CSR_installer(CSR):
         self.logger.info("Installation complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--install', action='store_true', help='Install CSR')
+
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
+        "--trace", action="store_true", help="enable trace level logging"
+    )
+    parser.add_argument("--username", default="vrnetlab", help="Username")
+    parser.add_argument("--password", default="VR-netlab9", help="Password")
+    parser.add_argument("--install", action="store_true", help="Install CSR")
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

@@ -7,7 +7,6 @@ import re
 import signal
 import subprocess
 import sys
-import telnetlib
 import time
 
 import vrnetlab
@@ -39,7 +38,9 @@ logging.Logger.trace = trace
 
 
 class CSR_vm(vrnetlab.VM):
-    def __init__(self, username, password, install_mode=False):
+    def __init__(
+        self, hostname, username, password, nics, conn_mode, install_mode=False
+    ):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
@@ -54,7 +55,10 @@ class CSR_vm(vrnetlab.VM):
         super(CSR_vm, self).__init__(username, password, disk_image=disk_image)
 
         self.install_mode = install_mode
-        self.num_nics = 9
+        self.num_nics = nics
+        self.hostname = hostname
+        self.conn_mode = conn_mode
+        self.nic_type = "virtio-net-pci"
 
         if self.install_mode:
             logger.trace("install mode")
@@ -62,6 +66,13 @@ class CSR_vm(vrnetlab.VM):
             self.create_boot_image()
 
             self.qemu_args.extend(["-cdrom", "/" + self.image_name])
+
+    def gen_nics(self):
+        """
+        override gen_nics to introduce delay
+        """
+        time.sleep(5)
+        return super(CSR_vm, self).gen_nics()
 
     def create_boot_image(self):
         """Creates a iso image with a bootstrap configuration"""
@@ -75,7 +86,9 @@ class CSR_vm(vrnetlab.VM):
             cfg_file.write("exit\r\n")
             cfg_file.write("license accept end user agreement\r\n")
             cfg_file.write("yes\r\n")
-            cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
+            cfg_file.write(
+                "do license install tftp://10.0.0.2/license.lic\r\n\r\n"
+            )
 
         cfg_file.write("platform console serial\r\n\r\n")
         cfg_file.write("do wr\r\n")
@@ -95,13 +108,15 @@ class CSR_vm(vrnetlab.VM):
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 
-        if self.spins > 300:
+        if self.spins > 600:
             # too many spins with no result ->  give up
             self.stop()
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!"], 1)
+        (ridx, match, res) = self.tn.expect(
+            [b"Press RETURN to get started!"], 1
+        )
         if match:  # got a match!
             if ridx == 0:  # login
                 if self.install_mode:
@@ -141,9 +156,10 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("enable", wait=">")
         self.wait_write("configure terminal", wait=">")
 
-        self.wait_write("hostname csr1000v")
+        self.wait_write("hostname %s" % (self.hostname))
         self.wait_write(
-            "username %s privilege 15 password %s" % (self.username, self.password)
+            "username %s privilege 15 password %s"
+            % (self.username, self.password)
         )
         self.wait_write("ip domain-name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
@@ -164,9 +180,9 @@ class CSR_vm(vrnetlab.VM):
 
 
 class CSR(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, nics, conn_mode):
         super(CSR, self).__init__(username, password)
-        self.vms = [CSR_vm(username, password)]
+        self.vms = [CSR_vm(hostname, username, password, nics, conn_mode)]
 
 
 class CSR_installer(CSR):
@@ -176,9 +192,18 @@ class CSR_installer(CSR):
     console output on serial, not vga.
     """
 
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, nics, conn_mode):
         super(CSR, self).__init__(username, password)
-        self.vms = [CSR_vm(username, password, install_mode=True)]
+        self.vms = [
+            CSR_vm(
+                hostname,
+                username,
+                password,
+                nics,
+                conn_mode,
+                install_mode=True,
+            )
+        ]
 
     def install(self):
         self.logger.info("Installing CSR")
@@ -200,6 +225,15 @@ if __name__ == "__main__":
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument("--install", action="store_true", help="Install CSR")
+    parser.add_argument(
+        "--hostname", default="csr1000v", help="Router Hostname"
+    )
+    parser.add_argument("--nics", type=int, default=9, help="Number of NICS")
+    parser.add_argument(
+        "--connection-mode",
+        default="vrxcon",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -211,8 +245,20 @@ if __name__ == "__main__":
         logger.setLevel(1)
 
     if args.install:
-        vr = CSR_installer(args.username, args.password)
+        vr = CSR_installer(
+            args.hostname,
+            args.username,
+            args.password,
+            args.nics,
+            args.connection_mode,
+        )
         vr.install()
     else:
-        vr = CSR(args.username, args.password)
+        vr = CSR(
+            args.hostname,
+            args.username,
+            args.password,
+            args.nics,
+            args.connection_mode,
+        )
         vr.start()

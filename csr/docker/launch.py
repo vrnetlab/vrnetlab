@@ -161,7 +161,7 @@ class CSR_vm(vrnetlab.VM):
             "username %s privilege 15 password %s"
             % (self.username, self.password)
         )
-        self.wait_write("ip domain-name example.com")
+        self.wait_write("ip domain name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
 
         self.wait_write("interface GigabitEthernet1")

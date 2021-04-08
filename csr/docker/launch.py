@@ -91,6 +91,7 @@ class CSR_vm(vrnetlab.VM):
             )
 
         cfg_file.write("platform console serial\r\n\r\n")
+        cfg_file.write("do clear platform software vnic-if nvtable\r\n\r\n")
         cfg_file.write("do wr\r\n")
         cfg_file.write("do reload\r\n")
         cfg_file.close()

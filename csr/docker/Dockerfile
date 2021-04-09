@@ -1,7 +1,8 @@
-FROM debian:stretch
+FROM ubuntu:20.04 
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
+MAINTAINER Denis Pointer <git@dpnet.ca>
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qy \
  && apt-get upgrade -qy \
@@ -11,6 +12,11 @@ RUN apt-get update -qy \
     python3-ipy \
     socat \
     qemu-kvm \
+    tcpdump \
+    ssh \ 
+    inetutils-ping \
+    dnsutils \
+    telnet \
     genisoimage \
  && rm -rf /var/lib/apt/lists/*
 

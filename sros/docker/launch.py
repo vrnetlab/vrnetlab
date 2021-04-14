@@ -7,6 +7,7 @@ import re
 import signal
 import sys
 import time
+import shutil
 import vrnetlab
 
 
@@ -700,7 +701,7 @@ class SROS(vrnetlab.VR):
             if re.search(r"\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
             if re.search(r"\.license$", e):
-                os.rename("/" + e, "/tftpboot/license.txt")
+                shutil.move("/" + e, "/tftpboot/license.txt")
 
         self.license = False
         if os.path.isfile("/tftpboot/license.txt"):

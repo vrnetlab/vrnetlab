@@ -61,7 +61,13 @@ class VM:
         #  various settings
         self.uuid = None
         self.fake_start_date = None
-        self.nic_type = "e1000"
+        # fixup nic_type for csr1000v
+        self.logger.debug("The disk image is %s" % self.image)
+        if 'csr1000v' in self.image:
+            self.logger.debug("csr1000v image identified, setting nic_type to virtio-net-pci")
+            self.nic_type = "virtio-net-pci"
+        else:
+            self.nic_type = "e1000"
         self.num_nics = 0
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []

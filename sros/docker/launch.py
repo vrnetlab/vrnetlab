@@ -473,6 +473,10 @@ class SROS_integrated(SROS_vm):
         """
         Override gen_nics by introducing a delay to let eth1+ interfaces to appear
         """
+        logger.debug("waiting for eth1+ interfaces to appear...")
+        while not os.path.exists("/sys/class/net/eth1"):
+            time.sleep(1)
+        logger.debug("waiting 5sec more for container interfaces to settle...")
         time.sleep(5)
         return super(SROS_integrated, self).gen_nics()
 

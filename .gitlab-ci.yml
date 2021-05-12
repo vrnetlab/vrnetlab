@@ -53,6 +53,9 @@ csr:
 nxos:
   <<: *build-template
 
+nxos9kv:
+  <<: *build-template
+
 routeros:
   <<: *build-template
 

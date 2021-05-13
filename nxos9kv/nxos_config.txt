@@ -1,0 +1,5 @@
+hostname nexus-switch
+username admin password Cisco1234
+interface mgmt0
+  vrf member management
+  ip address 10.0.0.15/24

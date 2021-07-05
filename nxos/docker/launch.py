@@ -33,7 +33,7 @@ logging.Logger.trace = trace
 
 
 class NXOS_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
@@ -42,6 +42,19 @@ class NXOS_vm(vrnetlab.VM):
         self.credentials = [
                 ['admin', 'admin']
             ]
+        self.hostname = hostname
+        self.conn_mode = conn_mode
+
+    def gen_nics(self):
+        """
+        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
+        """
+        logger.debug("waiting for eth1+ interfaces to appear...")
+        while not os.path.exists("/sys/class/net/eth1"):
+            time.sleep(1)
+        logger.debug("waiting 5sec more for container interfaces to settle...")
+        time.sleep(5)
+        return super(NXOS_vm, self).gen_nics()
 
 
     def bootstrap_spin(self):
@@ -97,6 +110,7 @@ class NXOS_vm(vrnetlab.VM):
         self.wait_write("", None)
         self.wait_write("configure")
         self.wait_write("username %s password 0 %s role network-admin" % (self.username, self.password))
+        self.wait_write("hostname %s" % (self.hostname))
 
         # configure mgmt interface
         self.wait_write("interface mgmt0")
@@ -107,16 +121,22 @@ class NXOS_vm(vrnetlab.VM):
 
 
 class NXOS(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         super(NXOS, self).__init__(username, password)
-        self.vms = [ NXOS_vm(username, password) ]
+        self.vms = [ NXOS_vm(hostname, username, password, conn_mode) ]
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
+    parser.add_argument("--hostname", default="vr-nxos", help="Router hostname")
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
+    parser.add_argument('--username', default='admin', help='Username')
+    parser.add_argument('--password', default='admin', help='Password')
+    parser.add_argument(
+        "--connection-mode",
+        default="tc",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -127,5 +147,6 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = NXOS(args.username, args.password)
+    vrnetlab.boot_delay()
+    vr = NXOS(args.hostname, args.username, args.password, conn_mode=args.connection_mode)
     vr.start()

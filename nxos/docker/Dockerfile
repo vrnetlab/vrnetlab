@@ -1,4 +1,4 @@
-FROM debian:stretch
+  FROM ubuntu:20.04
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,6 +11,9 @@ RUN apt-get update -qy \
     python3-ipy \
     socat \
     qemu-kvm \
+    tcpdump \
+    procps \
+    openvswitch-switch \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

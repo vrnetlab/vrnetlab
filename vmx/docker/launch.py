@@ -32,10 +32,12 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, version, install_mode=False):
+    def __init__(self, username, password, uuid, image, version, install_mode=False):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
         self.install_mode = install_mode
         self.num_nics = 0
+        if uuid:
+            self.uuid = uuid
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
         self.smbios = ["type=0,vendor=Juniper",
                        "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"]
@@ -243,14 +245,14 @@ class VMX(vrnetlab.VR):
     """ Juniper vMX router
     """
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, uuid):
         self.version = None
         self.version_info = []
         self.read_version()
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version), VMX_vfpc(self.version) ]
+        self.vms = [ VMX_vcp(username, password, uuid, "/vmx/" + self.vcp_image, self.version), VMX_vfpc(self.version) ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -280,9 +282,9 @@ class VMX_installer(VMX):
         self.version_info = []
         self.read_version()
 
-        super().__init__(username, password)
+        super().__init__(username, password, None)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version, install_mode=True) ]
+        self.vms = [ VMX_vcp(username, password, None, "/vmx/" + self.vcp_image, self.version, install_mode=True) ]
 
     def install(self):
         self.logger.info("Installing VMX")
@@ -324,6 +326,8 @@ if __name__ == '__main__':
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install vMX')
     parser.add_argument('--num-nics', type=int, default=96, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
+    parser.add_argument('--uuid', type=vrnetlab.argparse_type_uuid, help='UUID')
+
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -338,5 +342,5 @@ if __name__ == '__main__':
         vr = VMX_installer(args.username, args.password)
         vr.install()
     else:
-        vr = VMX(args.username, args.password)
+        vr = VMX(args.username, args.password, args.uuid)
         vr.start()

@@ -9,6 +9,7 @@ import re
 import subprocess
 import telnetlib
 import time
+import uuid
 
 MAX_RETRIES=60
 
@@ -35,6 +36,12 @@ def run_command(cmd, cwd=None, background=False):
     except:
         pass
     return res
+
+
+
+def argparse_type_uuid(arg_value):
+    uuid.UUID(str(arg_value))
+    return arg_value
 
 
 
@@ -91,6 +98,8 @@ class VM:
         # uuid
         if self.uuid:
             cmd.extend(["-uuid", self.uuid])
+        else:
+            cmd.extend(["-uuid", str(uuid.uuid4())])
 
         # do we have a fake start date?
         if self.fake_start_date:

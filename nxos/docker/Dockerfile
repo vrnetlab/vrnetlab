@@ -1,4 +1,4 @@
-  FROM ubuntu:20.04
+FROM ubuntu:20.04
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive

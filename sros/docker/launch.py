@@ -262,26 +262,28 @@ def parse_custom_variant(self, cfg):
             if "cpu=" in elem:
                 obj["cpu"] = elem.split("=")[1]
                 continue
-            else:
-                obj["cpu"] = 2
 
             if "ram=" in elem:
                 obj["min_ram"] = elem.split("=")[1]
                 continue
-            else:
-                obj["min_ram"] = 4
 
             if not skip_nics and "max_nics=" in elem:
                 obj["max_nics"] = int(elem.split("=")[1])
                 continue
             timos_line.append(elem)
         obj["timos_line"] = " ".join(timos_line)
+        # set default cpu and ram
+        if "cpu" not in obj:
+            obj["cpu"] = 2
+        if "min_ram" not in obj:
+            obj["min_ram"] = 4
         return obj
 
-    # init variant
+    # init variant object that gets returned
     variant = {
         "max_nics": 40
     }  # some default value for num nics if it is not provided in user cfg
+    # parsing distributed custom variant
     if "___" in cfg:
         variant["deployment_model"] = "distributed"
         for hw_part in cfg.split("___"):
@@ -529,7 +531,7 @@ class SROS_cp(SROS_vm):
     ):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "cp"
-        cpu = variant.get("cpu")
+        cpu = variant["cp"].get("cpu")
         super(SROS_cp, self).__init__(
             username,
             password,
@@ -625,10 +627,16 @@ class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
     def __init__(self, variant, conn_mode, num_nics, slot=1):
-        # cp - control plane. role is used to create a separate overlay image name
+        # lc - line card. role is used to create a separate overlay image name
         self.role = "lc"
+        cpu = variant["lc"].get("cpu")
         super(SROS_lc, self).__init__(
-            None, None, 1024 * int(variant["lc"]["min_ram"]), conn_mode, num=slot
+            None,
+            None,
+            cpu=cpu,
+            ram=1024 * int(variant["lc"]["min_ram"]),
+            conn_mode=conn_mode,
+            num=slot,
         )
 
         self.smbios = ["type=1,product=TIMOS:{}".format(variant["lc"]["timos_line"])]

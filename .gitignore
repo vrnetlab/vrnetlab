@@ -1,3 +1,9 @@
 .vscode
+.idea
+venv
 *.qcow2
 *.vmdk
+*.iso
+
+.DS_Store
+*/.DS_Store

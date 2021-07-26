@@ -58,6 +58,13 @@ class PAN_vm(vrnetlab.VM):
         # pan wants a uuid it seems (for licensing reasons?!)
         self.qemu_args.extend(["-uuid", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"])
 
+    def gen_nics(self):
+        """
+        override gen_nics to introduce delay
+        """
+        time.sleep(5)
+        return super(PAN_vm, self).gen_nics()
+
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 

@@ -50,7 +50,8 @@ class PAN_vm(vrnetlab.VM):
         )
         self.hostname = hostname
         self.conn_mode = conn_mode
-        self.num_nics = 8
+        # mgmt + 24 that show up in the vm, may as well populate them all in vrnetlab right away
+        self.num_nics = 25
         self.nic_type = "virtio-net-pci"
         self.qemu_args.extend(["-cpu", "host,level=9"])
         self.qemu_args.extend(["-smp", "2,sockets=1,cores=1"])

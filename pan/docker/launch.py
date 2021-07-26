@@ -190,7 +190,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
-    parser.add_argument("--hostname", default="vr-xrv9k", help="Router hostname")
+    parser.add_argument("--hostname", default="vr-pan", help="Router hostname")
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument(

@@ -56,7 +56,7 @@ class PAN_vm(vrnetlab.VM):
         self.qemu_args.extend(["-cpu", "host,level=9"])
         self.qemu_args.extend(["-smp", "2,sockets=1,cores=1"])
         # pan wants a uuid it seems (for licensing reasons?!)
-        self.qemu_args.extend(["-uuid", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"])
+        self.uuid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
     def gen_nics(self):
         """

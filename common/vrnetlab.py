@@ -412,7 +412,7 @@ class VM:
         inf_path = Path("/sys/class/net/")
         while True:
             provisioned_nics = list(inf_path.glob("eth*"))
-            # if we see num provisioned + (for mgmt) we have all nics ready to roll!
+            # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
             if len(provisioned_nics) >= self.num_provisioned_nics + 1:
                 self.logger.debug("interfaces provisioned, continuing...")
                 return

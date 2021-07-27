@@ -131,6 +131,7 @@ class N9KV_vm(vrnetlab.VM):
         self.logger.info("applying bootstrap configuration")
         self.wait_write("", None)
         self.wait_write("configure")
+        self.wait_write(f"hostname {self.hostname}")
         self.wait_write(
             f"username {self.username} password 0 {self.password} role network-admin"
         )
@@ -144,6 +145,8 @@ class N9KV_vm(vrnetlab.VM):
         self.wait_write("feature scp-server")
         self.wait_write("feature nxapi")
         self.wait_write("feature telnet")
+        self.wait_write("feature netconf")
+        self.wait_write("feature grpc")
         self.wait_write("exit")
         self.wait_write("copy running-config startup-config")
 

@@ -10,6 +10,7 @@ import subprocess
 import telnetlib
 import time
 import sys
+from pathlib import Path
 
 MAX_RETRIES = 60
 
@@ -76,6 +77,8 @@ class VM:
         self.fake_start_date = None
         self.nic_type = "e1000"
         self.num_nics = 0
+        # number of nics that are actually *provisioned* (as in nics that will be added to container)
+        self.num_provisioned_nics = int(os.environ.get("CLAB_ENV_INTFS", 0))
         self.nics_per_pci_bus = 26  # tested to work with XRv
         self.smbios = []
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
@@ -391,8 +394,26 @@ class VM:
         )
         return res
 
+    def nic_provision_delay(self, num_provisioned_nics: int) -> None:
+        if self.num_provisioned_nics == 0:
+            # no nics provisioned and/or not running from containerlab so we can bail
+            return
+
+        self.logger.debug("waiting for provisioned interfaces to appear...")
+
+        inf_path = Path("/sys/class/net/")
+        while True:
+            provisioned_nics = list(inf_path.glob("eth*"))
+            # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
+            if len(provisioned_nics) >= num_provisioned_nics + 1:
+                self.logger.debug("interfaces provisioned, continuing...")
+                return
+            time.sleep(5)
+
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""
+        self.nic_provision_delay(num_provisioned_nics=self.num_provisioned_nics)
+
         res = []
         bridges = []
         if self.conn_mode == "tc":

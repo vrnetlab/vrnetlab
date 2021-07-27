@@ -67,13 +67,6 @@ class CSR_vm(vrnetlab.VM):
 
             self.qemu_args.extend(["-cdrom", "/" + self.image_name])
 
-    def gen_nics(self):
-        """
-        override gen_nics to introduce delay
-        """
-        time.sleep(5)
-        return super(CSR_vm, self).gen_nics()
-
     def create_boot_image(self):
         """Creates a iso image with a bootstrap configuration"""
 

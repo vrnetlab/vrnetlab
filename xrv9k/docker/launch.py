@@ -110,13 +110,6 @@ class XRV_vm(vrnetlab.VM):
 
         return res
 
-    def gen_nics(self):
-        """
-        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
-        """
-        time.sleep(5)
-        return super(XRV_vm, self).gen_nics()
-
     def bootstrap_spin(self):
         """"""
 

@@ -50,12 +50,13 @@ class PAN_vm(vrnetlab.VM):
         )
         self.hostname = hostname
         self.conn_mode = conn_mode
-        self.num_nics = 8
+        # mgmt + 24 that show up in the vm, may as well populate them all in vrnetlab right away
+        self.num_nics = 25
         self.nic_type = "virtio-net-pci"
         self.qemu_args.extend(["-cpu", "host,level=9"])
         self.qemu_args.extend(["-smp", "2,sockets=1,cores=1"])
         # pan wants a uuid it seems (for licensing reasons?!)
-        self.qemu_args.extend(["-uuid", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"])
+        self.uuid = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
-    parser.add_argument("--hostname", default="vr-xrv9k", help="Router hostname")
+    parser.add_argument("--hostname", default="vr-pan", help="Router hostname")
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument(

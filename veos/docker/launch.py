@@ -152,14 +152,6 @@ class VEOS_vm(vrnetlab.VM):
 
         return res
 
-    def gen_nics(self):
-        """
-        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
-        """
-        time.sleep(5)
-        res = super(VEOS_vm, self).gen_nics()
-        return res
-
 
 class VEOS(vrnetlab.VR):
     def __init__(self, hostname, username, password, conn_mode):

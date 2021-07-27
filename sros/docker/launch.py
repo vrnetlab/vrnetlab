@@ -471,17 +471,6 @@ class SROS_integrated(SROS_vm):
 
         return res
 
-    def gen_nics(self):
-        """
-        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
-        """
-        logger.debug("waiting for eth1+ interfaces to appear...")
-        while not os.path.exists("/sys/class/net/eth1"):
-            time.sleep(1)
-        logger.debug("waiting 5sec more for container interfaces to settle...")
-        time.sleep(5)
-        return super(SROS_integrated, self).gen_nics()
-
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
 
@@ -678,13 +667,6 @@ class SROS_lc(SROS_vm):
             ]
         )
         return res
-
-    def gen_nics(self):
-        """
-        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
-        """
-        time.sleep(5)
-        return super(SROS_lc, self).gen_nics()
 
     def bootstrap_spin(self):
         """We have nothing to do for VSR-SIM line cards"""

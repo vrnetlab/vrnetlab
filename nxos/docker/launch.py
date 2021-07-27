@@ -49,17 +49,6 @@ class NXOS_vm(vrnetlab.VM):
         self.conn_mode = conn_mode
         self.qemu_args.extend(["-cpu", "host", "-smp", "2"])
 
-    def gen_nics(self):
-        """
-        Override gen_nics by introducing a delay to let eth1+ interfaces to appear
-        """
-        logger.debug("waiting for eth1+ interfaces to appear...")
-        while not os.path.exists("/sys/class/net/eth1"):
-            time.sleep(1)
-        logger.debug("waiting 5sec more for container interfaces to settle...")
-        time.sleep(5)
-        return super(NXOS_vm, self).gen_nics()
-
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 

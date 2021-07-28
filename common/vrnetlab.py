@@ -394,11 +394,19 @@ class VM:
         res.append(self.nic_type + f",netdev=p00,mac={gen_mac(0)}")
         res.append("-netdev")
         res.append(
-            "user,id=p00,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443"
+            "user,id=p00,net=10.0.0.0/24,"
+            "tftp=/tftpboot,"
+            "hostfwd=tcp::2022-10.0.0.15:22,"
+            "hostfwd=udp::2161-10.0.0.15:161,"
+            "hostfwd=tcp::2830-10.0.0.15:830,"
+            "hostfwd=tcp::2080-10.0.0.15:80,"
+            "hostfwd=tcp::2443-10.0.0.15:443"
         )
         return res
 
-    def nic_provision_delay(self, num_provisioned_nics: int) -> None:
+    def nic_provision_delay(self) -> None:
+        self.logger.debug(f"number of provisioned data plane interfaces is {self.num_provisioned_nics}")
+
         if self.num_provisioned_nics == 0:
             # no nics provisioned and/or not running from containerlab so we can bail
             return
@@ -422,7 +430,7 @@ class VM:
 
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""
-        self.nic_provision_delay(num_provisioned_nics=self.num_provisioned_nics)
+        self.nic_provision_delay()
 
         res = []
         bridges = []

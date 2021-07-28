@@ -417,7 +417,7 @@ class VM:
         while True:
             provisioned_nics = list(inf_path.glob("eth*"))
             # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
-            if len(provisioned_nics) >= num_provisioned_nics + 1:
+            if len(provisioned_nics) >= self.num_provisioned_nics + 1:
                 self.highest_provisioned_nic_num = max(
                     [int(re.search(pattern=r"\d+", string=nic.name).group()) for nic in provisioned_nics]
                 )

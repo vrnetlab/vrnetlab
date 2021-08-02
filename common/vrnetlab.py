@@ -79,6 +79,10 @@ class VM:
         self.num_nics = 0
         # number of nics that are actually *provisioned* (as in nics that will be added to container)
         self.num_provisioned_nics = int(os.environ.get("CLAB_INTFS", 0))
+        # "highest" provisioned nic num -- used for making sure we can allocate nics without needing
+        # to have them allocated sequential from eth1
+        self.highest_provisioned_nic_num = 0
+
         self.nics_per_pci_bus = 26  # tested to work with XRv
         self.smbios = []
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
@@ -414,6 +418,12 @@ class VM:
             provisioned_nics = list(inf_path.glob("eth*"))
             # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
             if len(provisioned_nics) >= self.num_provisioned_nics + 1:
+                self.highest_provisioned_nic_num = max(
+                    [int(re.search(pattern=r"\d+", string=nic.name).group()) for nic in provisioned_nics]
+                )
+                self.logger.debug(
+                    f"highest allocated interface id determined to be: {self.highest_provisioned_nic_num}..."
+                )
                 self.logger.debug("interfaces provisioned, continuing...")
                 return
             time.sleep(5)
@@ -448,16 +458,38 @@ class VM:
                 sys.exit(1)
 
         for i in range(1, self.num_nics + 1):
-            # if the matching container interface ethX doesn't exist, we don't create a nic
-            if not os.path.exists(f"/sys/class/net/eth{i}"):
-                continue
-
             # calc which PCI bus we are on and the local add on that PCI bus
             x = i
             if "vEOS" in self.image:
                 x = i + 1
             pci_bus = math.floor(x / self.nics_per_pci_bus) + 1
             addr = (x % self.nics_per_pci_bus) + 1
+
+            # if the matching container interface ethX doesn't exist, we don't create a nic
+            if not os.path.exists(f"/sys/class/net/eth{i}"):
+                if i >= self.highest_provisioned_nic_num:
+                    continue
+
+                # current intf number is *under* the highest provisioned nic number, so we need
+                # to allocate a "dummy" interface so that when the users data plane interface is
+                # actually provisioned it is provisioned in the appropriate "slot"
+                res.extend(
+                    [
+                        "-device",
+                        "%(nic_type)s,"
+                        "netdev=p%(i)02d,"
+                        "bus=pci.%(pci_bus)s,"
+                        "addr=0x%(addr)x" % {
+                            "nic_type": self.nic_type,
+                            "i": i,
+                            "pci_bus": pci_bus,
+                            "addr": addr,
+                        },
+                        "-netdev",
+                        "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}
+                     ]
+                )
+                continue
 
             mac = ""
             if self.conn_mode == "macvtap":

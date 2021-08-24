@@ -16,13 +16,15 @@ RUN apt-get update -qy \
     ssh \
     inetutils-ping \
     dnsutils \
+    iptables \
     telnet \
+    ftp \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
 COPY $IMAGE* /
 COPY *.py /
 
-EXPOSE 22 161/udp 830 5000 10000-10099
+EXPOSE 20 21 22 161/udp 830 5000 10000-10099
 HEALTHCHECK CMD ["/healthcheck.py"]
 ENTRYPOINT ["/launch.py"]

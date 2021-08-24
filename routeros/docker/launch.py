@@ -6,6 +6,7 @@ import os
 import re
 import signal
 import sys
+import ftplib
 
 import vrnetlab
 
@@ -26,6 +27,17 @@ TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
 
+# TODO: UPDATE COMMENT FOR FTP
+# to allow writing config from tftp location we needed to spin up a normal
+# tftp server in container host system. To access the host from qemu VM
+# we needed to put SR OS management interface in the container host network namespace
+# this is done by putting SR OS management interface with into a br-mgmt bridge
+# the bridge and SR OS mgmt interfaces will be addressed as follows
+BRIDGE_ADDR = "172.31.255.29"
+ROS_MGMT_ADDR = "172.31.255.30"
+PREFIX_LENGTH = "30"
+CONFIG_FILE = "/tftpboot/config.auto.rsc"
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
@@ -45,6 +57,38 @@ class ROS_vm(vrnetlab.VM):
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = 31
+
+        # set up bridge for management interface to a localhost
+        self.logger.info("Creating br-mgmt bridge for management interface")
+        # This is to whitlist all bridges
+        vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
+        vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+        vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
+        vrnetlab.run_command(
+            ["echo 16384 > /sys/class/net/br-mgmt/bridge/group_fwd_mask"],
+            shell=True,
+        )
+        vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
+        vrnetlab.run_command(
+            ["ip", "addr", "add", "dev", "br-mgmt", f"{BRIDGE_ADDR}/{PREFIX_LENGTH}"]
+        )
+
+    def gen_mgmt(self):
+        """
+        Generate RouterOS MGMT interface connected to a mgmt bridge
+        """
+
+        res = []
+
+        res.append("-device")
+
+        res.append(
+            self.nic_type + ",netdev=br-mgmt,mac=%(mac)s" % {"mac": vrnetlab.gen_mac(0)}
+        )
+        res.append("-netdev")
+        res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
+
+        return res
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -78,6 +122,9 @@ class ROS_vm(vrnetlab.VM):
                 # startup time?
                 startup_time = datetime.datetime.now() - self.start_time
                 self.logger.info("Startup complete in: %s" % startup_time)
+                # If a config file exists, push it to the device
+                if os.path.exists(CONFIG_FILE):
+                    self.push_ftp_config()
                 # mark as running
                 self.running = True
                 return
@@ -97,12 +144,16 @@ class ROS_vm(vrnetlab.VM):
         """Do the actual bootstrap config"""
         self.logger.info("applying bootstrap configuration")
         self.wait_write(
-            "/ip address add interface=ether1 address=10.0.0.15 netmask=255.255.255.0",
+            f"/ip address add interface=ether1 address={ROS_MGMT_ADDR}/{PREFIX_LENGTH}",
             "[admin@MikroTik] > ",
         )
+        if self.username == "admin":
+            operation = "set"
+        else:
+            operation = "add"
         self.wait_write(
-            '/user add name=%s password="%s" group=full'
-            % (self.username, self.password),
+            '/user %s name=%s password="%s" group=full'
+            % (operation, self.username, self.password),
             "[admin@MikroTik] > ",
         )
         self.wait_write(
@@ -110,6 +161,16 @@ class ROS_vm(vrnetlab.VM):
         )
         self.wait_write("\r", f"[admin@{self.hostname}] > ")
         self.logger.info("completed bootstrap configuration")
+
+    def push_ftp_config(self):
+        """ Push the config file via """
+        self.logger.info("Pushing config via FTP")
+        session = ftplib.FTP(ROS_MGMT_ADDR,self.username,self.password)
+        file = open(CONFIG_FILE,'rb')                  # file to send
+        session.storbinary('STOR config.auto.rsc', file)     # send the file
+        file.close()                                    # close file and FTP
+        session.quit()
+        self.logger.info("config pushed via FTP")
 
 
 class ROS(vrnetlab.VR):
@@ -122,7 +183,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("--hostname", default="vr-sros", help="Router hostname")
+    parser.add_argument("--hostname", default="vr-ros", help="Router hostname")
     parser.add_argument(
         "--trace", action="store_true", help="enable trace level logging"
     )
@@ -143,6 +204,28 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
+    # kill origin socats since we use bridge interface
+    # for Router OS management interface
+    # thus we need to forward connections to a different address
+    vrnetlab.run_command(["pkill", "socat"])
+
+    # redirecting incoming tcp traffic (except serial port 5000) from eth0 to RouterOS management interface
+    vrnetlab.run_command(
+        f"iptables -t nat -A PREROUTING -i eth0 -p tcp ! --dport 5000 -j DNAT --to-destination {ROS_MGMT_ADDR}".split()
+    )
+    # same redirection but for UDP
+    vrnetlab.run_command(
+        f"iptables -t nat -A PREROUTING -i eth0 -p udp -j DNAT --to-destination {ROS_MGMT_ADDR}".split()
+    )
+    # masquerading the incoming traffic so RouterOS is able to reply back
+    vrnetlab.run_command(
+        "iptables -t nat -A POSTROUTING -o br-mgmt -j MASQUERADE".split()
+    )
+
+    # allow RouterOS breakout to management network by NATing via eth0
+    vrnetlab.run_command("iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
+
+
     logger.debug(
         f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}'"
     )
@@ -158,3 +241,4 @@ if __name__ == "__main__":
         conn_mode=args.connection_mode,
     )
     vr.start()
+

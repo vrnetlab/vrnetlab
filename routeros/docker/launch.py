@@ -27,12 +27,11 @@ TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
 
-# TODO: UPDATE COMMENT FOR FTP
-# to allow writing config from tftp location we needed to spin up a normal
-# tftp server in container host system. To access the host from qemu VM
-# we needed to put SR OS management interface in the container host network namespace
-# this is done by putting SR OS management interface with into a br-mgmt bridge
-# the bridge and SR OS mgmt interfaces will be addressed as follows
+# to allow writing config from ftp location we need to spin up a normal ftp client
+# in the container host system. To access the host from qemu VM
+# we needed to put the management interface in the container host network namespace
+# this is done by putting the management interface with into a br-mgmt bridge
+# the bridge and the mgmt interfaces will be addressed as follows
 BRIDGE_ADDR = "172.31.255.29"
 ROS_MGMT_ADDR = "172.31.255.30"
 PREFIX_LENGTH = "30"

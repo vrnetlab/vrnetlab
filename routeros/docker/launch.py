@@ -146,15 +146,20 @@ class ROS_vm(vrnetlab.VM):
             f"/ip address add interface=ether1 address={ROS_MGMT_ADDR}/{PREFIX_LENGTH}",
             "[admin@MikroTik] > ",
         )
+        # Update admin account if username==admin and there is a password set
         if self.username == "admin":
-            operation = "set"
+            if self.password != "":
+                self.wait_write(
+                    f"/user set {self.username} password={self.password}",
+                    "[admin@MikroTik] > ",
+                )
         else:
-            operation = "add"
-        self.wait_write(
-            '/user %s name=%s password="%s" group=full'
-            % (operation, self.username, self.password),
-            "[admin@MikroTik] > ",
-        )
+            # Create new user if username != admin
+            self.wait_write(
+                    f"/user add name={self.username} password={self.password} group=full",
+                    "[admin@MikroTik] > ",
+                )
+
         self.wait_write(
             f"/system identity set name={self.hostname}", "[admin@MikroTik] > "
         )
@@ -203,6 +208,9 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
+    # make tftpboot writable for saving ROS config
+    vrnetlab.run_command(["chmod", "-R", "777", "/tftpboot"])
+
     # kill origin socats since we use bridge interface
     # for Router OS management interface
     # thus we need to forward connections to a different address
@@ -239,5 +247,5 @@ if __name__ == "__main__":
         args.password,
         conn_mode=args.connection_mode,
     )
-    vr.start()
+    vr.start(add_fwd_rules=False)
 

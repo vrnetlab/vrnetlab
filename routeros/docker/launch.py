@@ -35,7 +35,7 @@ logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 BRIDGE_ADDR = "172.31.255.29"
 ROS_MGMT_ADDR = "172.31.255.30"
 PREFIX_LENGTH = "30"
-CONFIG_FILE = "/tftpboot/config.auto.rsc"
+CONFIG_FILE = "/ftpboot/config.auto.rsc"
 
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
@@ -118,12 +118,14 @@ class ROS_vm(vrnetlab.VM):
                 self.bootstrap_config()
                 # close telnet connection
                 self.tn.close()
-                # startup time?
-                startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
+                
                 # If a config file exists, push it to the device
                 if os.path.exists(CONFIG_FILE):
                     self.push_ftp_config()
+
+                # startup time?
+                startup_time = datetime.datetime.now() - self.start_time
+                self.logger.info("Startup complete in: %s" % startup_time)
                 # mark as running
                 self.running = True
                 return
@@ -208,8 +210,8 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
 
-    # make tftpboot writable for saving ROS config
-    vrnetlab.run_command(["chmod", "-R", "777", "/tftpboot"])
+    # make ftpboot writable for saving ROS config
+    vrnetlab.run_command(["chmod", "-R", "777", "/ftpboot"])
 
     # kill origin socats since we use bridge interface
     # for Router OS management interface

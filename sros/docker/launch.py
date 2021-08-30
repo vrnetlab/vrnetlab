@@ -97,7 +97,7 @@ SROS_VARIANTS = {
         "lc": {
             "min_ram": 4,
             "timos_line": "chassis=ixr-s slot=1 card=imm48-sfp++6-qsfp28 mda/1=m48-sfp++6-qsfp28",
-            "card_config": """/configure card 1 card-type m48-sfp++6-qsfp28
+            "card_config": """/configure card 1 card-type imm48-sfp++6-qsfp28
             /configure card 1 mda 1 mda-type m48-sfp++6-qsfp28
             """,
         },

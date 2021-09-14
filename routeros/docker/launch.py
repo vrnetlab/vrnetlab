@@ -171,11 +171,23 @@ class ROS_vm(vrnetlab.VM):
     def push_ftp_config(self):
         """ Push the config file via """
         self.logger.info("Pushing config via FTP")
-        session = ftplib.FTP(ROS_MGMT_ADDR,self.username,self.password)
-        file = open(CONFIG_FILE,'rb')                  # file to send
-        session.storbinary('STOR config.auto.rsc', file)     # send the file
-        file.close()                                    # close file and FTP
-        session.quit()
+        #Adding a retry field as FTP sometimes fails with a lot of nodes
+        max_attempts = 5
+        for i in range(1,max_attempts+1):
+            try:
+                with ftplib.FTP(ROS_MGMT_ADDR,self.username,self.password) as session:
+                    with open(CONFIG_FILE,'rb') as file:                  # file to send
+                        session.storbinary('STOR config.auto.rsc', file)     # send the file
+                        file.close()                                    # close file and FTP
+                        session.quit()
+                        break
+            except ftplib.all_errors as e:
+                self.logger.info(f"FTP attempt #{i} failed due to {str(e)}")
+                if i != max_attempts:
+                    self.logger.info("Trying again")
+                else:
+                    self.logger.info(f"Giving up after {max_attempts}")
+
         self.logger.info("config pushed via FTP")
 
 

@@ -3,15 +3,9 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
-import subprocess
 import sys
-import telnetlib
-import time
-
-import IPy
 
 import vrnetlab
 
@@ -36,12 +30,12 @@ logging.Logger.trace = trace
 
 
 class VQFX_vcp(vrnetlab.VM):
-    def __init__(self, username, password):
-        for e in os.listdir("/"):
-            if re.search("-re-.*.vmdk", e):
-                vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vcp.qcow2"])
-        super(VQFX_vcp, self).__init__(username, password, disk_image="/vcp.qcow2", ram=2048)
+    def __init__(self, hostname, username, password, conn_mode):
+        re_image_name = open('/re_image').read().strip()
+        super(VQFX_vcp, self).__init__(username, password, disk_image=re_image_name, ram=2048)
         self.num_nics = 12
+        self.conn_mode = conn_mode
+        self.hostname = hostname
 
 
     def start(self):
@@ -136,6 +130,7 @@ class VQFX_vcp(vrnetlab.VM):
         self.wait_write("delete interfaces")
         self.wait_write("set interfaces em0 unit 0 family inet address 10.0.0.15/24")
         self.wait_write("set interfaces em1 unit 0 family inet address 169.254.0.2/24")
+        self.wait_write(f"set system host-name {self.hostname}")
         self.wait_write("commit")
         self.wait_write("exit")
 
@@ -162,10 +157,8 @@ class VQFX_vcp(vrnetlab.VM):
 
 class VQFX_vpfe(vrnetlab.VM):
     def __init__(self):
-        for e in os.listdir("/"):
-            if re.search("-pfe-.*.vmdk", e):
-                vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vpfe.qcow2"])
-        super(VQFX_vpfe, self).__init__(None, None, disk_image="/vpfe.qcow2", num=1, ram=2048)
+        pfe_image_name = open('/pfe_image').read().strip()
+        super(VQFX_vpfe, self).__init__(None, None, disk_image=pfe_image_name, num=1, ram=2048)
         self.num_nics = 0
 
 
@@ -183,7 +176,6 @@ class VQFX_vpfe(vrnetlab.VM):
         return res
 
 
-
     def start(self):
         # use parent class start() function
         super(VQFX_vpfe, self).start()
@@ -191,6 +183,13 @@ class VQFX_vpfe(vrnetlab.VM):
         vrnetlab.run_command(["brctl", "addif", "int_cp", "vpfe-int"])
         vrnetlab.run_command(["ip", "link", "set", "vpfe-int", "up"])
 
+
+    def gen_nics(self):
+        """
+        Override the parent's gen_nic function,
+        since dataplane interfaces are not to be created for VCP
+        """
+        return []
 
 
     def bootstrap_spin(self):
@@ -201,13 +200,13 @@ class VQFX_vpfe(vrnetlab.VM):
 
 
 class VQFX(vrnetlab.VR):
-    """ Juniper vMX router
+    """ Juniper vQFX router
     """
 
-    def __init__(self, username, password):
+    def __init__(self, hostname, username, password, conn_mode):
         super(VQFX, self).__init__(username, password)
 
-        self.vms = [ VQFX_vcp(username, password), VQFX_vpfe() ]
+        self.vms = [ VQFX_vcp(hostname, username, password, conn_mode), VQFX_vpfe() ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -219,9 +218,15 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
+    parser.add_argument("--hostname", default="vr-vqfx", help="QFX hostname")
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--install', action='store_true', help='Install vMX')
+    parser.add_argument('--install', action='store_true', help='Install vQFX')
+    parser.add_argument(
+        "--connection-mode",
+        default="tc",
+        help="Connection mode to use in the datapath",
+    )
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -231,6 +236,6 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     if args.trace:
         logger.setLevel(1)
-
-    vr = VQFX(args.username, args.password)
+    vrnetlab.boot_delay()
+    vr = VQFX(args.hostname, args.username, args.password, conn_mode=args.connection_mode)
     vr.start()

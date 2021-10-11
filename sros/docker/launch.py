@@ -541,8 +541,9 @@ class SROS_cp(SROS_vm):
         self.variant = variant
 
         self.smbios = [
-            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
+            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active address={SROS_MGMT_V6_ADDR}/{V6_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
         ]
+        self.logger.info("Acting timos line: {}".format(self.smbios))
 
     def start(self):
         # use parent class start() function
@@ -725,6 +726,10 @@ class SROS(vrnetlab.VR):
         # This is to whitlist all bridges
         vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
         vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+        # Enable IPv6 inside the container
+        vrnetlab.run_command(["sysctl net.ipv6.conf.all.disable_ipv6=0"], shell=True)
+        # Enable IPv6 routing inside the container
+        vrnetlab.run_command(["sysctl net.ipv6.conf.all.forwarding=1"], shell=True)
         vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
         vrnetlab.run_command(
             ["echo 16384 > /sys/class/net/br-mgmt/bridge/group_fwd_mask"],
@@ -833,17 +838,26 @@ if __name__ == "__main__":
     vrnetlab.run_command(
         f"iptables -t nat -A PREROUTING -i eth0 -p tcp ! --dport 5000 -j DNAT --to-destination {SROS_MGMT_V4_ADDR}".split()
     )
+    vrnetlab.run_command(
+        f"ip6tables -t nat -A PREROUTING -i eth0 -p tcp ! --dport 5000 -j DNAT --to-destination {SROS_MGMT_V6_ADDR}".split()
+    )
     # same redirection but for UDP
     vrnetlab.run_command(
         f"iptables -t nat -A PREROUTING -i eth0 -p udp -j DNAT --to-destination {SROS_MGMT_V4_ADDR}".split()
+    )
+    vrnetlab.run_command(
+        f"ip6tables -t nat -A PREROUTING -i eth0 -p udp -j DNAT --to-destination {SROS_MGMT_V6_ADDR}".split()
     )
     # masquerading the incoming traffic so SR OS is able to reply back
     vrnetlab.run_command(
         "iptables -t nat -A POSTROUTING -o br-mgmt -j MASQUERADE".split()
     )
-
+    vrnetlab.run_command(
+        "ip6tables -t nat -A POSTROUTING -o br-mgmt -j MASQUERADE".split()
+    )
     # allow sros breakout to management network by NATing via eth0
     vrnetlab.run_command("iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
+    vrnetlab.run_command("ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
 
     logger.debug(
         f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}'"

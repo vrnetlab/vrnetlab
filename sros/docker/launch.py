@@ -448,7 +448,7 @@ class SROS_integrated(SROS_vm):
         self.mode = mode
         self.num_nics = num_nics
         self.smbios = [
-            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['timos_line']}"
+            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active address={SROS_MGMT_V6_ADDR}/{V6_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
         self.variant = variant

@@ -1,7 +1,7 @@
 VENDOR=Arista
 NAME=vEOS
 IMAGE_FORMAT=vmdk
-IMAGE_GLOB=*.vmdk
+IMAGE_GLOB=vEOS-lab*.vmdk
 
 # match versions like:
 # vEOS-lab-4.16.6M.vmdk

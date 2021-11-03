@@ -40,17 +40,22 @@ class VEOS_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".iso$", e):
                 boot_iso = "/" + e
+
+
+        self.zerotouch_disabled = False
+        self.requires_zerotouch_disable = False
+
+        # list of images that require us to disable zerotouch for proper function
+        zerotouch_disabled_images = ['vEOS-lab-4.27.0F.vmdk']
+
+
+        if disk_image[1:] in zerotouch_disabled_images:
+            self.requires_zerotouch_disable = True
+
         super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
         self.num_nics = 20
         self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
-        self.zerotouch_disabled = False
-        self.disable_zerotouch = False
 
-        # list of images that require us to disable zerotouch for proper function
-        requires_zerotouch_disable = ['vEOS-lab-4.27.0F.vmdk']
-
-        if disk_image in requires_zerotouch_disable:
-            self.disable_zerotouch = True
 
 
 
@@ -72,7 +77,7 @@ class VEOS_vm(vrnetlab.VM):
                 self.logger.debug("trying to log in with 'admin'")
                 self.wait_write("admin", wait=None)
 
-                if self.disable_zerotouch and not self.zerotouch_disabled:
+                if self.requires_zerotouch_disable and not self.zerotouch_disabled:
                     self.disable_zerotouch()
                 else:
                     # run main config!

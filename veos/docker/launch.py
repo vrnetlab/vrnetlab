@@ -43,6 +43,15 @@ class VEOS_vm(vrnetlab.VM):
         super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
         self.num_nics = 20
         self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
+        self.zerotouch_disabled = False
+        self.disable_zerotouch = False
+
+        # list of images that require us to disable zerotouch for proper function
+        requires_zerotouch_disable = ['vEOS-lab-4.27.0F.vmdk']
+
+        if disk_image in requires_zerotouch_disable:
+            self.disable_zerotouch = True
+
 
 
     def bootstrap_spin(self):
@@ -63,16 +72,19 @@ class VEOS_vm(vrnetlab.VM):
                 self.logger.debug("trying to log in with 'admin'")
                 self.wait_write("admin", wait=None)
 
-                # run main config!
-                self.bootstrap_config()
-                # close telnet connection
-                self.tn.close()
-                # startup time?
-                startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
-                # mark as running
-                self.running = True
-                return
+                if self.disable_zerotouch and not self.zerotouch_disabled:
+                    self.disable_zerotouch()
+                else:
+                    # run main config!
+                    self.bootstrap_config()
+                    # close telnet connection
+                    self.tn.close()
+                    # startup time?
+                    startup_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Startup complete in: %s" % startup_time)
+                    # mark as running
+                    self.running = True
+                    return
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -84,6 +96,17 @@ class VEOS_vm(vrnetlab.VM):
         self.spins += 1
 
         return
+
+
+    def disable_zerotouch(self):
+        """ Disable zerotouch and reload the router
+        """
+
+        self.logger.info("disabling zerotouch")
+        self.wait_write("", None)
+        self.wait_write("enable", ">")
+        self.wait_write("zerotouch disable")
+        self.zerotouch_disabled = True
 
 
 

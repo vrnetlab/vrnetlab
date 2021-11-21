@@ -26,6 +26,10 @@ and thus taking a very long time. You will get a lot of trace output during
 this process so at least you can see what's going on. I think it's worth the
 longer build time since we build images few times but run them many.
 
+The bootstrap configuration is provided to the device via a "config-drive".
+During the install phase, the file `juniper.conf` is used to populate the
+metadata-usb image that is attached to the device.
+
 If you want, you can tag the resulting docker image with something else, like
 `my-repo.example.com/vr-vmx` and then push it to your repo.  The tag is the
 same as the version of the JUNOS image, so if you have vmx-15.1F4.15.tgz your
@@ -65,6 +69,16 @@ as soon as you close it though. Use `-d` for long running routers.
 The vFPC has a serial port that is exposed on TCP port 5001. Normally you don't
 need to interact with it but I imagine it could be useful for some debugging.
 
+You can provide additional configuration, to be merged with running
+configuration on startup. Pass the complete configuration file in the correct
+format in the `EXTRA_CONFIG` environment variable to the container.
+Assuming you have the configuration stored in a file `extra-config.conf`, to
+read it into an environment variable use this:
+
+```
+docker run --privileged -it --name vmx15 --env EXTRA_CONFIG="`cat extra-config.conf`" vrnetlab/vr-vmx:15.1F6.9 --trace
+```
+
 System requirements
 -------------------
 CPU: 4 cores - 3 for the vFPC (virtual FPC - the forwarding plane) and 1 for
@@ -93,15 +107,6 @@ licenses which means bandwidth licenses are added together, before which only
 the bandwidth license with the highest capacity would be used. In 16.1 the
 evaluation period of 30 days was removed to the benefit of a perpetual
 evaluation license but still with a global throughput cap of 1Mbps.
-
-##### Q: Why aren't you using config-drive to inject the config instead of serial?
-A: It is true that we could use a "config-drive" / the metadata-usb image on
-the VCP to inject a config. I opted for the serial driver as it was easier to
-start off with - I had already written it for SR-OS whereas I would have to
-spend some time on fixing a config-drive builder. I suppose it could prove more
-reliable than serial-hackery but we also have to face things like password
-encryption, i.e. how can we feed a plain-text password in that configuration
-file?
 
 ##### Q: I'm getting this error: qemu-system-x86_64: /build/qemu-XXUWBP/qemu-2.1+dfsg/hw/usb/dev-storage.c:236: usb_msd_send_status: Assertion `s->csw.sig == cpu_to_le32(0x53425355)' failed.
 A: Get a newer kernel & qemu. I've seen this on Ubuntu 15.10. Upgrading to

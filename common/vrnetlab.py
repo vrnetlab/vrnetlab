@@ -45,6 +45,7 @@ class VM:
 
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
+        self.start_time = datetime.datetime.now()
 
         # username / password to configure
         self.username = username
@@ -65,17 +66,12 @@ class VM:
         self.num_nics = 0
         self.nics_per_pci_bus = 26 # tested to work with XRv
         self.smbios = []
-        overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', disk_image)
-
-        if not os.path.exists(overlay_disk_image):
-            self.logger.debug("Creating overlay disk image")
-            run_command(["qemu-img", "create", "-f", "qcow2", "-b", disk_image, overlay_disk_image])
 
         self.qemu_args = ["qemu-system-x86_64", "-display", "none", "-machine", "pc" ]
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
-                               "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
-                               "-drive", "if=ide,file=%s" % overlay_disk_image])
+                               "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num])
+        self.qemu_args.extend(self.create_overlay_image())
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             self.qemu_args.insert(1, '-enable-kvm')
@@ -84,7 +80,6 @@ class VM:
 
     def start(self):
         self.logger.info("Starting %s" % self.__class__.__name__)
-        self.start_time = datetime.datetime.now()
 
         cmd = list(self.qemu_args)
 
@@ -184,6 +179,18 @@ class VM:
                        % { 'i': i, 'j': i + 10000 })
         return res
 
+
+    def create_overlay_image(self):
+        """Creates an overlay image if one does not exist and return
+           an array of parameters to extend qemu_args,
+           A subclass may want to override this for using specific drive id.
+        """
+        overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', self.image)
+
+        if not os.path.exists(overlay_disk_image):
+            self.logger.debug("Creating overlay disk image")
+            run_command(["qemu-img", "create", "-f", "qcow2", "-b", self.image, overlay_disk_image])
+        return ["-drive", "if=ide,file=%s" % overlay_disk_image]
 
 
     def stop(self):

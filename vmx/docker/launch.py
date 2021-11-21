@@ -3,15 +3,11 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import subprocess
 import sys
-import telnetlib
 import time
-
-import IPy
 
 import vrnetlab
 
@@ -36,13 +32,18 @@ logging.Logger.trace = trace
 
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, install_mode=False):
+    def __init__(self, username, password, image, version, install_mode=False):
         super(VMX_vcp, self).__init__(username, password, disk_image=image, ram=2048)
         self.install_mode = install_mode
         self.num_nics = 0
         self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
         self.smbios = ["type=0,vendor=Juniper",
                        "type=1,manufacturer=Juniper,product=VM-vcp_vmx2-161-re-0,version=0.1.0"]
+        # insert bootstrap config file into metadata image
+        if self.install_mode:
+            self.insert_bootstrap_config()
+        else:
+            self.insert_extra_config()
         # add metadata image if it exists
         if os.path.exists("/vmx/metadata-usb-re.img"):
             self.qemu_args.extend(
@@ -91,11 +92,12 @@ class VMX_vcp(vrnetlab.VM):
             self.spins = 0
             return
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"root@(%|:~ #)"], 1)
+        (ridx, match, res) = self.tn.expect([b"(?<!Last )login:", b"root@(%|[^:]*:~ #)"], 1)
         if match: # got a match!
             if ridx == 0: # matched login prompt, so should login
                 self.logger.info("matched login prompt")
                 self.wait_write("root", wait=None)
+                self.wait_write("VR-netlab9", "Password:")
             if ridx == 1:
                 if self.install_mode:
                     self.logger.info("requesting power-off")
@@ -104,8 +106,8 @@ class VMX_vcp(vrnetlab.VM):
                     self.wait_write("yes", 'Power Off the system')
                     self.running = True
                     return
-                # run main config!
-                self.bootstrap_config()
+                # run extra config!
+                self.do_extra_config()
                 self.running = True
                 self.tn.close()
                 # calc startup time
@@ -125,24 +127,13 @@ class VMX_vcp(vrnetlab.VM):
 
 
 
-    def bootstrap_config(self):
+    def do_extra_config(self):
         """ Do the actual bootstrap config
         """
+        self.wait_write("mount_msdosfs /dev/da0 /mnt", None)
         self.wait_write("cli", None)
         self.wait_write("configure", '>', 10)
-        self.wait_write("set chassis fpc 0 pic 0 number-of-ports 96")
-        self.wait_write("set system services ssh")
-        self.wait_write("set system services netconf ssh")
-        self.wait_write("set system services netconf rfc-compliant")
-        self.wait_write("set system login user %s class super-user authentication plain-text-password" % self.username)
-        self.wait_write(self.password, 'New password:')
-        self.wait_write(self.password, 'Retype new password:')
-        self.wait_write("set system root-authentication plain-text-password")
-        self.wait_write(self.password, 'New password:')
-        self.wait_write(self.password, 'Retype new password:')
-        self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24")
-        self.wait_write("delete interfaces fxp0 unit 0 family inet dhcp")
-        self.wait_write("delete system processes dhcp-service")
+        self.wait_write("load merge /mnt/extra-config.conf")
         self.wait_write("commit")
         self.wait_write("exit")
 
@@ -163,8 +154,24 @@ class VMX_vcp(vrnetlab.VM):
         self.logger.debug("writing to serial console: %s" % cmd)
         self.tn.write("{}\r".format(cmd).encode())
 
+    def insert_bootstrap_config(self):
+        vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
+        vrnetlab.run_command(["mkdir", "/tmp/vmm-config"])
+        vrnetlab.run_command(["tar", "-xzvf", "/mnt/vmm-config.tgz", "-C", "/tmp/vmm-config"])
+        vrnetlab.run_command(["mkdir", "/tmp/vmm-config/config"])
+        vrnetlab.run_command(["cp", "/juniper.conf", "/tmp/vmm-config/config/"])
+        vrnetlab.run_command(["tar", "zcf", "vmm-config.tgz", "-C", "/tmp/vmm-config", "."])
+        vrnetlab.run_command(["cp", "vmm-config.tgz", "/mnt/vmm-config.tgz"])
+        vrnetlab.run_command(["umount", "/mnt"])
 
-
+    def insert_extra_config(self):
+        extra_config = os.getenv('EXTRA_CONFIG')
+        if extra_config:
+            self.logger.debug('extra_config = ' + extra_config)
+            vrnetlab.run_command(["mount", "-o", "loop", "/vmx/metadata-usb-re.img", "/mnt"])
+            with open('/mnt/extra-config.conf', 'w') as f:
+                f.write(extra_config)
+            vrnetlab.run_command(["umount", "/mnt"])
 
 
 class VMX_vfpc(vrnetlab.VM):
@@ -194,11 +201,10 @@ class VMX_vfpc(vrnetlab.VM):
         res.extend(["-netdev",
                     "tap,ifname=vfpc-int,id=vfpc-int,script=no,downscript=no"])
 
-        if self.version in ('15.1F6.9', '16.1R2.11', '17.2R1.13'):
+        if self.version in ('15.1F6.9', '16.1R2.11', '17.1R1.8', '17.2R1.13', '18.2R2.6', '18.4R1.8', '18.4R3.3'):
             # dummy interface for some vMX versions - not sure why vFPC wants
             # it but without it we get a misalignment
-            res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" %
-                                   vrnetlab.gen_mac(0)])
+            res.extend(["-device", "virtio-net-pci,netdev=dummy,mac=%s" % vrnetlab.gen_mac(0)])
             res.extend(["-netdev", "tap,ifname=vfpc-dummy,id=dummy,script=no,downscript=no"])
 
         return res
@@ -215,12 +221,13 @@ class VMX_vfpc(vrnetlab.VM):
 
 
     def bootstrap_spin(self):
-        (ridx, match, res) = self.tn.expect([b"localhost login", b"mounting /dev/sda2 on /mnt failed"], 1)
+        (ridx, match, res) = self.tn.expect([b"localhost login", b"qemux86-64 login", b"mounting /dev/sda2 on /mnt failed"], 1)
         if match:
-            if ridx == 0: # got login - vFPC start succeeded!
+            if ridx in (0, 1): # got login - vFPC start succeeded!
                 self.logger.info("vFPC successfully started")
                 self.running = True
-            if ridx == 1: # vFPC start failed - restart it
+                self.tn.close()
+            if ridx == 2: # vFPC start failed - restart it
                 self.logger.info("vFPC start failed, restarting")
                 self.stop()
                 self.start()
@@ -243,7 +250,7 @@ class VMX(vrnetlab.VR):
 
         super(VMX, self).__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image), VMX_vfpc(self.version) ]
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version), VMX_vfpc(self.version) ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
@@ -252,7 +259,7 @@ class VMX(vrnetlab.VR):
 
     def read_version(self):
         for e in os.listdir("/vmx/"):
-            m = re.search("-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e)
+            m = re.search(r"-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e)
             if m:
                 self.vcp_image = e
                 self.version = m.group(1)
@@ -273,9 +280,9 @@ class VMX_installer(VMX):
         self.version_info = []
         self.read_version()
 
-        super(VMX, self).__init__(username, password)
+        super().__init__(username, password)
 
-        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, install_mode=True) ]
+        self.vms = [ VMX_vcp(username, password, "/vmx/" + self.vcp_image, self.version, install_mode=True) ]
 
     def install(self):
         self.logger.info("Installing VMX")
@@ -316,6 +323,7 @@ if __name__ == '__main__':
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
     parser.add_argument('--install', action='store_true', help='Install vMX')
+    parser.add_argument('--num-nics', type=int, default=96, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

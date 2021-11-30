@@ -98,19 +98,33 @@ class ROS_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"MikroTik Login"], 1)
+        (ridx, match, res) = self.tn.expect([b"MikroTik Login", b"RouterOS Login"], 1)
         if match:  # got a match!
-            if ridx == 0:  # login
+            if ridx in (0,1):  # login
                 self.logger.debug("VM started")
 
                 # Login
                 self.wait_write("\r", None)
                 # Append +ct to username for the plain-text console version
-                self.wait_write("admin+ct", wait="MikroTik Login: ")
+
+                # Mikrotik decided to change the prompt in the 6.48 line of code it seems
+                if ridx == 0:
+                    self.wait_write("admin+ct", wait="MikroTik Login: ")
+                elif ridx == 1:
+                    self.wait_write("admin+ct", wait="RouterOS Login: ")
                 self.wait_write("", wait="Password: ")
                 self.wait_write(
                     "n", wait="Do you want to see the software license? [Y/n]: "
                 )
+
+                # ROSv7 requires changing the password right away. ROSv6 does not require changing the password
+
+                (ridx2, match2, _) = self.tn.expect([b"new password>"], 1)
+                if match2 and ridx2 == 0:  # got a match! login
+                    self.logger.debug("ROSv7 detected, setting admin password")
+                    self.wait_write(f"{self.password}", wait="new password>")
+                    self.wait_write(f"{self.password}", wait="repeat new password>")
+
 
                 self.logger.debug("Login completed")
 
@@ -144,27 +158,27 @@ class ROS_vm(vrnetlab.VM):
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
         self.logger.info("applying bootstrap configuration")
+        self.wait_write(f"/system identity set name={self.hostname}", wait="")
+
         self.wait_write(
             f"/ip address add interface=ether1 address={ROS_MGMT_ADDR}/{PREFIX_LENGTH}",
-            "[admin@MikroTik] > ",
+            f"[admin@{self.hostname}] > ",
         )
         # Update admin account if username==admin and there is a password set
         if self.username == "admin":
             if self.password != "":
                 self.wait_write(
                     f"/user set {self.username} password={self.password}",
-                    "[admin@MikroTik] > ",
+                    f"[admin@{self.hostname}] > ",
                 )
         else:
             # Create new user if username != admin
             self.wait_write(
                     f"/user add name={self.username} password={self.password} group=full",
-                    "[admin@MikroTik] > ",
+                    f"[admin@{self.hostname}] > ",
                 )
 
-        self.wait_write(
-            f"/system identity set name={self.hostname}", "[admin@MikroTik] > "
-        )
+        
         self.wait_write("\r", f"[admin@{self.hostname}] > ")
         self.logger.info("completed bootstrap configuration")
 

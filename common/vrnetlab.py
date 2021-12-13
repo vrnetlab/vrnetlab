@@ -13,14 +13,16 @@ import time
 MAX_RETRIES=60
 
 # Global list of ports that we want to set up forwarding from container IP ->
-# mgmt IP of router (usually 10.0.0.15). These
-HOST_FWDS = (
-    ('tcp', 22),
-    ('udp', 161),
-    ('tcp', 830),
-    ('tcp', 80),
-    ('tcp', 443)
-)
+# mgmt IP of router (usually 10.0.0.15). Each entry consists of the protocol,
+# the source port (on the outside of the container) and the destination port
+# (on the virtual router).
+HOST_FWDS = [
+    ('tcp', 22, 22),      # SSH
+    ('udp', 161, 161),    # SNMP
+    ('tcp', 830, 830),    # NETCONF
+    ('tcp', 80, 80),      # HTTP
+    ('tcp', 443, 443),    # HTTPS
+]
 
 def gen_mac(last_octet=None):
     """ Generate a random MAC address that is in the qemu OUI space and that
@@ -153,8 +155,17 @@ class VM:
             pass
 
     def gen_host_forwards(self, mgmt_ip='10.0.0.15', offset=2000):
+        """Generate the host forward argument for qemu
+        HOST_FWDS contain the ports we want to forward and allows mapping a
+        container (source) port to a different destination port on the VR/VM.
+        We do a straight mapping here and let socat do the port mapping. Since
+        multiple source ports can be mapped to the same destination port, we
+        first unique the set of ports.
+        """
+        fwd_ports = {(proto, dst_port) for proto, src_port, dst_port in HOST_FWDS}
         # hostfwd=tcp::2022-10.0.0.15:22,...
-        return ",".join("hostfwd=%s::%d-%s:%d" % (proto, port + offset, mgmt_ip, port) for proto, port in HOST_FWDS)
+        return ",".join("hostfwd=%s::%d-%s:%d" % (proto, port + offset, mgmt_ip, port) for proto, port in fwd_ports)
+
 
     def gen_mgmt(self):
         """ Generate qemu args for the mgmt interface(s)
@@ -323,9 +334,9 @@ class VR:
         health_file.close()
 
     def start_socat(self, src_offset=0, dst_offset=2000):
-        for proto, port in HOST_FWDS:
-            run_command(["socat", "%s-LISTEN:%d,fork" % (proto.upper(), port + src_offset),
-                         "%s:127.0.0.1:%d" % (proto.upper(), port + dst_offset)],
+        for proto, src_port, dst_port in HOST_FWDS:
+            run_command(["socat", "%s-LISTEN:%d,fork" % (proto.upper(), src_port + src_offset),
+                         "%s:127.0.0.1:%d" % (proto.upper(), dst_port + dst_offset)],
                          background=True)
 
     def start(self):

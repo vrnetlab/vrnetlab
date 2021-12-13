@@ -33,11 +33,12 @@ logging.Logger.trace = trace
 
 
 class XRV_vm(vrnetlab.VM):
-    def __init__(self, username, password, nics):
+    def __init__(self, username, password, ram, nics):
         for e in os.listdir("/"):
             if re.search(".qcow2", e):
                 disk_image = "/" + e
-        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=12288)
+        super(XRV_vm, self).__init__(username, password, disk_image=disk_image,
+                                     ram=ram*1024)
         self.num_nics = nics
         self.qemu_args.extend(["-cpu", "host",
                                "-smp", "cores=4,threads=1,sockets=1",
@@ -208,9 +209,9 @@ class XRV_vm(vrnetlab.VM):
 
 
 class XRV(vrnetlab.VR):
-    def __init__(self, username, password, nics):
+    def __init__(self, username, password, ram, nics):
         super(XRV, self).__init__(username, password)
-        self.vms = [ XRV_vm(username, password, nics) ]
+        self.vms = [ XRV_vm(username, password, ram, nics) ]
 
 
 
@@ -220,7 +221,8 @@ if __name__ == '__main__':
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--username', default='vrnetlab', help='Username')
     parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--nics', type=int, default=128, help='Number of NICS')
+    parser.add_argument('--num-nics', type=int, default=24, help='Number of NICS')
+    parser.add_argument('--ram', type=int, default=16, help='RAM in GB')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -231,5 +233,5 @@ if __name__ == '__main__':
     if args.trace:
         logger.setLevel(1)
 
-    vr = XRV(args.username, args.password, args.nics)
+    vr = XRV(args.username, args.password, args.ram, args.num_nics)
     vr.start()

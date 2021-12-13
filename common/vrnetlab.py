@@ -12,6 +12,16 @@ import time
 
 MAX_RETRIES=60
 
+# Global list of ports that we want to set up forwarding from container IP ->
+# mgmt IP of router (usually 10.0.0.15). These
+HOST_FWDS = (
+    ('tcp', 22),
+    ('udp', 161),
+    ('tcp', 830),
+    ('tcp', 80),
+    ('tcp', 443)
+)
+
 def gen_mac(last_octet=None):
     """ Generate a random MAC address that is in the qemu OUI space and that
         has the given last octet.
@@ -142,6 +152,9 @@ class VM:
         except:
             pass
 
+    def gen_host_forwards(self, mgmt_ip='10.0.0.15', offset=2000):
+        # hostfwd=tcp::2022-10.0.0.15:22,...
+        return ",".join("hostfwd=%s::%d-%s:%d" % (proto, port + offset, mgmt_ip, port) for proto, port in HOST_FWDS)
 
     def gen_mgmt(self):
         """ Generate qemu args for the mgmt interface(s)
@@ -157,7 +170,7 @@ class VM:
             res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
                        % { 'i': 0, 'mac': gen_mac(0) })
         res.append("-netdev")
-        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443" % { 'i': 0 })
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,%(hostfwd)s" % { 'i': 0, 'hostfwd': self.gen_host_forwards() })
 
         return res
 
@@ -267,7 +280,7 @@ class VM:
             try:
                 self.bootstrap_spin()
             except EOFError:
-                self.logger.error("Telnet session was disconncted, restarting")
+                self.logger.error("Telnet session was disconnected, restarting")
                 self.restart()
 
 
@@ -304,24 +317,23 @@ class VR:
         except:
             pass
 
-
     def update_health(self, exit_status, message):
         health_file = open("/health", "w")
         health_file.write("%d %s" % (exit_status, message))
         health_file.close()
 
-
+    def start_socat(self, src_offset=0, dst_offset=2000):
+        for proto, port in HOST_FWDS:
+            run_command(["socat", "%s-LISTEN:%d,fork" % (proto.upper(), port + src_offset),
+                         "%s:127.0.0.1:%d" % (proto.upper(), port + dst_offset)],
+                         background=True)
 
     def start(self):
         """ Start the virtual router
         """
-        self.logger.debug("Starting vrnetlab %s" % self.__class__.__name__)
-        self.logger.debug("VMs: %s" % self.vms)
-        run_command(["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True)
-        run_command(["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True)
-        run_command(["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True)
-        run_command(["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True)
-        run_command(["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True)
+        self.logger.debug("Starting vrnetlab %s", self.__class__.__name__)
+        self.logger.debug("VMs: %s", self.vms)
+        self.start_socat()
 
         started = False
         while True:

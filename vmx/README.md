@@ -26,6 +26,13 @@ and thus taking a very long time. You will get a lot of trace output during
 this process so at least you can see what's going on. I think it's worth the
 longer build time since we build images few times but run them many.
 
+The router can run in standalone mode (single routing engine) or redundant mode
+(dual routing engines). This is controller with a runtime configuration options
+`--dual-re`. At build time, we build the VCP machines for both modes of
+operation: a standalone RE (files in `/vmx/re`) and dual RE (files in
+`/vmx/re{0,1}`). At runtime the VCP(s) are started from the correct
+directories.
+
 The bootstrap configuration is provided to the device via a "config-drive".
 During the install phase, the file `juniper.conf` is used to populate the
 metadata-usb image that is attached to the device.
@@ -66,7 +73,7 @@ If you want to look at the startup process you can specify `-i -t` to docker
 run and you'll get an interactive terminal, do note that docker will terminate
 as soon as you close it though. Use `-d` for long running routers.
 
-The vFPC has a serial port that is exposed on TCP port 5001. Normally you don't
+The vFPC has a serial port that is exposed on TCP port 5002. Normally you don't
 need to interact with it but I imagine it could be useful for some debugging.
 
 You can provide additional configuration, to be merged with running
@@ -77,6 +84,19 @@ read it into an environment variable use this:
 
 ```
 docker run --privileged -it --name vmx15 --env EXTRA_CONFIG="`cat extra-config.conf`" vrnetlab/vr-vmx:15.1F6.9 --trace
+```
+
+By default the virtual router runs in standalone mode - a single routing
+engine. To change the mode to dual RE, pass `--dual-re` to the launch script.
+The second RE console is exposed on port 5001. The management ports (NETCONF,
+SSH, SNMP) are exposed on the container IP, offset by 1000.
+
+```
+docker run --privileged -d --name vmx15-dual-re vrnetlab/vr-vmx:15.1F6.9 --trace --dual-re
+# connect to re0
+ssh vrnetlab@$CONTAINER_IP -p 22
+# connect to re1
+ssh vrnetlab@$CONTAINER_IP -p 1022
 ```
 
 System requirements

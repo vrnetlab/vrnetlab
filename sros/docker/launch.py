@@ -331,7 +331,6 @@ def uuid_rev_part(part):
 
 
 # generate bof configuration commands based on env vars
-# TODO: add ipv6 management support
 def gen_bof_config():
     cmds = []
     if "DOCKER_NET_V4_ADDR" in os.environ and os.getenv("DOCKER_NET_V4_ADDR") != "":
@@ -516,7 +515,10 @@ class SROS_integrated(SROS_vm):
                     mode=self.mode
                 )
             )
-            self.wait_write("/logout")
+
+        # save bof config on disk
+        self.wait_write("/bof save")
+        self.wait_write("/logout")
 
 
 class SROS_cp(SROS_vm):
@@ -583,6 +585,7 @@ class SROS_cp(SROS_vm):
 
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
+
         # apply common configuration if config file was not provided
         if not os.path.isfile("/tftpboot/config.txt"):
             for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
@@ -617,7 +620,10 @@ class SROS_cp(SROS_vm):
                     mode=self.mode
                 )
             )
-            self.wait_write("/logout")
+
+        # save bof config on disk
+        self.wait_write("/bof save")
+        self.wait_write("/logout")
 
 
 class SROS_lc(SROS_vm):
@@ -737,10 +743,24 @@ class SROS(vrnetlab.VR):
         )
         vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
         vrnetlab.run_command(
-            ["ip", "addr", "add", "dev", "br-mgmt", f"{BRIDGE_V4_ADDR}/{V4_PREFIX_LENGTH}"]
+            [
+                "ip",
+                "addr",
+                "add",
+                "dev",
+                "br-mgmt",
+                f"{BRIDGE_V4_ADDR}/{V4_PREFIX_LENGTH}",
+            ]
         )
         vrnetlab.run_command(
-            ["ip", "addr", "add", "dev", "br-mgmt", f"{BRIDGE_V6_ADDR}/{V6_PREFIX_LENGTH}"]
+            [
+                "ip",
+                "addr",
+                "add",
+                "dev",
+                "br-mgmt",
+                f"{BRIDGE_V6_ADDR}/{V6_PREFIX_LENGTH}",
+            ]
         )
 
         if variant["deployment_model"] == "distributed":
@@ -857,7 +877,9 @@ if __name__ == "__main__":
     )
     # allow sros breakout to management network by NATing via eth0
     vrnetlab.run_command("iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
-    vrnetlab.run_command("ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
+    vrnetlab.run_command(
+        "ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split()
+    )
 
     logger.debug(
         f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}', variant '{args.variant}'"

@@ -9,6 +9,8 @@ import sys
 
 import vrnetlab
 
+STARTUP_CONFIG_FILE = "/startup-config/config.txt"
+
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
 
@@ -93,6 +95,7 @@ class VQFX_vcp(vrnetlab.VM):
             if ridx == 1:
                 # run main config!
                 self.bootstrap_config()
+                self.startup_config()
                 self.running = True
                 self.tn.close()
                 # calc startup time
@@ -133,6 +136,32 @@ class VQFX_vcp(vrnetlab.VM):
         self.wait_write(f"set system host-name {self.hostname}")
         self.wait_write("commit")
         self.wait_write("exit")
+
+    def startup_config(self):
+        """ Load additional config provided by user.
+        """
+
+        if os.path.exists(STARTUP_CONFIG_FILE):
+            self.logger.trace("Config File %s exists" % STARTUP_CONFIG_FILE)
+            with open(STARTUP_CONFIG_FILE) as file:
+                self.logger.trace("Opening Config File %s" % STARTUP_CONFIG_FILE)
+                config_lines = file.readlines()
+                config_lines = [line.rstrip() for line in config_lines]
+                self.logger.trace("Parsed Config File %s" % STARTUP_CONFIG_FILE)
+
+            self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)
+            # Enter Config Mode on QFX
+            self.wait_write("cli", None)
+            self.wait_write("configure", '>', 10)
+            # Appline lines from file
+            for line in config_lines:
+                self.wait_write(line)
+            # Commit and GTFO
+            self.wait_write("commit")
+            self.wait_write("exit")
+
+            self.logger.info("Done loading config file %s" % STARTUP_CONFIG_FILE)
+
 
 
     def wait_write(self, cmd, wait='#', timeout=None):

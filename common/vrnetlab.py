@@ -363,6 +363,19 @@ class VR:
                 else:
                     self.update_health(1, "starting")
 
+class VR_Installer:
+    def __init__(self):
+        self.logger = logging.getLogger()
+        self.vm = None
+
+    def install(self):
+        vm =  self.vm
+        while not vm.running:
+            self.logger.trace("%s working", self.__class__.__name__)
+            vm.work()
+        self.logger.debug("%s running, shutting down", self.__class__.__name__)
+        vm.stop()
+        self.logger.info("Installation complete")
 
 class QemuBroken(Exception):
     """ Our Qemu instance is somehow broken

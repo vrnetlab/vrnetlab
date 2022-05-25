@@ -119,6 +119,9 @@ class VQFX_vcp(vrnetlab.VM):
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
         self.wait_write("cli", None)
+        self.wait_write("set cli screen-length 0", ">", 10)
+        self.wait_write("set cli screen-width 511", ">", 10)
+        self.wait_write("set cli complete-on-space off", ">", 10)
         self.wait_write("configure", ">", 10)
         self.wait_write("set system services ssh")
         self.wait_write("set system services netconf ssh")

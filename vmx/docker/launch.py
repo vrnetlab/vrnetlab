@@ -3,17 +3,15 @@
 import datetime
 import logging
 import os
-import random
 import re
 import signal
 import subprocess
 import sys
-import telnetlib
 import time
 
-import IPy
-
 import vrnetlab
+
+STARTUP_CONFIG_FILE = "/config/startup-config.cfg"
 
 
 def handle_SIGCHLD(signal, frame):
@@ -55,18 +53,18 @@ class VMX_vcp(vrnetlab.VM):
         self.hostname = hostname
         self.install_mode = install_mode
         self.num_nics = 0
-        self.qemu_args.extend(["-drive", "if=ide,file=/vmx/vmxhdd.img"])
+        self.qemu_args.extend(["-drive", "if=ide,file=/vmx/re/vmxhdd.img"])
         self.smbios = [
             "type=0,vendor=Juniper",
             "type=1,manufacturer=VMX,product=VM-vcp_vmx2-161-re-0,version=0.1.0",
         ]
         # add metadata image if it exists
-        if os.path.exists("/vmx/metadata-usb-re.img"):
+        if os.path.exists("/vmx/re/metadata-usb-re.img"):
             self.qemu_args.extend(
                 [
                     "-usb",
                     "-drive",
-                    "id=my_usb_disk,media=disk,format=raw,file=/vmx/metadata-usb-re.img,if=none",
+                    "id=my_usb_disk,media=disk,format=raw,file=/vmx/re/metadata-usb-re.img,if=none",
                     "-device",
                     "usb-storage,drive=my_usb_disk",
                 ]
@@ -153,6 +151,7 @@ class VMX_vcp(vrnetlab.VM):
                     return
                 # run main config!
                 self.bootstrap_config()
+                self.startup_config()
                 self.running = True
                 self.tn.close()
                 # calc startup time
@@ -173,6 +172,9 @@ class VMX_vcp(vrnetlab.VM):
     def bootstrap_config(self):
         """Do the actual bootstrap config"""
         self.wait_write("cli", None)
+        self.wait_write("set cli screen-length 0", ">", 10)
+        self.wait_write("set cli screen-width 511", ">", 10)
+        self.wait_write("set cli complete-on-space off", ">", 10)
         self.wait_write("edit exclusive", ">", 10)
         self.wait_write("delete chassis auto-image-upgrade")
         self.wait_write("commit")
@@ -203,6 +205,32 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("exit")
         # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes
         self.wait_write("exit", wait=">")
+
+    def startup_config(self):
+        """Load additional config provided by user."""
+
+        if not os.path.exists(STARTUP_CONFIG_FILE):
+            return
+
+        self.logger.trace("Config File %s exists" % STARTUP_CONFIG_FILE)
+        with open(STARTUP_CONFIG_FILE) as file:
+            self.logger.trace("Opening Config File %s" % STARTUP_CONFIG_FILE)
+            config_lines = file.readlines()
+            config_lines = [line.rstrip() for line in config_lines]
+            self.logger.trace("Parsed Config File %s" % STARTUP_CONFIG_FILE)
+
+        self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)
+
+        self.wait_write("cli", None)
+        self.wait_write("configure", ">", 10)
+        # Apply lines from file
+        for line in config_lines:
+            self.wait_write(line)
+        # Commit and GTFO
+        self.wait_write("commit")
+        self.wait_write("exit")
+
+        self.logger.info("Done loading config file %s" % STARTUP_CONFIG_FILE)
 
     def wait_write(self, cmd, wait="#", timeout=None):
         """Wait for something and then send command"""
@@ -327,9 +355,9 @@ class VMX(vrnetlab.VR):
         vrnetlab.run_command(["ip", "link", "set", "int_cp", "up"])
 
     def read_version(self):
-        for e in os.listdir("/vmx/"):
+        for e in os.listdir("/vmx/re"):
             m = re.search(
-                "-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-D[0-9]*)?\.([0-9]+))", e
+                r"-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e
             )
             if m:
                 self.vcp_image = e
@@ -365,7 +393,7 @@ class VMX_installer(VMX):
                 "install",
                 username,
                 password,
-                "/vmx/" + self.vcp_image,
+                "/vmx/re/" + self.vcp_image,
                 install_mode=True,
                 conn_mode=conn_mode,
             )

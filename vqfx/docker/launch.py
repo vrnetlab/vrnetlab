@@ -5,6 +5,7 @@ import logging
 import os
 import signal
 import sys
+import re
 
 import vrnetlab
 
@@ -37,14 +38,14 @@ logging.Logger.trace = trace
 
 
 class VQFX_vcp(vrnetlab.VM):
-    def __init__(self, hostname, username, password, conn_mode):
-        re_image_name = open("/re_image").read().strip()
+    def __init__(self, hostname, username, password, conn_mode, version, disk_image):
         super(VQFX_vcp, self).__init__(
-            username, password, disk_image=re_image_name, ram=2048
+            username, password, disk_image=disk_image, ram=2048
         )
         self.num_nics = 12
         self.conn_mode = conn_mode
         self.hostname = hostname
+        self.version = version
 
     def start(self):
         # use parent class start() function
@@ -89,12 +90,21 @@ class VQFX_vcp(vrnetlab.VM):
             self.spins = 0
             return
 
-        (ridx, match, res) = self.tn.expect([b"login:", b"root@vqfx-re:RE:0%"], 1)
+        # logged_in_prompt prompt for v20+ versions
+        logged_in_prompt = b"root@:RE:0%"
+
+        if self.version["major"] < 20:
+            logged_in_prompt = b"root@vqfx-re:RE:0%"
+
+        (ridx, match, res) = self.tn.expect([b"login:", logged_in_prompt], 1)
         if match:  # got a match!
             if ridx == 0:  # matched login prompt, so should login
                 self.logger.info("matched login prompt")
                 self.wait_write("root", wait=None)
-                self.wait_write("Juniper", wait="Password:")
+
+                # v19 has Juniper password for root login
+                if self.version["major"] < 20:
+                    self.wait_write("Juniper", wait="Password:")
             if ridx == 1:
                 # run main config!
                 self.bootstrap_config()
@@ -186,10 +196,9 @@ class VQFX_vcp(vrnetlab.VM):
 
 
 class VQFX_vpfe(vrnetlab.VM):
-    def __init__(self):
-        pfe_image_name = open("/pfe_image").read().strip()
+    def __init__(self, disk_image):
         super(VQFX_vpfe, self).__init__(
-            None, None, disk_image=pfe_image_name, num=1, ram=2048
+            None, None, disk_image=disk_image, num=1, ram=2048
         )
         self.num_nics = 0
 
@@ -232,11 +241,33 @@ class VQFX(vrnetlab.VR):
     def __init__(self, hostname, username, password, conn_mode):
         super(VQFX, self).__init__(username, password)
 
-        self.vms = [VQFX_vcp(hostname, username, password, conn_mode), VQFX_vpfe()]
+        self.read_version()
+
+        self.vms = [
+            VQFX_vcp(
+                hostname, username, password, conn_mode, self.ver, self.vcp_qcow_name
+            ),
+            VQFX_vpfe(self.pfe_qcow_name),
+        ]
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
         vrnetlab.run_command(["ip", "link", "set", "int_cp", "up"])
+
+    def read_version(self):
+        for e in os.listdir("/"):
+            vcp_match = re.match(r"vqfx-(\d+)\.(\w+)\.(\w+)\S+re\S+\.qcow2", e)
+            if vcp_match:
+                self.ver = {
+                    "major": int(vcp_match.group(1)),
+                    "minor": vcp_match.group(2),
+                }
+                self.vcp_qcow_name = vcp_match.group(0)
+
+            # https://regex101.com/r/4ByEhT/1
+            pfe_match = re.match(r"vqfx-(\d+)\.(\w+)\S+-pfe.+qcow2?", e)
+            if pfe_match:
+                self.pfe_qcow_name = pfe_match.group(0)
 
 
 if __name__ == "__main__":
@@ -249,7 +280,6 @@ if __name__ == "__main__":
     parser.add_argument("--hostname", default="vr-vqfx", help="QFX hostname")
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
-    parser.add_argument("--install", action="store_true", help="Install vQFX")
     parser.add_argument(
         "--connection-mode",
         default="tc",

@@ -1,29 +1,23 @@
 FROM ubuntu:20.04
-MAINTAINER Kristian Larsson <kristian@spritelink.net>
-
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qy \
- && apt-get upgrade -qy \
- && apt-get install -y \
-    bridge-utils \
-    iproute2 \
-    python3-ipy \
-    socat \
-    qemu-kvm \
-    procps \
-    tcpdump \
-    openvswitch-switch \
- && rm -rf /var/lib/apt/lists/*
+   && apt-get upgrade -qy \
+   && apt-get install -y \
+   bridge-utils \
+   iproute2 \
+   python3-ipy \
+   socat \
+   qemu-kvm \
+   procps \
+   tcpdump \
+   && rm -rf /var/lib/apt/lists/*
 
 ARG RE_IMAGE
 ARG PFE_IMAGE
 
 COPY $RE_IMAGE /
 COPY $PFE_IMAGE /
-
-RUN echo $RE_IMAGE > /re_image
-RUN echo $PFE_IMAGE > /pfe_image
 
 COPY healthcheck.py /
 COPY vrnetlab.py /

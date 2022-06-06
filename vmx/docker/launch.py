@@ -344,7 +344,7 @@ class VMX(vrnetlab.VR):
                 hostname,
                 username,
                 password,
-                "/vmx/" + self.vcp_image,
+                "/vmx/re/" + self.vcp_image,
                 conn_mode=conn_mode,
             ),
             VMX_vfpc(self.version, conn_mode=conn_mode),

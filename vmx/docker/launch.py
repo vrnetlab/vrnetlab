@@ -210,18 +210,18 @@ class VMX_vcp(vrnetlab.VM):
         """Load additional config provided by user."""
 
         if not os.path.exists(STARTUP_CONFIG_FILE):
+            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
             return
 
-        self.logger.trace("Config File %s exists" % STARTUP_CONFIG_FILE)
+        self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} exists")
         with open(STARTUP_CONFIG_FILE) as file:
-            self.logger.trace("Opening Config File %s" % STARTUP_CONFIG_FILE)
             config_lines = file.readlines()
             config_lines = [line.rstrip() for line in config_lines]
-            self.logger.trace("Parsed Config File %s" % STARTUP_CONFIG_FILE)
+            self.logger.trace(f"Parsed startup config file {STARTUP_CONFIG_FILE}")
 
-        self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)
+        self.logger.info(f"Writing lines from {STARTUP_CONFIG_FILE}")
 
-        self.wait_write("cli", None)
+        self.wait_write("cli", "#", 10)
         self.wait_write("configure", ">", 10)
         # Apply lines from file
         for line in config_lines:
@@ -229,8 +229,6 @@ class VMX_vcp(vrnetlab.VM):
         # Commit and GTFO
         self.wait_write("commit")
         self.wait_write("exit")
-
-        self.logger.info("Done loading config file %s" % STARTUP_CONFIG_FILE)
 
     def wait_write(self, cmd, wait="#", timeout=None):
         """Wait for something and then send command"""

@@ -11,7 +11,7 @@ IMAGE_GLOB=*.qcow2
 # - nexus9300v.9.3.9.qcow2
 # - nexus9300v.9.3.10.qcow2
 # - nexus9300v64.10.2.2.F.qcow
-VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+\?\.\(\(7\.0\.3\.I[0-9]\.[0-9a-z]\+\)\|\([0-9]\+\.[0-9]\+\.[0-9]\+\)\)\(\..*\|$$\)/\1/'
+VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+\?\.\(\(7\.0\.3\.I[0-9]\.[0-9a-z]\+\)\|\([0-9]\+\.[0-9]\+\.[0-9]\+\)\)\(\..*\|$$\)/\1/')
 
 -include ../makefile-sanity.include
 -include ../makefile.include

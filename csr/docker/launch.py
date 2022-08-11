@@ -11,6 +11,8 @@ import time
 
 import vrnetlab
 
+STARTUP_CONFIG_FILE = "/config/startup-config.cfg"
+
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -79,9 +81,7 @@ class CSR_vm(vrnetlab.VM):
             cfg_file.write("exit\r\n")
             cfg_file.write("license accept end user agreement\r\n")
             cfg_file.write("yes\r\n")
-            cfg_file.write(
-                "do license install tftp://10.0.0.2/license.lic\r\n\r\n"
-            )
+            cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
 
         cfg_file.write("platform console serial\r\n\r\n")
         cfg_file.write("do clear platform software vnic-if nvtable\r\n\r\n")
@@ -108,9 +108,7 @@ class CSR_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect(
-            [b"Press RETURN to get started!"], 1
-        )
+        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!"], 1)
         if match:  # got a match!
             if ridx == 0:  # login
                 if self.install_mode:
@@ -122,13 +120,13 @@ class CSR_vm(vrnetlab.VM):
 
                 # run main config!
                 self.bootstrap_config()
+                self.startup_config()
+                self.running = True
                 # close telnet connection
                 self.tn.close()
                 # startup time?
                 startup_time = datetime.datetime.now() - self.start_time
                 self.logger.info("Startup complete in: %s" % startup_time)
-                # mark as running
-                self.running = True
                 return
 
         # no match, if we saw some output from the router it's probably
@@ -152,8 +150,7 @@ class CSR_vm(vrnetlab.VM):
 
         self.wait_write("hostname %s" % (self.hostname))
         self.wait_write(
-            "username %s privilege 15 password %s"
-            % (self.username, self.password)
+            "username %s privilege 15 password %s" % (self.username, self.password)
         )
         self.wait_write("ip domain name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
@@ -171,6 +168,29 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
         self.wait_write("\r", None)
+
+    def startup_config(self):
+        """Load additional config provided by user."""
+
+        if not os.path.exists(STARTUP_CONFIG_FILE):
+            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
+            return
+
+        self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} exists")
+        with open(STARTUP_CONFIG_FILE) as file:
+            config_lines = file.readlines()
+            config_lines = [line.rstrip() for line in config_lines]
+            self.logger.trace(f"Parsed startup config file {STARTUP_CONFIG_FILE}")
+
+        self.logger.info(f"Writing lines from {STARTUP_CONFIG_FILE}")
+
+        self.wait_write("configure terminal")
+        # Apply lines from file
+        for line in config_lines:
+            self.wait_write(line)
+        # End and Save
+        self.wait_write("end")
+        self.wait_write("copy running-config startup-config")
 
 
 class CSR(vrnetlab.VR):
@@ -219,9 +239,7 @@ if __name__ == "__main__":
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument("--install", action="store_true", help="Install CSR")
-    parser.add_argument(
-        "--hostname", default="csr1000v", help="Router Hostname"
-    )
+    parser.add_argument("--hostname", default="csr1000v", help="Router Hostname")
     parser.add_argument("--nics", type=int, default=9, help="Number of NICS")
     parser.add_argument(
         "--connection-mode",

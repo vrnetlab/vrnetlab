@@ -12,6 +12,8 @@ import time
 
 import vrnetlab
 
+STARTUP_CONFIG_FILE = "/config/startup-config.cfg"
+
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -104,6 +106,7 @@ class XRV_vm(vrnetlab.VM):
             if self.xr_ready == True and ridx == 4:
                 # run main config!
                 self.bootstrap_config()
+                self.startup_config()
                 # close telnet connection
                 self.tn.close()
                 # startup time?
@@ -182,6 +185,30 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("exit")
         self.wait_write("commit")
         self.wait_write("exit")
+
+    def startup_config(self):
+        """Load additional config provided by user."""
+
+        if not os.path.exists(STARTUP_CONFIG_FILE):
+            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
+            return
+
+        self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} exists")
+        with open(STARTUP_CONFIG_FILE) as file:
+            config_lines = file.readlines()
+            config_lines = [line.rstrip() for line in config_lines]
+            self.logger.trace(f"Parsed startup config file {STARTUP_CONFIG_FILE}")
+
+        self.logger.info(f"Writing lines from {STARTUP_CONFIG_FILE}")
+
+        self.wait_write("configure")
+        # Apply lines from file
+        for line in config_lines:
+            self.wait_write(line)
+        # Commit and GTFO
+        self.wait_write("commit")
+        self.wait_write("exit")
+
 
     def gen_mgmt(self):
         """

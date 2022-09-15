@@ -168,6 +168,7 @@ class N9KV_vm(vrnetlab.VM):
         self.wait_write("feature grpc")
         self.wait_write("exit")
         self.wait_write("copy running-config startup-config")
+        self.wait_write("! Bootstrap Config for ContainerLab Complete.", wait="Copy complete.")
 
     def startup_config(self):
         """Load additional config provided by user."""

@@ -315,7 +315,7 @@ if __name__ == "__main__":
         "--vcpu", type=int, default=2, help="Number of cpu cores to use"
     )
     parser.add_argument(
-        "--ram", type=int, default=12228, help="Number RAM to use in MB"
+        "--ram", type=int, default=16384, help="Number RAM to use in MB"
     )
     parser.add_argument(
         "--connection-mode",

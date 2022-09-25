@@ -103,9 +103,9 @@ class N9KV_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"\(yes\/skip\/no\)\[no\]:", b"login:"], 1)
+        (ridx, match, res) = self.tn.expect([b"\(yes\/skip\/no\)\[no\]:",b"\(yes\/no\)\[n\]:", b"login:"], 1)
         if match:  # got a match!
-            if ridx == 0:
+            if ridx == 0 or ridx == 1:
                 self.logger.debug("matched poap prompt")
                 self.wait_write("yes", wait=None)
                 self.wait_write(
@@ -116,7 +116,7 @@ class N9KV_vm(vrnetlab.VM):
                 self.wait_write(
                     "no", wait="Would you like to enter the basic configuration dialog"
                 )
-            elif ridx == 1:  # login
+            elif ridx == 2:  # login
                 self.logger.debug("matched login prompt")
                 self.logger.debug(f'trying to log in with "admin" / {self.password}')
                 self.wait_write("admin", wait=None)

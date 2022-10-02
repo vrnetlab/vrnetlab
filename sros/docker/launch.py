@@ -287,15 +287,18 @@ def parse_custom_variant(cfg):
     if "___" in cfg:
         variant["deployment_model"] = "distributed"
         variant["lcs"] = []
-        variant["max_nics"] = 0
+        # >> No need to recompute max_nics
+        # variant["max_nics"] = 0
         for hw_part in cfg.split("___"):
             if "cp: " in hw_part:
                 variant["cp"] = _parse(hw_part.strip(), None, skip_nics=True)
             elif "lc: " in hw_part:
                 lc = _parse(hw_part.strip(), None)
-                if "max_nics" in lc:
-                    variant["max_nics"] = variant["max_nics"] + int(lc["max_nics"])
-                    lc.pop("max_nics")
+                # >> No need to rempute max_nics
+                # if "max_nics" in lc:
+                #    variant["max_nics"] = variant["max_nics"] + int(lc["max_nics"])
+                    # Need to keep this information
+                    # lc.pop("max_nics")
                 variant["lcs"].append(lc)
 
     else:
@@ -626,7 +629,7 @@ class SROS_cp(SROS_vm):
 class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
-    def __init__(self, lc_config, conn_mode, num_nics, slot=1):
+    def __init__(self, lc_config, conn_mode, num_nics, slot=1, nic_eth_start=1):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "lc"
         super(SROS_lc, self).__init__(
@@ -641,6 +644,7 @@ class SROS_lc(SROS_vm):
         self.smbios = ["type=1,product=TIMOS:{}".format(lc_config["timos_line"])]
         self.slot = slot
         self.num_nics = num_nics
+        self.start_nic_eth_idx = nic_eth_start
 
     def start(self):
         # use parent class start() function
@@ -758,10 +762,18 @@ class SROS(vrnetlab.VR):
                     conn_mode,
                 )
             ]
+
+            start_eth = 1
             for i, lc in enumerate(variant["lcs"]):
+                # Priority is to use max_nics from each lc definition
+                max_nics = lc.get('max_nics', None)
+                if not max_nics:
+                    max_nics = variant['max_nics']
+
                 self.vms.append(
-                    SROS_lc(lc, conn_mode, variant["max_nics"], slot=2 + i),
+                    SROS_lc(lc, conn_mode, max_nics, slot=2 + i, nic_eth_start=start_eth)
                 )
+                start_eth += int(max_nics)
 
             # set up bridge for connecting CP with LCs
             vrnetlab.run_command(["brctl", "addbr", "int_cp"])

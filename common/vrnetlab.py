@@ -78,6 +78,9 @@ class VM:
         self.num_nics = 0
         self.nics_per_pci_bus = 26  # tested to work with XRv
         self.smbios = []
+
+        self.start_nic_eth_idx = 1
+
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
         # append role to overlay name to have different overlay images for control and data plane images
         if hasattr(self, "role"):
@@ -395,6 +398,7 @@ class VM:
         """Generate qemu args for the normal traffic carrying interface(s)"""
         res = []
         bridges = []
+
         if self.conn_mode == "tc":
             self.create_tc_tap_ifup()
         elif self.conn_mode in ["ovs", "ovs-user"]:
@@ -418,7 +422,9 @@ class VM:
                 )
                 sys.exit(1)
 
-        for i in range(1, self.num_nics + 1):
+        start_eth = self.start_nic_eth_idx
+        end_eth = self.start_nic_eth_idx + self.num_nics
+        for i in range(start_eth, end_eth):
             # if the matching container interface ethX doesn't exist, we don't create a nic
             if not os.path.exists(f"/sys/class/net/eth{i}"):
                 continue
@@ -439,6 +445,7 @@ class VM:
                     mac = f.readline().strip("\n")
             else:
                 mac = gen_mac(i)
+
             res.append("-device")
             res.append(
                 "%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x"
@@ -450,11 +457,13 @@ class VM:
                     "mac": mac,
                 }
             )
+
             if self.conn_mode == "tc":
                 res.append("-netdev")
                 res.append(
                     f"tap,id=p{i:02d},ifname=tap{i},script=/etc/tc-tap-ifup,downscript=no"
                 )
+
             if self.conn_mode == "macvtap":
                 # if required number of nics exceeds the number of attached interfaces
                 # we skip excessive ones

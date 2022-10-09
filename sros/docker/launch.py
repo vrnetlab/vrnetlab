@@ -297,30 +297,69 @@ def parse_custom_variant(cfg):
     variant = {
         "max_nics": 40
     }  # some default value for num nics if it is not provided in user cfg
+
     # parsing distributed custom variant
     if "___" in cfg:
         variant["deployment_model"] = "distributed"
         variant["lcs"] = []
-        # >> No need to recompute max_nics
-        # variant["max_nics"] = 0
+
         for hw_part in cfg.split("___"):
             if "cp: " in hw_part:
                 variant["cp"] = _parse(hw_part.strip(), None, skip_nics=True)
             elif "lc: " in hw_part:
                 lc = _parse(hw_part.strip(), None)
-                # >> No need to rempute max_nics
-                # if "max_nics" in lc:
-                #    variant["max_nics"] = variant["max_nics"] + int(lc["max_nics"])
-                    # Need to keep this information
-                    # lc.pop("max_nics")
                 variant["lcs"].append(lc)
 
+            # Sort lc line by slot number
+            variant["lcs"] = sort_lc_lines_by_slot(variant["lcs"])
     else:
         # parsing integrated mode config
         variant["deployment_model"] = "integrated"
         variant = _parse(cfg, obj=variant)
 
     return variant
+
+
+def parse_tokens_line(txt: str) -> dict:
+    tokens = txt.strip().split(' ')
+    tokens = list(filter(lambda token: '=' in token, tokens))
+
+    tokens_dict = {}
+    for token in tokens:
+        elems = token.split('=')
+        if 2 == len(elems):
+            k, v = elems
+            tokens_dict[k] = v
+    return tokens_dict
+
+
+def sort_lc_lines_by_slot(lc_lines: list) -> list:
+    timos_tupples = []
+    sorted_timos = []
+
+    for v in lc_lines:
+        timos_line = v.get('timos_line', None)
+
+        if timos_line:
+            line = timos_line.strip().lower()
+            tokens = parse_tokens_line(line)
+
+            key = tokens.get('slot', None)
+            try:
+                key = int(key)
+            except (TypeError, ValueError):
+                # Set to last in sequence
+                key = 999
+        else:
+            key = 999
+
+        # contrcut dict with the key to be sorted later
+        timos_tupples.append((key, v))
+
+    if timos_tupples:
+        sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tupples)]
+
+    return sorted_timos
 
 
 def mangle_uuid(uuid):
@@ -655,7 +694,7 @@ class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
     def __init__(self, lc_config, conn_mode, num_nics, slot=1,  nic_eth_start=1):
-        # cp - control plane. role is used to create a separate overlay image name
+        # lc - line card. role is used to create a separate overlay image name
         self.role = "lc"
         super(SROS_lc, self).__init__(
             None,
@@ -790,6 +829,7 @@ class SROS(vrnetlab.VR):
         )
 
         if variant["deployment_model"] == "distributed":
+            # CP VM instantiation
             self.vms = [
                 SROS_cp(
                     hostname,
@@ -802,17 +842,44 @@ class SROS(vrnetlab.VR):
                 )
             ]
 
+            # LC VM Instantiation
             start_eth = 1
-            for i, lc in enumerate(variant["lcs"]):
+            lc_slot_tracker = []
+            for lc in variant["lcs"]:
+                # Get slot information for lince definition line
+                lc_tokens = parse_tokens_line(lc.get('timos_line'))
+                lc_slot = lc_tokens.get('slot', None)
+
+                # Validation of lc_slot value
+                if not lc_slot:
+                    self.logger.warning(
+                            f"No Slot information on following lc line defintion: {lc}"
+                            "Skip LC VM creation"
+                            )
+                    continue
+
+                if lc_slot in lc_slot_tracker:
+                    self.logger.warning(f"Found duplicate slot: {lc} Skip LC VM creation")
+                    continue
+
+                try:
+                    lc_slot = int(lc_slot)
+                except (TypeError, ValueError):
+                    self.logger.warning(f"slot value format is not valid: {lc} Skip LC VM creation")
+                    continue
+
                 # Priority is to use max_nics from each lc definition
                 max_nics = lc.get('max_nics', None)
                 if not max_nics:
                     max_nics = variant['max_nics']
 
                 self.vms.append(
-                    SROS_lc(lc, conn_mode, max_nics, slot=2 + i, nic_eth_start=start_eth)
+                    SROS_lc(lc, conn_mode, max_nics, slot=2 + lc_slot, nic_eth_start=start_eth)
                 )
+
+                # Ehernet sequence is based on attached linecard respecting slot sequence
                 start_eth += int(max_nics)
+                lc_slot_tracker.append(lc_slot)
 
             # set up bridge for connecting CP with LCs
             vrnetlab.run_command(["brctl", "addbr", "int_cp"])

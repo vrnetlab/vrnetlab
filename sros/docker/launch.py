@@ -96,10 +96,11 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=ixr-s card=cpm-ixr-s",
         },
         # line card (IOM/XCM)
-        "lcs": [{
-            "min_ram": 4,
-            "timos_line": "chassis=ixr-s slot=1 card=imm48-sfp++6-qsfp28 mda/1=m48-sfp++6-qsfp28",
-            "card_config": """/configure card 1 card-type imm48-sfp++6-qsfp28
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "chassis=ixr-s slot=1 card=imm48-sfp++6-qsfp28 mda/1=m48-sfp++6-qsfp28",
+                "card_config": """/configure card 1 card-type imm48-sfp++6-qsfp28
             /configure card 1 mda 1 mda-type m48-sfp++6-qsfp28
             """,
             }
@@ -260,7 +261,7 @@ def parse_custom_variant(cfg):
     an example of user defined variant configuration
     1) integrated:  cpu=2 ram=4 max_nics=6 chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28
     2) distributed: cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___
-                    lc: cpu=2 ram=4 max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 
+                    lc: cpu=2 ram=4 max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28
                         mda/1=m24-sfp++8-sfp28+2-qsfp28
     """
 
@@ -321,12 +322,12 @@ def parse_custom_variant(cfg):
 
 
 def parse_tokens_line(txt: str) -> dict:
-    tokens = txt.strip().split(' ')
-    tokens = list(filter(lambda token: '=' in token, tokens))
+    tokens = txt.strip().split(" ")
+    tokens = list(filter(lambda token: "=" in token, tokens))
 
     tokens_dict = {}
     for token in tokens:
-        elems = token.split('=')
+        elems = token.split("=")
         if 2 == len(elems):
             k, v = elems
             tokens_dict[k] = v
@@ -338,13 +339,13 @@ def sort_lc_lines_by_slot(lc_lines: list) -> list:
     sorted_timos = []
 
     for v in lc_lines:
-        timos_line = v.get('timos_line', None)
+        timos_line = v.get("timos_line", None)
 
         if timos_line:
             line = timos_line.strip().lower()
             tokens = parse_tokens_line(line)
 
-            key = tokens.get('slot', None)
+            key = tokens.get("slot", None)
             try:
                 key = int(key)
             except (TypeError, ValueError):
@@ -353,7 +354,7 @@ def sort_lc_lines_by_slot(lc_lines: list) -> list:
         else:
             key = 999
 
-        # contrcut dict with the key to be sorted later
+        # constcut dict with the key to be sorted later
         timos_tupples.append((key, v))
 
     if timos_tupples:
@@ -693,7 +694,7 @@ class SROS_cp(SROS_vm):
 class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
-    def __init__(self, lc_config, conn_mode, num_nics, slot=1,  nic_eth_start=1):
+    def __init__(self, lc_config, conn_mode, num_nics, slot=1, nic_eth_start=1):
         # lc - line card. role is used to create a separate overlay image name
         self.role = "lc"
         super(SROS_lc, self).__init__(
@@ -702,7 +703,7 @@ class SROS_lc(SROS_vm):
             ram=1024 * int(lc_config["min_ram"]),
             conn_mode=conn_mode,
             num=slot,
-            cpu=lc_config.get("cpu")
+            cpu=lc_config.get("cpu"),
         )
 
         self.smbios = ["type=1,product=TIMOS:{}".format(lc_config["timos_line"])]
@@ -847,34 +848,44 @@ class SROS(vrnetlab.VR):
             lc_slot_tracker = []
             for lc in variant["lcs"]:
                 # Get slot information for lince definition line
-                lc_tokens = parse_tokens_line(lc.get('timos_line'))
-                lc_slot = lc_tokens.get('slot', None)
+                lc_tokens = parse_tokens_line(lc.get("timos_line"))
+                lc_slot = lc_tokens.get("slot", None)
 
                 # Validation of lc_slot value
                 if not lc_slot:
                     self.logger.warning(
-                            f"No Slot information on following lc line defintion: {lc}"
-                            "Skip LC VM creation"
-                            )
+                        f"No Slot information on following lc line defintion: {lc}"
+                        "Skip LC VM creation"
+                    )
                     continue
 
                 if lc_slot in lc_slot_tracker:
-                    self.logger.warning(f"Found duplicate slot: {lc} Skip LC VM creation")
+                    self.logger.warning(
+                        f"Found duplicate slot: {lc} Skip LC VM creation"
+                    )
                     continue
 
                 try:
                     lc_slot = int(lc_slot)
                 except (TypeError, ValueError):
-                    self.logger.warning(f"slot value format is not valid: {lc} Skip LC VM creation")
+                    self.logger.warning(
+                        f"slot value format is not valid: {lc} Skip LC VM creation"
+                    )
                     continue
 
                 # Priority is to use max_nics from each lc definition
-                max_nics = lc.get('max_nics', None)
+                max_nics = lc.get("max_nics", None)
                 if not max_nics:
-                    max_nics = variant['max_nics']
+                    max_nics = variant["max_nics"]
 
                 self.vms.append(
-                    SROS_lc(lc, conn_mode, max_nics, slot=2 + lc_slot, nic_eth_start=start_eth)
+                    SROS_lc(
+                        lc,
+                        conn_mode,
+                        max_nics,
+                        slot=2 + lc_slot,
+                        nic_eth_start=start_eth,
+                    )
                 )
 
                 # Ehernet sequence is based on attached linecard respecting slot sequence

@@ -268,6 +268,7 @@ def parse_custom_variant(cfg):
     def _parse(cfg, obj, skip_nics=False):
         if not obj:
             obj = {}
+
         timos_line = []
         for elem in cfg.split():
             # skip cp: lc: markers
@@ -282,16 +283,31 @@ def parse_custom_variant(cfg):
                 obj["min_ram"] = elem.split("=")[1]
                 continue
 
+            if "slot=" in elem:
+                obj["slot"] = elem.split("=")[1]
+                # Do not set continue because 
+                # slot is part of Timos Line
+
             if not skip_nics and "max_nics=" in elem:
                 obj["max_nics"] = int(elem.split("=")[1])
                 continue
             timos_line.append(elem)
         obj["timos_line"] = " ".join(timos_line)
+
         # set default cpu and ram
         if "cpu" not in obj:
             obj["cpu"] = 2
+
         if "min_ram" not in obj:
             obj["min_ram"] = 4
+
+        # set default value for slot
+        if "slot" not in obj:
+            if "lc:" in cfg:
+                obj["slot"] = 1
+            else:
+                obj["slot"] = "A"
+
         return obj
 
     # init variant object that gets returned
@@ -311,8 +327,8 @@ def parse_custom_variant(cfg):
                 lc = _parse(hw_part.strip(), None)
                 variant["lcs"].append(lc)
 
-            # Sort lc line by slot number
-            variant["lcs"] = sort_lc_lines_by_slot(variant["lcs"])
+        # Sort lc line by slot number
+        variant["lcs"] = sort_lc_lines_by_slot(variant["lcs"])
     else:
         # parsing integrated mode config
         variant["deployment_model"] = "integrated"
@@ -321,45 +337,9 @@ def parse_custom_variant(cfg):
     return variant
 
 
-def parse_tokens_line(txt: str) -> dict:
-    tokens = txt.strip().split(" ")
-    tokens = list(filter(lambda token: "=" in token, tokens))
-
-    tokens_dict = {}
-    for token in tokens:
-        elems = token.split("=")
-        if 2 == len(elems):
-            k, v = elems
-            tokens_dict[k] = v
-    return tokens_dict
-
-
 def sort_lc_lines_by_slot(lc_lines: list) -> list:
-    timos_tupples = []
-    sorted_timos = []
-
-    for v in lc_lines:
-        timos_line = v.get("timos_line", None)
-
-        if timos_line:
-            line = timos_line.strip().lower()
-            tokens = parse_tokens_line(line)
-
-            key = tokens.get("slot", None)
-            try:
-                key = int(key)
-            except (TypeError, ValueError):
-                # Set to last in sequence
-                key = 999
-        else:
-            key = 999
-
-        # constcut dict with the key to be sorted later
-        timos_tupples.append((key, v))
-
-    if timos_tupples:
-        sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tupples)]
-
+    timos_tuples = [(v["slot"], v) for v in lc_lines]
+    sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tuples)]
     return sorted_timos
 
 
@@ -848,8 +828,7 @@ class SROS(vrnetlab.VR):
             lc_slot_tracker = []
             for lc in variant["lcs"]:
                 # Get slot information for lince definition line
-                lc_tokens = parse_tokens_line(lc.get("timos_line"))
-                lc_slot = lc_tokens.get("slot", None)
+                lc_slot = lc["slot"]
 
                 # Validation of lc_slot value
                 if not lc_slot:

@@ -463,15 +463,17 @@ class VM:
 
         start_eth = self.start_nic_eth_idx
         end_eth = self.start_nic_eth_idx + self.num_nics
+        pci_bus_ctr = 0
         for i in range(start_eth, end_eth):
-            # if the matching container interface ethX doesn't exist, we don't create a nic
-            if not os.path.exists(f"/sys/class/net/eth{i}"):
-                continue
+            # PCI bus counter is to ensure pci bus index starts from 1
+            # and continuing in sequence regardles the eth index
+            pci_bus_ctr += 1
 
             # calc which PCI bus we are on and the local add on that PCI bus
-            x = i
+            x = pci_bus_ctr
             if "vEOS" in self.image:
-                x = i + 1
+                x = pci_bus_ctr + 1
+
             pci_bus = math.floor(x / self.nics_per_pci_bus) + 1
             addr = (x % self.nics_per_pci_bus) + 1
 

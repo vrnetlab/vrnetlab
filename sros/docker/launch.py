@@ -45,13 +45,15 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=ixr-e card=cpm-ixr-e",
         },
         # line card (IOM/XCM)
-        "lc": {
-            "min_ram": 4,
-            "timos_line": "chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28",
-            "card_config": """/configure card 1 card-type imm24-sfp++8-sfp28+2-qsfp28
-            /configure card 1 mda 1 mda-type m24-sfp++8-sfp28+2-qsfp28
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28",
+                "card_config": """/configure card 1 card-type imm24-sfp++8-sfp28+2-qsfp28
+                /configure card 1 mda 1 mda-type m24-sfp++8-sfp28+2-qsfp28
             """,
-        },
+            }
+        ],
     },
     #    "ixr-6": {
     #        "deployment_model": "distributed",
@@ -94,13 +96,15 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=ixr-s card=cpm-ixr-s",
         },
         # line card (IOM/XCM)
-        "lc": {
-            "min_ram": 4,
-            "timos_line": "chassis=ixr-s slot=1 card=imm48-sfp++6-qsfp28 mda/1=m48-sfp++6-qsfp28",
-            "card_config": """/configure card 1 card-type imm48-sfp++6-qsfp28
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "chassis=ixr-s slot=1 card=imm48-sfp++6-qsfp28 mda/1=m48-sfp++6-qsfp28",
+                "card_config": """/configure card 1 card-type imm48-sfp++6-qsfp28
             /configure card 1 mda 1 mda-type m48-sfp++6-qsfp28
             """,
-        },
+            }
+        ],
     },
     "ixr-e-small": {
         "deployment_model": "distributed",
@@ -111,12 +115,14 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=ixr-e card=imm14-10g-sfp++4-1g-tx",
         },
         # line card (IOM/XCM)
-        "lc": {
-            "min_ram": 4,
-            "timos_line": "chassis=ixr-e slot=1 card=imm14-10g-sfp++4-1g-tx mda/1=m14-10g-sfp++4-1g-tx",
-            "card_config": """
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "chassis=ixr-e slot=1 card=imm14-10g-sfp++4-1g-tx mda/1=m14-10g-sfp++4-1g-tx",
+                "card_config": """
             """,
-        },
+            }
+        ],
     },
     "sr-1s": {
         "deployment_model": "integrated",
@@ -141,43 +147,45 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=SR-14s sfm=sfm-s card=cpm2-s",
         },
         # line card (IOM/XCM)
-        "lc": {
-            "min_ram": 6,
-            "timos_line": "slot=1 chassis=SR-14s sfm=sfm-s card=xcm-14s mda/1=s36-100gb-qsfp28",
-            "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
-            /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 5 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 6 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 7 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 8 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 9 power-module-type ps-a-dc-6000
-            /configure system power-shelf 1 power-module 10 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-shelf-type ps-a10-shelf-dc
-            /configure system power-shelf 2 power-module 1 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 2 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 3 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 4 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 5 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 6 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 7 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 8 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 9 power-module-type ps-a-dc-6000
-            /configure system power-shelf 2 power-module 10 power-module-type ps-a-dc-6000
-            /configure sfm 1 sfm-type sfm-s
-            /configure sfm 2 sfm-type sfm-s
-            /configure sfm 3 sfm-type sfm-s
-            /configure sfm 4 sfm-type sfm-s
-            /configure sfm 5 sfm-type sfm-s
-            /configure sfm 6 sfm-type sfm-s
-            /configure sfm 7 sfm-type sfm-s
-            /configure sfm 8 sfm-type sfm-s
-            /configure card 1 card-type xcm-14s
-            /configure card 1 mda 1 mda-type s36-100gb-qsfp28
+        "lcs": [
+            {
+                "min_ram": 6,
+                "timos_line": "slot=1 chassis=SR-14s sfm=sfm-s card=xcm-14s mda/1=s36-100gb-qsfp28",
+                "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
+                /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 5 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 6 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 7 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 8 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 9 power-module-type ps-a-dc-6000
+                /configure system power-shelf 1 power-module 10 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-shelf-type ps-a10-shelf-dc
+                /configure system power-shelf 2 power-module 1 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 2 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 3 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 4 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 5 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 6 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 7 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 8 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 9 power-module-type ps-a-dc-6000
+                /configure system power-shelf 2 power-module 10 power-module-type ps-a-dc-6000
+                /configure sfm 1 sfm-type sfm-s
+                /configure sfm 2 sfm-type sfm-s
+                /configure sfm 3 sfm-type sfm-s
+                /configure sfm 4 sfm-type sfm-s
+                /configure sfm 5 sfm-type sfm-s
+                /configure sfm 6 sfm-type sfm-s
+                /configure sfm 7 sfm-type sfm-s
+                /configure sfm 8 sfm-type sfm-s
+                /configure card 1 card-type xcm-14s
+                /configure card 1 mda 1 mda-type s36-100gb-qsfp28
             """,
-        },
+            }
+        ],
     },
     "sr-1": {
         "deployment_model": "integrated",
@@ -197,13 +205,15 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=sr-1e card=cpm-e",
         },
         # line card (IOM/XCM)
-        "lc": {
-            "min_ram": 4,
-            "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
-            "card_config": """/configure card 1 card-type iom-e
-            /configure card 1 mda 1 mda-type me40-1gb-csfp
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
+                "card_config": """/configure card 1 card-type iom-e
+                /configure card 1 mda 1 mda-type me40-1gb-csfp
             """,
-        },
+            }
+        ],
     },
 }
 
@@ -246,16 +256,19 @@ SROS_MGMT_V6_ADDR = "200::1"
 V6_PREFIX_LENGTH = "127"
 
 
-def parse_custom_variant(self, cfg):
+def parse_custom_variant(cfg):
     """Parse custom variant definition from a users input returning a variant dict
     an example of user defined variant configuration
     1) integrated:  cpu=2 ram=4 max_nics=6 chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28
-    2) distributed: cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___ lc: cpu=2 ram=4 max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28
+    2) distributed: cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___
+                    lc: cpu=2 ram=4 max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28
+                        mda/1=m24-sfp++8-sfp28+2-qsfp28
     """
 
     def _parse(cfg, obj, skip_nics=False):
         if not obj:
             obj = {}
+
         timos_line = []
         for elem in cfg.split():
             # skip cp: lc: markers
@@ -270,40 +283,65 @@ def parse_custom_variant(self, cfg):
                 obj["min_ram"] = elem.split("=")[1]
                 continue
 
+            if "slot=" in elem:
+                obj["slot"] = elem.split("=")[1]
+                # Do not set continue because
+                # slot is part of Timos Line
+
             if not skip_nics and "max_nics=" in elem:
                 obj["max_nics"] = int(elem.split("=")[1])
                 continue
             timos_line.append(elem)
         obj["timos_line"] = " ".join(timos_line)
+
         # set default cpu and ram
         if "cpu" not in obj:
             obj["cpu"] = 2
+
         if "min_ram" not in obj:
             obj["min_ram"] = 4
+
+        # set default value for slot
+        if "slot" not in obj:
+            if "lc:" in cfg:
+                obj["slot"] = 1
+            else:
+                obj["slot"] = "A"
+
         return obj
 
     # init variant object that gets returned
     variant = {
         "max_nics": 40
     }  # some default value for num nics if it is not provided in user cfg
+
     # parsing distributed custom variant
     if "___" in cfg:
         variant["deployment_model"] = "distributed"
+        variant["lcs"] = []
+
         for hw_part in cfg.split("___"):
             if "cp: " in hw_part:
                 variant["cp"] = _parse(hw_part.strip(), None, skip_nics=True)
             elif "lc: " in hw_part:
-                variant["lc"] = _parse(hw_part.strip(), None)
-                if "max_nics" in variant["lc"]:
-                    variant["max_nics"] = int(variant["lc"]["max_nics"])
-                    variant["lc"].pop("max_nics")
+                lc = _parse(hw_part.strip(), None)
+                variant["lcs"].append(lc)
 
+        # Sort lc line by slot number
+        variant["lcs"] = sort_lc_lines_by_slot(variant["lcs"])
     else:
         # parsing integrated mode config
         variant["deployment_model"] = "integrated"
         variant = _parse(cfg, obj=variant)
 
     return variant
+
+
+# sort line card definitions if they were provided in a non-consequetive order
+def sort_lc_lines_by_slot(lc_lines: list) -> list:
+    timos_tuples = [(v["slot"], v) for v in lc_lines]
+    sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tuples)]
+    return sorted_timos
 
 
 def mangle_uuid(uuid):
@@ -422,7 +460,7 @@ class SROS_vm(vrnetlab.VM):
             m = re.search("([0-9]{4}-[0-9]{2}-)([0-9]{2})", license)
             if m:
                 self.fake_start_date = "%s%02d" % (m.group(1), int(m.group(2)) + 1)
-        except:
+        except Exception:
             raise ValueError("Unable to parse license file")
         self.logger.info(
             "License file found for UUID %s with start date %s"
@@ -447,7 +485,10 @@ class SROS_integrated(SROS_vm):
         self.mode = mode
         self.num_nics = num_nics
         self.smbios = [
-            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active address={SROS_MGMT_V6_ADDR}/{V6_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['timos_line']}"
+            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active "
+            f"address={SROS_MGMT_V6_ADDR}/{V6_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/"
+            f"license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} "
+            f"{variant['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
         self.variant = variant
@@ -543,7 +584,11 @@ class SROS_cp(SROS_vm):
         self.variant = variant
 
         self.smbios = [
-            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active address={SROS_MGMT_V6_ADDR}/{V6_PREFIX_LENGTH}@active license-file=tftp://{BRIDGE_V4_ADDR}/license.txt primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
+            f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active "
+            f"address={SROS_MGMT_V6_ADDR}/{V6_PREFIX_LENGTH}@active "
+            f"license-file=tftp://{BRIDGE_V4_ADDR}/license.txt "
+            f"primary-config=tftp://{BRIDGE_V4_ADDR}/config.txt "
+            f"system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
 
@@ -606,9 +651,10 @@ class SROS_cp(SROS_vm):
                 )
 
             # configure card/mda of a given variant
-            if "card_config" in self.variant["lc"]:
-                for l in iter(self.variant["lc"]["card_config"].splitlines()):
-                    self.wait_write(l)
+            for lc in self.variant["lcs"]:
+                if "card_config" in lc:
+                    for l in iter(lc["card_config"].splitlines()):
+                        self.wait_write(l)
 
             # configure bof
             for l in iter(gen_bof_config()):
@@ -629,22 +675,22 @@ class SROS_cp(SROS_vm):
 class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
-    def __init__(self, variant, conn_mode, num_nics, slot=1):
-        # lc - line card. role is used to create a separate overlay image name
+    def __init__(self, lc_config, conn_mode, num_nics, slot=1, nic_eth_start=1):
+        # role lc if for a line card. role is used to create a separate overlay image name
         self.role = "lc"
-        cpu = variant["lc"].get("cpu")
         super(SROS_lc, self).__init__(
             None,
             None,
-            cpu=cpu,
-            ram=1024 * int(variant["lc"]["min_ram"]),
+            ram=1024 * int(lc_config["min_ram"]),
             conn_mode=conn_mode,
             num=slot,
+            cpu=lc_config.get("cpu"),
         )
 
-        self.smbios = ["type=1,product=TIMOS:{}".format(variant["lc"]["timos_line"])]
+        self.smbios = ["type=1,product=TIMOS:{}".format(lc_config["timos_line"])]
         self.slot = slot
         self.num_nics = num_nics
+        self.start_nic_eth_idx = nic_eth_start
 
     def start(self):
         # use parent class start() function
@@ -696,7 +742,7 @@ class SROS(vrnetlab.VR):
         if variant_name.lower() in SROS_VARIANTS:
             variant = SROS_VARIANTS[variant_name.lower()]
         else:
-            variant = parse_custom_variant(self, variant_name)
+            variant = parse_custom_variant(variant_name)
 
         major_release = 0
 
@@ -723,6 +769,7 @@ class SROS(vrnetlab.VR):
             )
             sys.exit(1)
 
+        self.logger.debug("Raw SR OS variant: " + str(variant))
         self.logger.info("SR OS Variant: " + variant_name)
         self.logger.info(f"Number of NICs: {variant['max_nics']}")
         self.logger.info("Configuration mode: " + str(mode))
@@ -764,6 +811,7 @@ class SROS(vrnetlab.VR):
         )
 
         if variant["deployment_model"] == "distributed":
+            # CP VM instantiation
             self.vms = [
                 SROS_cp(
                     hostname,
@@ -773,9 +821,55 @@ class SROS(vrnetlab.VR):
                     major_release,
                     variant,
                     conn_mode,
-                ),
-                SROS_lc(variant, conn_mode, variant["max_nics"]),
+                )
             ]
+
+            # LC VM Instantiation
+            start_eth = 1
+            lc_slot_tracker = []
+            for lc in variant["lcs"]:
+                lc_slot = lc["slot"]
+
+                # Validation of lc_slot value
+                if not lc_slot:
+                    self.logger.warning(
+                        f"No Slot information on following lc line defintion: {lc}"
+                        "Skip LC VM creation"
+                    )
+                    continue
+
+                if lc_slot in lc_slot_tracker:
+                    self.logger.warning(
+                        f"Found duplicate slot: {lc} Skip LC VM creation"
+                    )
+                    continue
+
+                try:
+                    lc_slot = int(lc_slot)
+                except (TypeError, ValueError):
+                    self.logger.warning(
+                        f"slot value format is not valid: {lc} Skip LC VM creation"
+                    )
+                    continue
+
+                # Priority is to use max_nics from each lc definition
+                max_nics = lc.get("max_nics", None)
+                if not max_nics:
+                    max_nics = variant["max_nics"]
+
+                self.vms.append(
+                    SROS_lc(
+                        lc,
+                        conn_mode,
+                        max_nics,
+                        slot=lc_slot,
+                        nic_eth_start=start_eth,
+                    )
+                )
+
+                # Ethernet sequence is based on attached linecard respecting slot sequence
+                start_eth += int(max_nics)
+                lc_slot_tracker.append(lc_slot)
 
             # set up bridge for connecting CP with LCs
             vrnetlab.run_command(["brctl", "addbr", "int_cp"])

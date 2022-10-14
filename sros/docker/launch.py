@@ -336,6 +336,7 @@ def parse_custom_variant(cfg):
 
     return variant
 
+
 # sort line card definitions if they were provided in a non-consequetive order
 def sort_lc_lines_by_slot(lc_lines: list) -> list:
     timos_tuples = [(v["slot"], v) for v in lc_lines]
@@ -861,7 +862,7 @@ class SROS(vrnetlab.VR):
                         lc,
                         conn_mode,
                         max_nics,
-                        slot=2 + lc_slot,
+                        slot=lc_slot,
                         nic_eth_start=start_eth,
                     )
                 )

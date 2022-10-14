@@ -285,7 +285,7 @@ def parse_custom_variant(cfg):
 
             if "slot=" in elem:
                 obj["slot"] = elem.split("=")[1]
-                # Do not set continue because 
+                # Do not set continue because
                 # slot is part of Timos Line
 
             if not skip_nics and "max_nics=" in elem:
@@ -336,7 +336,7 @@ def parse_custom_variant(cfg):
 
     return variant
 
-
+# sort line card definitions if they were provided in a non-consequetive order
 def sort_lc_lines_by_slot(lc_lines: list) -> list:
     timos_tuples = [(v["slot"], v) for v in lc_lines]
     sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tuples)]
@@ -675,7 +675,7 @@ class SROS_lc(SROS_vm):
     """Line card for distributed VSR-SIM"""
 
     def __init__(self, lc_config, conn_mode, num_nics, slot=1, nic_eth_start=1):
-        # lc - line card. role is used to create a separate overlay image name
+        # role lc if for a line card. role is used to create a separate overlay image name
         self.role = "lc"
         super(SROS_lc, self).__init__(
             None,
@@ -827,7 +827,6 @@ class SROS(vrnetlab.VR):
             start_eth = 1
             lc_slot_tracker = []
             for lc in variant["lcs"]:
-                # Get slot information for lince definition line
                 lc_slot = lc["slot"]
 
                 # Validation of lc_slot value
@@ -867,7 +866,7 @@ class SROS(vrnetlab.VR):
                     )
                 )
 
-                # Ehernet sequence is based on attached linecard respecting slot sequence
+                # Ethernet sequence is based on attached linecard respecting slot sequence
                 start_eth += int(max_nics)
                 lc_slot_tracker.append(lc_slot)
 

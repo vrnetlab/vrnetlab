@@ -416,14 +416,24 @@ class VM:
 
         self.logger.debug("waiting for provisioned interfaces to appear...")
 
+        # start_eth means eth index for VM
+        # particularly for multiple slot LC
+        start_eth = self.start_nic_eth_idx
+        end_eth = self.start_nic_eth_idx + self.num_nics
+
         inf_path = Path("/sys/class/net/")
         while True:
             provisioned_nics = list(inf_path.glob("eth*"))
             # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
             if len(provisioned_nics) >= self.num_provisioned_nics + 1:
-                self.highest_provisioned_nic_num = max(
-                    [int(re.search(pattern=r"\d+", string=nic.name).group()) for nic in provisioned_nics]
-                )
+                nics = [int(re.search(pattern=r"\d+", string=nic.name).group()) for nic in provisioned_nics]
+
+                # Ensure the max eth is in range of allocated eth index of VM LC
+                nics = [nic for nic in nics if nic in range(start_eth, end_eth)]
+
+                if nics:
+                    self.highest_provisioned_nic_num = max(nics)
+
                 self.logger.debug(
                     f"highest allocated interface id determined to be: {self.highest_provisioned_nic_num}..."
                 )

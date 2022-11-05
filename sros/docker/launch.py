@@ -255,6 +255,7 @@ BRIDGE_V6_ADDR = "200::"
 SROS_MGMT_V6_ADDR = "200::1"
 V6_PREFIX_LENGTH = "127"
 
+
 def parse_variant_line(cfg, obj, skip_nics=False):
     if not obj:
         obj = {}
@@ -300,6 +301,7 @@ def parse_variant_line(cfg, obj, skip_nics=False):
 
     return obj
 
+
 def parse_custom_variant(cfg):
     """Parse custom variant definition from a users input returning a variant dict
     an example of user defined variant configuration
@@ -321,7 +323,9 @@ def parse_custom_variant(cfg):
 
         for hw_part in cfg.split("___"):
             if "cp: " in hw_part:
-                variant["cp"] = parse_variant_line(hw_part.strip(), None, skip_nics=True)
+                variant["cp"] = parse_variant_line(
+                    hw_part.strip(), None, skip_nics=True
+                )
             elif "lc: " in hw_part:
                 lc = parse_variant_line(hw_part.strip(), None)
                 variant["lcs"].append(lc)
@@ -338,7 +342,8 @@ def parse_custom_variant(cfg):
 
 # sort line card definitions if they were provided in a non-consequetive order
 def sort_lc_lines_by_slot(lc_lines: list) -> list:
-    timos_tuples = [(v["slot"], v) for v in lc_lines]
+    max_slot = 99
+    timos_tuples = [(v.get("slot", max_slot), v) for v in lc_lines]
     sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tuples)]
     return sorted_timos
 
@@ -740,6 +745,13 @@ class SROS(vrnetlab.VR):
 
         if variant_name.lower() in SROS_VARIANTS:
             variant = SROS_VARIANTS[variant_name.lower()]
+
+            if variant.get("lcs", None):
+                variant["lcs"] = [
+                    parse_variant_line(lc.get("timos_line", ""), lc)
+                    for lc in variant["lcs"]
+                ]
+                variant["lsc"] = sort_lc_lines_by_slot(variant["lcs"])
         else:
             variant = parse_custom_variant(variant_name)
 
@@ -826,21 +838,9 @@ class SROS(vrnetlab.VR):
             # LC VM Instantiation
             start_eth = 1
             lc_slot_tracker = []
-
             for lc in variant["lcs"]:
                 lc_slot = lc.get("slot", None)
 
-                # Try to retrive from timos_line
-                if not lc_slot:
-                    timos_line = lc.get("timos_line")
-                    lc = parse_variant_line(timos_line, lc)
-                    self.logger.info(f"New reconsructed LC: {lc}")
-
-                    # Retrieve slot information from new constructed LC
-                    lc_slot = lc.get("slot", None)
-
-
-                # Final validation of lc_slot value
                 # If lc_slot does not exist the skip instantiation
                 if not lc_slot:
                     self.logger.warning(

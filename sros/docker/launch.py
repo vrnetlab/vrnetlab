@@ -35,6 +35,22 @@ def trace(self, message, *args, **kws):
 
 logging.Logger.trace = trace
 
+#
+def line_card_config(chassis, card, mda, integrated=False, card_type=None):
+    """
+    line_card_config is a convenience function that generates line card definition strings
+    such as `timos_line`, `card_config`.
+    """
+    slot = "A" if integrated else "1"
+    return {
+        "timos_line": f"slot={slot} chassis={chassis} card={card} mda/1={mda}",
+        "card_config": f"""
+/configure card 1 card-type {card_type if card_type else card}
+/configure card 1 mda 1 mda-type {mda}
+      """,
+    }
+
+
 SROS_VARIANTS = {
     "ixr-e-big": {
         "deployment_model": "distributed",
@@ -212,6 +228,26 @@ SROS_VARIANTS = {
                 "card_config": """/configure card 1 card-type iom-e
                 /configure card 1 mda 1 mda-type me40-1gb-csfp
             """,
+            }
+        ],
+    },
+    "sr-1x-48d": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 48,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1x-48D card=cpm-1x",
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 4,
+                **line_card_config(
+                    chassis="sr-1x-48D",
+                    card="i48-800g-qsfpdd-1x",
+                    mda="m48-800g-qsfpdd-1x",
+                ),
             }
         ],
     },
@@ -564,7 +600,7 @@ class SROS_integrated(SROS_vm):
                 )
             )
 
-            # logout at the end of execution 
+            # logout at the end of execution
             self.wait_write("/logout")
 
 

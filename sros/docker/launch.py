@@ -556,7 +556,6 @@ class SROS_integrated(SROS_vm):
 
             # save bof config on disk
             self.wait_write("/bof save")
-            self.wait_write("/logout")
 
             self.wait_write("/admin save")
             self.wait_write(
@@ -564,6 +563,9 @@ class SROS_integrated(SROS_vm):
                     mode=self.mode
                 )
             )
+
+            # logout at the end of execution 
+            self.wait_write("/logout")
 
 
 class SROS_cp(SROS_vm):
@@ -666,7 +668,6 @@ class SROS_cp(SROS_vm):
 
             # save bof config on disk
             self.wait_write("/bof save")
-            self.wait_write("/logout")
 
             self.wait_write("/admin save")
             self.wait_write(
@@ -674,6 +675,9 @@ class SROS_cp(SROS_vm):
                     mode=self.mode
                 )
             )
+
+            # logout at the end of execution
+            self.wait_write("/logout")
 
 
 class SROS_lc(SROS_vm):

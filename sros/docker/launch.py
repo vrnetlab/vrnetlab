@@ -256,6 +256,52 @@ SROS_MGMT_V6_ADDR = "200::1"
 V6_PREFIX_LENGTH = "127"
 
 
+def parse_variant_line(cfg, obj, skip_nics=False):
+    if not obj:
+        obj = {}
+
+    timos_line = []
+    for elem in cfg.split():
+        # skip cp: lc: markers
+        if elem in ["cp:", "lc:"]:
+            continue
+
+        if "cpu=" in elem:
+            obj["cpu"] = elem.split("=")[1]
+            continue
+
+        if "ram=" in elem:
+            obj["min_ram"] = elem.split("=")[1]
+            continue
+
+        if "slot=" in elem:
+            obj["slot"] = elem.split("=")[1]
+            # Do not set continue because
+            # slot is part of Timos Line
+
+        if not skip_nics and "max_nics=" in elem:
+            obj["max_nics"] = int(elem.split("=")[1])
+            continue
+        timos_line.append(elem)
+    obj["timos_line"] = " ".join(timos_line)
+
+    # set default cpu and ram
+    if "cpu" not in obj:
+        obj["cpu"] = 2
+
+    if "min_ram" not in obj:
+        obj["min_ram"] = 4
+
+    # set default value for slot
+    if "slot" not in obj:
+        if "lc:" in cfg:
+            obj["slot"] = 1
+        else:
+            obj["slot"] = "A"
+
+    return obj
+
+
 def parse_custom_variant(cfg):
     """Parse custom variant definition from a users input returning a variant dict
     an example of user defined variant configuration
@@ -264,51 +310,6 @@ def parse_custom_variant(cfg):
                     lc: cpu=2 ram=4 max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28
                         mda/1=m24-sfp++8-sfp28+2-qsfp28
     """
-
-    def _parse(cfg, obj, skip_nics=False):
-        if not obj:
-            obj = {}
-
-        timos_line = []
-        for elem in cfg.split():
-            # skip cp: lc: markers
-            if elem in ["cp:", "lc:"]:
-                continue
-
-            if "cpu=" in elem:
-                obj["cpu"] = elem.split("=")[1]
-                continue
-
-            if "ram=" in elem:
-                obj["min_ram"] = elem.split("=")[1]
-                continue
-
-            if "slot=" in elem:
-                obj["slot"] = elem.split("=")[1]
-                # Do not set continue because
-                # slot is part of Timos Line
-
-            if not skip_nics and "max_nics=" in elem:
-                obj["max_nics"] = int(elem.split("=")[1])
-                continue
-            timos_line.append(elem)
-        obj["timos_line"] = " ".join(timos_line)
-
-        # set default cpu and ram
-        if "cpu" not in obj:
-            obj["cpu"] = 2
-
-        if "min_ram" not in obj:
-            obj["min_ram"] = 4
-
-        # set default value for slot
-        if "slot" not in obj:
-            if "lc:" in cfg:
-                obj["slot"] = 1
-            else:
-                obj["slot"] = "A"
-
-        return obj
 
     # init variant object that gets returned
     variant = {
@@ -322,9 +323,11 @@ def parse_custom_variant(cfg):
 
         for hw_part in cfg.split("___"):
             if "cp: " in hw_part:
-                variant["cp"] = _parse(hw_part.strip(), None, skip_nics=True)
+                variant["cp"] = parse_variant_line(
+                    hw_part.strip(), None, skip_nics=True
+                )
             elif "lc: " in hw_part:
-                lc = _parse(hw_part.strip(), None)
+                lc = parse_variant_line(hw_part.strip(), None)
                 variant["lcs"].append(lc)
 
         # Sort lc line by slot number
@@ -332,14 +335,15 @@ def parse_custom_variant(cfg):
     else:
         # parsing integrated mode config
         variant["deployment_model"] = "integrated"
-        variant = _parse(cfg, obj=variant)
+        variant = parse_variant_line(cfg, obj=variant)
 
     return variant
 
 
 # sort line card definitions if they were provided in a non-consequetive order
 def sort_lc_lines_by_slot(lc_lines: list) -> list:
-    timos_tuples = [(v["slot"], v) for v in lc_lines]
+    max_slot = 99
+    timos_tuples = [(v.get("slot", max_slot), v) for v in lc_lines]
     sorted_timos = [t_tupple[1] for t_tupple in sorted(timos_tuples)]
     return sorted_timos
 
@@ -550,6 +554,9 @@ class SROS_integrated(SROS_vm):
             for l in iter(gen_bof_config()):
                 self.wait_write(l)
 
+            # save bof config on disk
+            self.wait_write("/bof save")
+
             self.wait_write("/admin save")
             self.wait_write(
                 "/configure system management-interface configuration-mode {mode}".format(
@@ -557,9 +564,8 @@ class SROS_integrated(SROS_vm):
                 )
             )
 
-        # save bof config on disk
-        self.wait_write("/bof save")
-        self.wait_write("/logout")
+            # logout at the end of execution 
+            self.wait_write("/logout")
 
 
 class SROS_cp(SROS_vm):
@@ -660,6 +666,9 @@ class SROS_cp(SROS_vm):
             for l in iter(gen_bof_config()):
                 self.wait_write(l)
 
+            # save bof config on disk
+            self.wait_write("/bof save")
+
             self.wait_write("/admin save")
             self.wait_write(
                 "/configure system management-interface configuration-mode {mode}".format(
@@ -667,9 +676,8 @@ class SROS_cp(SROS_vm):
                 )
             )
 
-        # save bof config on disk
-        self.wait_write("/bof save")
-        self.wait_write("/logout")
+            # logout at the end of execution
+            self.wait_write("/logout")
 
 
 class SROS_lc(SROS_vm):
@@ -741,6 +749,13 @@ class SROS(vrnetlab.VR):
 
         if variant_name.lower() in SROS_VARIANTS:
             variant = SROS_VARIANTS[variant_name.lower()]
+
+            if variant.get("lcs", None):
+                variant["lcs"] = [
+                    parse_variant_line(lc.get("timos_line", ""), lc)
+                    for lc in variant["lcs"]
+                ]
+                variant["lsc"] = sort_lc_lines_by_slot(variant["lcs"])
         else:
             variant = parse_custom_variant(variant_name)
 
@@ -828,9 +843,9 @@ class SROS(vrnetlab.VR):
             start_eth = 1
             lc_slot_tracker = []
             for lc in variant["lcs"]:
-                lc_slot = lc["slot"]
+                lc_slot = lc.get("slot", None)
 
-                # Validation of lc_slot value
+                # If lc_slot does not exist the skip instantiation
                 if not lc_slot:
                     self.logger.warning(
                         f"No Slot information on following lc line defintion: {lc}"

@@ -251,6 +251,20 @@ SROS_VARIANTS = {
             }
         ],
     },
+    "vsr-i": {
+        "deployment_model": "integrated",
+        "min_ram": 8,  # minimum RAM requirements
+        "max_nics": 20,
+        "timos_line": "chassis=VSR-I slot=A card=iom-v mda/1=m20-v mda/2=isa-tunnel-v",
+        "card_config": """/configure card 1 card-type iom-v
+        /configure card 1 mda 1 mda-type m20-v
+        /configure card 1 mda 2 mda-type isa-tunnel-v
+        """,
+            # depending of the Network Function the Multi-Service Integrated Services Module (MS-ISM) card could be also defined as:
+                # isa-aa-v --> Application Assurance (Stateful Firewall)
+                # isa-bb-v --> Broadband (BNG, LAC, LNS)
+                # isa-tunnel-v (Already Configured) --> IP Tunneling (GRE, IPSec)
+    },
 }
 
 SROS_COMMON_CFG = """/configure system name {name}

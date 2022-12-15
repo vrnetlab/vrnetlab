@@ -201,6 +201,11 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24")
         self.wait_write("delete interfaces fxp0 unit 0 family inet dhcp")
         self.wait_write("delete system processes dhcp-service")
+        # set interface fxp0 on dedicated management vrf, to avoid 10.0.0.0/24 to overlap with any "testing" network
+        self.wait_write("set system management-instance")
+        self.wait_write("set routing-instances mgmt_junos description management-instance")
+        # allow NATed outgoing traffic (set the default route on the management vrf)
+        self.wait_write("set routing-instances mgmt_junos routing-options static route 0.0.0.0/0 next-hop 10.0.0.2")
         self.wait_write("commit")
         self.wait_write("exit")
         # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes

@@ -3,7 +3,12 @@ NAME=VSR
 IMAGE_FORMAT=qcow2
 IMAGE_GLOB=*.qcow2
 
-# match versions like:
+## Configure proxy support here for the build process.
+## Uncomment and complete the following lines as appropriate.
+#http_proxy=http://192.168.1.1:3128
+#https_proxy=http://192.168.1.1:3128
+
+## match versions like:
 # sros-vm-13.0.R7.qcow2
 # sros-vm-14.0.R4.qcow2
 # sros-vm-14.0.R7.qcow2

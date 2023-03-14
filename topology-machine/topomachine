@@ -10,13 +10,15 @@ import jinja2
 class VrTopo:
     """ vrnetlab topo builder
     """
-    def __init__(self, config):
-        self.routers = {}
+    def __init__(self, config, keep_order):
+        self.keep_order = keep_order
         self.links = []
         self.fullmeshes = {}
         self.hubs = {}
         if 'routers' in config:
             self.routers = config['routers']
+        else:
+            self.routers = {}
 
         # sanity checking - use a YANG model and pyang to validate input?
         for r, val in self.routers.items():
@@ -179,7 +181,7 @@ class VrTopo:
             }
 
         if output_format == 'json':
-            return json.dumps(output, sort_keys=True, indent=4)
+            return json.dumps(output, sort_keys=(not self.keep_order), indent=4)
         else:
             raise ValueError("Invalid output format")
 
@@ -299,6 +301,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", help="Build topology from config")
+    parser.add_argument("--keep-order", action="store_true", help="Keep topology order (routers, links, fullmeshes). Applies to --build only")
     parser.add_argument("--run", help="Run topology")
     parser.add_argument("--dry-run", action="store_true", default=False, help="Only print what would be performed during --run")
     parser.add_argument("--prefix", default='', help="docker container name prefix")
@@ -321,7 +324,7 @@ if __name__ == '__main__':
         config = json.loads(input_file.read(), object_pairs_hook=OrderedDict)
         input_file.close()
         try:
-            vt = VrTopo(config)
+            vt = VrTopo(config, args.keep_order)
         except Exception as exc:
             print("ERROR:", exc)
             sys.exit(1)

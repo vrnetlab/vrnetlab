@@ -154,6 +154,34 @@ SROS_VARIANTS = {
         /configure card 1 mda 1 mda-type s36-100gb-qsfp28
         """,
     },
+    "sr-7s": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 36,
+        "power": {"modules": 10, "shelves": 2},
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=SR-7s sfm=sfm-s card=cpm2-s",
+        },
+        # line card (IOM/XCM)
+        "lc": {
+            "min_ram": 6,
+            "timos_line": "slot=1 chassis=SR-7s sfm=sfm-s card=xcm-7s mda/1=s36-100gb-qsfp28",
+            "card_config": """
+             /configure sfm 1 sfm-type sfm-s
+             /configure sfm 2 sfm-type sfm-s
+             /configure sfm 3 sfm-type sfm-s
+             /configure sfm 4 sfm-type sfm-s
+             /configure sfm 5 sfm-type sfm-s
+             /configure sfm 6 sfm-type sfm-s
+             /configure sfm 7 sfm-type sfm-s
+             /configure sfm 8 sfm-type sfm-s
+             /configure card 1 card-type xcm-7s
+             /configure card 1 mda 1 mda-type s36-100gb-qsfp28
+             """,
+        },
+        "connector": {"type": "c1-100g"},
+    },
     "sr-14s": {
         "deployment_model": "distributed",
         # control plane (CPM)

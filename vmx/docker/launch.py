@@ -30,7 +30,8 @@ def trace(self, message, *args, **kws):
         self._log(TRACE_LEVEL_NUM, message, args, **kws)
 logging.Logger.trace = trace
 
-
+#append port for gRPCs
+vrnetlab.HOST_FWDS.append(('tcp', 57400, 57400))
 
 class VMX_vcp(vrnetlab.VM):
     def __init__(self, username, password, image, version, dual_re=False, re_instance=0, install_mode=False):

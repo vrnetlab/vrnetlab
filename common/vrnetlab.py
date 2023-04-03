@@ -25,10 +25,12 @@ HOST_FWDS = [
 ]
 
 def gen_mac(last_octet=None):
-    """ Generate a random MAC address that is in the qemu OUI space and that
+    """ Generate a random MAC address that is in unused OUI space and that
         has the given last octet.
     """
-    return "52:54:00:%02x:%02x:%02x" % (
+    return "0C:%02x:%02x:%02x:%02x:%02x" % (
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff),
             random.randint(0x00, 0xff),
             random.randint(0x00, 0xff),
             last_octet

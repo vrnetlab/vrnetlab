@@ -16,10 +16,11 @@ MAX_RETRIES = 60
 
 
 def gen_mac(last_octet=None):
-    """Generate a random MAC address that is in the qemu OUI space and that
-    has the given last octet.
+    """Generate a random MAC address that is in recognizable (0C:00) OUI space
+    and that has the given last octet.
     """
-    return "52:54:00:%02x:%02x:%02x" % (
+    return "0C:00:%02x:%02x:%02x:%02x" % (
+        random.randint(0x00, 0xFF),
         random.randint(0x00, 0xFF),
         random.randint(0x00, 0xFF),
         last_octet,

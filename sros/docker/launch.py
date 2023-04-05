@@ -163,7 +163,7 @@ SROS_VARIANTS = {
     },
     "sr-1s": {
         "deployment_model": "integrated",
-        "min_ram": 5,  # minimum RAM requirements
+        "min_ram": 6,  # minimum RAM requirements
         "max_nics": 36,
         "timos_line": "chassis=sr-1s slot=A card=xcm-1s mda/1=s36-100gb-qsfp28",
         "card_config": """/configure system power-shelf 1 power-shelf-type ps-a4-shelf-dc

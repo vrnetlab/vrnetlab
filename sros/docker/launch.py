@@ -103,10 +103,14 @@ SROS_VARIANTS = {
         "deployment_model": "integrated",
         "cpu": 4,
         "min_ram": 6,  # minimum RAM requirements
-        "max_nics": 10,
-        "timos_line": "slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28",
-        "card_config": """/configure card 1 mda 1 mda-type m6-10g-sfp++4-25g-sfp28
-        """,
+        "max_nics": 7,
+        **line_card_config(
+            chassis="ixr-r6",
+            card="cpiom-ixr-r6",
+            card_type="iom-ixr-r6",
+            mda="m6-10g-sfp++1-100g-qsfp28",  # Supports MACsec
+            integrated=True,
+        ),
     },
     "ixr-s": {
         "deployment_model": "distributed",

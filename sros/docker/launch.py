@@ -59,7 +59,7 @@ SROS_VARIANTS = {
     "ixr-e-big": {
         "deployment_model": "distributed",
         # control plane (CPM)
-        "max_nics": 34,
+        "max_nics": 34,  # 24*10 + 8*25G + 2*100G (with connector)
         "cp": {
             "min_ram": 3,
             "timos_line": "slot=A chassis=ixr-e card=cpm-ixr-e",
@@ -68,10 +68,11 @@ SROS_VARIANTS = {
         "lcs": [
             {
                 "min_ram": 4,
-                "timos_line": "chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28",
-                "card_config": """/configure card 1 card-type imm24-sfp++8-sfp28+2-qsfp28
-                /configure card 1 mda 1 mda-type m24-sfp++8-sfp28+2-qsfp28
-            """,
+                **line_card_config(
+                    chassis="ixr-e",
+                    card="imm24-sfp++8-sfp28+2-qsfp28",
+                    mda="m24-sfp++8-sfp28+2-qsfp28",
+                ),
             }
         ],
     },

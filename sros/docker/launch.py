@@ -166,14 +166,14 @@ SROS_VARIANTS = {
         "min_ram": 6,  # minimum RAM requirements
         "max_nics": 36,
         "timos_line": "chassis=sr-1s slot=A card=xcm-1s mda/1=s36-100gb-qsfp28",
-        "card_config": """/configure system power-shelf 1 power-shelf-type ps-a4-shelf-dc
-        /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
-        /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
-        /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
-        /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
-        /configure card 1 card-type xcm-1s
-        /configure card 1 mda 1 mda-type s36-100gb-qsfp28
-        """,
+        **line_card_config(
+            chassis="sr-1s",
+            card="cpm-1s",
+            card_type="xcm-1s",
+            mda="s36-100gb-qsfp28",
+            integrated=True,
+        ),
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
     },
     "sr-7s": {
         "deployment_model": "distributed",
@@ -514,6 +514,7 @@ class SROS_vm(vrnetlab.VM):
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
+        self.power = "dc"  # vSR emulates DC only
         self.read_license()
         if not cpu or cpu == 0 or cpu == "0":
             cpu = 2
@@ -588,6 +589,29 @@ class SROS_vm(vrnetlab.VM):
             "License file found for UUID %s with start date %s"
             % (self.uuid, self.fake_start_date)
         )
+
+    # configure power modules
+    def configure_power(self, power_cfg):
+        """
+        Configure power shelf/ves and modules
+        """
+        shelves = power_cfg["shelves"] if "shelves" in power_cfg else 1
+        modules = power_cfg["modules"]
+        if type(modules) is dict:
+            modules = modules[self.power]  # 3(AC) or 4(DC)
+
+        if self.power == "dc":  # vSIM default
+            power_shelf_type = f"ps-a{modules}-shelf-dc"
+            module_type = "ps-a-dc-6000"
+
+        for s in range(1, shelves + 1):
+            self.wait_write(
+                f"/configure system power-shelf {s} power-shelf-type {power_shelf_type}"
+            )
+            for m in range(1, modules + 1):
+                self.wait_write(
+                    f"/configure system power-shelf {s} power-module {m} power-module-type {module_type}"
+                )
 
 
 class SROS_integrated(SROS_vm):
@@ -669,6 +693,10 @@ class SROS_integrated(SROS_vm):
             if "card_config" in self.variant:
                 for l in iter(self.variant["card_config"].splitlines()):
                     self.wait_write(l)
+
+            # configure power modules
+            if "power" in self.variant:
+                self.configure_power(self.variant["power"])
 
             # configure bof
             for l in iter(gen_bof_config()):
@@ -782,6 +810,10 @@ class SROS_cp(SROS_vm):
                 if "card_config" in lc:
                     for l in iter(lc["card_config"].splitlines()):
                         self.wait_write(l)
+
+            # configure power modules
+            if "power" in self.variant:
+                self.configure_power(self.variant["power"])
 
             # configure bof
             for l in iter(gen_bof_config()):

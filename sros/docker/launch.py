@@ -268,6 +268,7 @@ SROS_VARIANTS = {
         "deployment_model": "distributed",
         # control plane (CPM)
         "max_nics": 36,
+        "power": {"modules": 10, "shelves": 2},
         "cp": {
             "min_ram": 4,
             "timos_line": "slot=A chassis=SR-14s sfm=sfm-s card=cpm2-s",
@@ -277,28 +278,7 @@ SROS_VARIANTS = {
             {
                 "min_ram": 6,
                 "timos_line": "slot=1 chassis=SR-14s sfm=sfm-s card=xcm-14s mda/1=s36-100gb-qsfp28",
-                "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
-                /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 5 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 6 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 7 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 8 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 9 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 10 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-shelf-type ps-a10-shelf-dc
-                /configure system power-shelf 2 power-module 1 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 2 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 3 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 4 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 5 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 6 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 7 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 8 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 9 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 10 power-module-type ps-a-dc-6000
+                "card_config": """
                 /configure sfm 1 sfm-type sfm-s
                 /configure sfm 2 sfm-type sfm-s
                 /configure sfm 3 sfm-type sfm-s

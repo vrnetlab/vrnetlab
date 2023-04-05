@@ -149,6 +149,18 @@ SROS_VARIANTS = {
             }
         ],
     },
+    "ixr-ec": {
+        "deployment_model": "integrated",
+        "min_ram": 4,  # minimum RAM requirements
+        "max_nics": 30,
+        **line_card_config(
+            chassis="ixr-ec",
+            card="cpm-ixr-ec",
+            card_type="imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
+            mda="m4-1g-tx+20-1g-sfp+6-10g-sfp+",
+            integrated=True,
+        ),
+    },
     "sr-1s": {
         "deployment_model": "integrated",
         "min_ram": 5,  # minimum RAM requirements

@@ -36,12 +36,14 @@ logging.Logger.trace = trace
 
 
 # line_card_config is a convenience function that generates line card definition strings
-def line_card_config(chassis, card, mda, integrated=False, card_type=None):
+def line_card_config(
+    chassis: str, card: str, mda: str, integrated: bool = False, card_type: str = None
+) -> Dict[str, str]:
     """
     line_card_config is a convenience function that generates line card definition strings
     such as `timos_line`, `card_config`.
     """
-    slot = "A" if integrated else "1"
+    slot: str = "A" if integrated else "1"
     return {
         "timos_line": f"slot={slot} chassis={chassis} card={card} mda/1={mda}",
         "card_config": f"""

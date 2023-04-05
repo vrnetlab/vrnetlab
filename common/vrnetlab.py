@@ -157,8 +157,7 @@ class VM:
         # generate normal NICs
         cmd.extend(self.gen_nics())
 
-        self.logger.debug(cmd)
-        self.logger.debug("joined cmd: {}".format(" ".join(cmd)))
+        self.logger.debug("qemu cmd: {}".format(" ".join(cmd)))
 
         self.p = subprocess.Popen(
             " ".join(cmd),
@@ -409,7 +408,9 @@ class VM:
         return res
 
     def nic_provision_delay(self) -> None:
-        self.logger.debug(f"number of provisioned data plane interfaces is {self.num_provisioned_nics}")
+        self.logger.debug(
+            f"number of provisioned data plane interfaces is {self.num_provisioned_nics}"
+        )
 
         if self.num_provisioned_nics == 0:
             # no nics provisioned and/or not running from containerlab so we can bail
@@ -427,7 +428,10 @@ class VM:
             provisioned_nics = list(inf_path.glob("eth*"))
             # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
             if len(provisioned_nics) >= self.num_provisioned_nics + 1:
-                nics = [int(re.search(pattern=r"\d+", string=nic.name).group()) for nic in provisioned_nics]
+                nics = [
+                    int(re.search(pattern=r"\d+", string=nic.name).group())
+                    for nic in provisioned_nics
+                ]
 
                 # Ensure the max eth is in range of allocated eth index of VM LC
                 nics = [nic for nic in nics if nic in range(start_eth, end_eth)]
@@ -502,15 +506,16 @@ class VM:
                         "%(nic_type)s,"
                         "netdev=p%(i)02d,"
                         "bus=pci.%(pci_bus)s,"
-                        "addr=0x%(addr)x" % {
+                        "addr=0x%(addr)x"
+                        % {
                             "nic_type": self.nic_type,
                             "i": i,
                             "pci_bus": pci_bus,
                             "addr": addr,
                         },
                         "-netdev",
-                        "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}
-                     ]
+                        "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000},
+                    ]
                 )
                 continue
 
@@ -725,3 +730,51 @@ class VR:
 
 class QemuBroken(Exception):
     """Our Qemu instance is somehow broken"""
+
+
+# getMem returns the RAM size (in Mb) for a given VM mode.
+# RAM can be specified in the variant dict, provided by a user via the custom type definition,
+# or set via env vars.
+# If set via env vars, the getMem will return this value as the most specific one.
+# Otherwise, the ram provided to this function will be converted to Mb and returned.
+def getMem(vmMode: str, ram: int) -> int:
+    if vmMode == "integrated":
+        # Integrated VM can use both MEMORY and CP_MEMORY env vars
+        if "MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("MEMORY"))
+        if "CP_MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("CP_MEMORY"))
+    if vmMode == "cp":
+        if "CP_MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("CP_MEMORY"))
+    if vmMode == "lc":
+        if "LC_MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("LC_MEMORY"))
+    return 1024 * ram
+
+
+# getCpu returns the number of cpu cores for a given VM mode.
+# Cpu can be specified in the variant dict, provided by a user via the custom type definition,
+# or set via env vars.
+# If set via env vars, the function will return this value as the most specific one.
+# Otherwise, the number provided to this function via cpu param returned.
+def getCpu(vsimMode: str, cpu: int) -> int:
+    if vsimMode == "integrated":
+        # Integrated VM can use both MEMORY and CP_MEMORY env vars
+        if "CPU" in os.environ:
+            return int(os.getenv("CPU"))
+        if "CP_CPU" in os.environ:
+            return int(os.getenv("CP_CPU"))
+    if vsimMode == "cp":
+        if "CP_CPU" in os.environ:
+            return int(os.getenv("CP_CPU"))
+    if vsimMode == "lc":
+        if "LC_CPU" in os.environ:
+            return int(os.getenv("LC_CPU"))
+    return cpu
+
+
+# strip all non-numeric characters from a string
+def get_digits(input_str: str) -> int:
+    non_string_chars = re.findall(r"\d", input_str)
+    return int("".join(non_string_chars))

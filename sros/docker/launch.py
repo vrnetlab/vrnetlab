@@ -175,6 +175,29 @@ SROS_VARIANTS = {
         ),
         "power": {"modules": {"ac/hv": 3, "dc": 4}},
     },
+    "sr-2s": {
+        "deployment_model": "distributed",
+        "max_nics": 10,  # 8+2
+        "cp": {
+            "min_ram": 3,
+            # The 7750 SR-2s uses an integrated switch fabric module (SFM) design
+            "timos_line": "slot=A chassis=sr-2s sfm=sfm-2s card=cpm-2s",
+        },
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "slot=1 chassis=sr-2s sfm=sfm-2s card=xcm-2s xiom/x1=iom-s-3.0t mda/x1/1=ms8-100gb-sfpdd+2-100gb-qsfp28",
+                "card_config": """
+/configure sfm 1 sfm-type sfm-2s
+/configure sfm 2 sfm-type sfm-2s
+/configure card 1 card-type xcm-2s
+/configure card 1 xiom x1 xiom-type iom-s-3.0t level cr1600g+
+/configure card 1 xiom x1 mda 1 mda-type ms8-100gb-sfpdd+2-100gb-qsfp28
+""",
+                "power": {"modules": {"ac/hv": 3, "dc": 4}},
+            },
+        ],
+    },
     "sr-7s": {
         "deployment_model": "distributed",
         # control plane (CPM)

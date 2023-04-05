@@ -175,6 +175,18 @@ SROS_VARIANTS = {
         ),
         "power": {"modules": {"ac/hv": 3, "dc": 4}},
     },
+    "sr-1s-macsec": {
+        "deployment_model": "integrated",
+        "min_ram": 6,  # minimum RAM requirements xcm-1s
+        "max_nics": 20,
+        "timos_line": "slot=A chassis=sr-1s card=xcm-1s xiom/x1=iom-s-3.0t mda/x1/1=ms16-100gb-sfpdd+4-100gb-qsfp28",
+        "card_config": """
+        /configure card 1 card-type xcm-1s
+        /configure card 1 xiom x1 xiom-type iom-s-3.0t level cr1600g+
+        /configure card 1 xiom x1 mda 1 mda-type ms16-100gb-sfpdd+4-100gb-qsfp28
+         """,
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
+    },
     "sr-2s": {
         "deployment_model": "distributed",
         "max_nics": 10,  # 8+2

@@ -19,24 +19,25 @@ It's been tested to run with the following versions:
 
 Nokia SR OS virtualized simulator (VSIM) can be configured to emulate many chassis and cards combinations.
 
-To give vrnetlab users flexibility of choice, this fork provides a number of such combinations, which are called _variants_.
+To give vrnetlab users the flexibility of choice, this fork provides a number of such combinations, which are called _variants_.
 
 By selecting a certain variant (referred by its `name`) the VSIM will start with a certain configuration as per the following table:
 
-|    Name     |    mode     |     Control plane      |           Line card            | RAM (GB) | Max NICs |
-| :---------: | :---------: | :--------------------: | :----------------------------: | :------: | :------: |
-|    sr-1     | integrated  |         cpm-1          |       me12-100gb-qsfp28        |    5     |    12    |
-|    sr-1e    | distributed |         cpm-e          |         me40-1gb-csfp          |   4+4    |    40    |
-|    sr-1s    | integrated  |         xcm-1s         |        s36-100gb-qsfp28        |    5     |    36    |
-|    sr-2s    | distributed |         cpm-2s         | ms8-100gb-sfpdd+2-100gb-qsfp28 |   3+4    |    10    |
-|   sr-14s    | distributed |     sfm-s+xcm-14s      |        s36-100gb-qsfp28        |   4+6    |    36    |
-| ixr-e-small | distributed | imm14-10g-sfp++4-1g-tx |      m14-10g-sfp++4-1g-tx      |   3+4    |    18    |
-|  ixr-e-big  | distributed |       cpm-ixr-e        |   m24-sfp++8-sfp28+2-qsfp28    |   3+4    |    34    |
-|   ixr-ec    | integrated  |       cpm-ixr-e        | m4-1g-tx+20-1g-sfp+6-10g-sfp+  |    4     |    34    |
-|   ixr-r6    | integrated  |      cpiom-ixr-r6      |   m6-10g-sfp++1-100g-qsfp28    |    6     |    10    |
-|    ixr-s    | integrated  |       cpm-ixr-s        |       m48-sfp++6-qsfp28        |   3+4    |    54    |
+|     Name     |    mode     |     Control plane      |            Line card            | RAM (GB) | Max NICs |
+| :----------: | :---------: | :--------------------: | :-----------------------------: | :------: | :------: |
+|     sr-1     | integrated  |         cpm-1          |        me12-100gb-qsfp28        |    5     |    12    |
+|    sr-1e     | distributed |         cpm-e          |          me40-1gb-csfp          |   4+4    |    40    |
+|    sr-1s     | integrated  |         xcm-1s         |        s36-100gb-qsfp28         |    6     |    36    |
+| sr-1s-macsec | integrated  |         xcm-1s         | ms16-100gb-sfpdd+4-100gb-qsfp28 |    6     |    20    |
+|    sr-2s     | distributed |         cpm-2s         | ms8-100gb-sfpdd+2-100gb-qsfp28  |   3+4    |    10    |
+|    sr-14s    | distributed |     sfm-s+xcm-14s      |        s36-100gb-qsfp28         |   4+6    |    36    |
+| ixr-e-small  | distributed | imm14-10g-sfp++4-1g-tx |      m14-10g-sfp++4-1g-tx       |   3+4    |    18    |
+|  ixr-e-big   | distributed |       cpm-ixr-e        |    m24-sfp++8-sfp28+2-qsfp28    |   3+4    |    34    |
+|    ixr-ec    | integrated  |       cpm-ixr-e        |  m4-1g-tx+20-1g-sfp+6-10g-sfp+  |    4     |    34    |
+|    ixr-r6    | integrated  |      cpiom-ixr-r6      |    m6-10g-sfp++1-100g-qsfp28    |    6     |    10    |
+|    ixr-s     | integrated  |       cpm-ixr-s        |        m48-sfp++6-qsfp28        |   3+4    |    54    |
 
-The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf70a9a9f2f060a68797a7ec29ce6aea96acb779/sros/docker/launch.py#L38-L66) as a dictionary. If a variant you need is not in the table, use the `custom` variant and define the emulated platform yourself as described below.
+The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf70a9a9f2f060a68797a7ec29ce6aea96acb779/sros/docker/launch.py#L58) as a dictionary. If a variant you need is not in the table, use the `custom` variant and define the emulated platform yourself as described below.
 
 ### Custom variant
 

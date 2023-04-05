@@ -298,9 +298,13 @@ SROS_VARIANTS = {
         "min_ram": 5,  # minimum RAM requirements
         "max_nics": 12,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me12-100gb-qsfp28",
-        "card_config": """/configure card 1 card-type iom-1
-        /configure card 1 mda 1 mda-type me12-100gb-qsfp28
-        """,
+        **line_card_config(
+            chassis="sr-1",
+            card="cpm-1",
+            card_type="iom-1",
+            mda="me12-100gb-qsfp28",
+            integrated=True,
+        ),
     },
     "sr-1e": {
         "deployment_model": "distributed",
@@ -315,9 +319,7 @@ SROS_VARIANTS = {
             {
                 "min_ram": 4,
                 "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
-                "card_config": """/configure card 1 card-type iom-e
-                /configure card 1 mda 1 mda-type me40-1gb-csfp
-            """,
+                **line_card_config(chassis="sr-1e", card="iom-e", mda="me40-1gb-csfp"),
             }
         ],
     },

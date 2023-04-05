@@ -4,9 +4,11 @@ import datetime
 import logging
 import os
 import re
+import shutil
 import signal
 import sys
-import shutil
+from typing import Dict
+
 import vrnetlab
 
 

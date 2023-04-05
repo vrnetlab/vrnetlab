@@ -4,9 +4,11 @@ import datetime
 import logging
 import os
 import re
+import shutil
 import signal
 import sys
-import shutil
+from typing import Dict
+
 import vrnetlab
 
 
@@ -36,12 +38,14 @@ logging.Logger.trace = trace
 
 
 # line_card_config is a convenience function that generates line card definition strings
-def line_card_config(chassis, card, mda, integrated=False, card_type=None):
+def line_card_config(
+    chassis: str, card: str, mda: str, integrated: bool = False, card_type: str = None
+) -> Dict[str, str]:
     """
     line_card_config is a convenience function that generates line card definition strings
     such as `timos_line`, `card_config`.
     """
-    slot = "A" if integrated else "1"
+    slot: str = "A" if integrated else "1"
     return {
         "timos_line": f"slot={slot} chassis={chassis} card={card} mda/1={mda}",
         "card_config": f"""
@@ -55,7 +59,7 @@ SROS_VARIANTS = {
     "ixr-e-big": {
         "deployment_model": "distributed",
         # control plane (CPM)
-        "max_nics": 34,
+        "max_nics": 34,  # 24*10 + 8*25G + 2*100G (with connector)
         "cp": {
             "min_ram": 3,
             "timos_line": "slot=A chassis=ixr-e card=cpm-ixr-e",
@@ -64,10 +68,11 @@ SROS_VARIANTS = {
         "lcs": [
             {
                 "min_ram": 4,
-                "timos_line": "chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28",
-                "card_config": """/configure card 1 card-type imm24-sfp++8-sfp28+2-qsfp28
-                /configure card 1 mda 1 mda-type m24-sfp++8-sfp28+2-qsfp28
-            """,
+                **line_card_config(
+                    chassis="ixr-e",
+                    card="imm24-sfp++8-sfp28+2-qsfp28",
+                    mda="m24-sfp++8-sfp28+2-qsfp28",
+                ),
             }
         ],
     },
@@ -98,10 +103,14 @@ SROS_VARIANTS = {
         "deployment_model": "integrated",
         "cpu": 4,
         "min_ram": 6,  # minimum RAM requirements
-        "max_nics": 10,
-        "timos_line": "slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-25g-sfp28",
-        "card_config": """/configure card 1 mda 1 mda-type m6-10g-sfp++4-25g-sfp28
-        """,
+        "max_nics": 7,
+        **line_card_config(
+            chassis="ixr-r6",
+            card="cpiom-ixr-r6",
+            card_type="iom-ixr-r6",
+            mda="m6-10g-sfp++1-100g-qsfp28",  # Supports MACsec
+            integrated=True,
+        ),
     },
     "ixr-s": {
         "deployment_model": "distributed",
@@ -140,24 +149,97 @@ SROS_VARIANTS = {
             }
         ],
     },
+    "ixr-ec": {
+        "deployment_model": "integrated",
+        "min_ram": 4,  # minimum RAM requirements
+        "max_nics": 30,
+        **line_card_config(
+            chassis="ixr-ec",
+            card="cpm-ixr-ec",
+            card_type="imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
+            mda="m4-1g-tx+20-1g-sfp+6-10g-sfp+",
+            integrated=True,
+        ),
+    },
     "sr-1s": {
         "deployment_model": "integrated",
-        "min_ram": 5,  # minimum RAM requirements
+        "min_ram": 6,  # minimum RAM requirements
         "max_nics": 36,
         "timos_line": "chassis=sr-1s slot=A card=xcm-1s mda/1=s36-100gb-qsfp28",
-        "card_config": """/configure system power-shelf 1 power-shelf-type ps-a4-shelf-dc
-        /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
-        /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
-        /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
-        /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
-        /configure card 1 card-type xcm-1s
-        /configure card 1 mda 1 mda-type s36-100gb-qsfp28
-        """,
+        **line_card_config(
+            chassis="sr-1s",
+            card="cpm-1s",
+            card_type="xcm-1s",
+            mda="s36-100gb-qsfp28",
+            integrated=True,
+        ),
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
     },
-    "sr-7s": {
+    "sr-1s-macsec": {
+        "deployment_model": "integrated",
+        "min_ram": 6,  # minimum RAM requirements xcm-1s
+        "max_nics": 20,
+        "timos_line": "slot=A chassis=sr-1s card=xcm-1s xiom/x1=iom-s-3.0t mda/x1/1=ms16-100gb-sfpdd+4-100gb-qsfp28",
+        "card_config": """
+        /configure card 1 card-type xcm-1s
+        /configure card 1 xiom x1 xiom-type iom-s-3.0t level cr1600g+
+        /configure card 1 xiom x1 mda 1 mda-type ms16-100gb-sfpdd+4-100gb-qsfp28
+         """,
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
+    },
+    "sr-2s": {
+        "deployment_model": "distributed",
+        "max_nics": 10,  # 8+2
+        "cp": {
+            "min_ram": 3,
+            # The 7750 SR-2s uses an integrated switch fabric module (SFM) design
+            "timos_line": "slot=A chassis=sr-2s sfm=sfm-2s card=cpm-2s",
+        },
+        "lcs": [
+            {
+                "min_ram": 4,
+                "timos_line": "slot=1 chassis=sr-2s sfm=sfm-2s card=xcm-2s xiom/x1=iom-s-3.0t mda/x1/1=ms8-100gb-sfpdd+2-100gb-qsfp28",
+                "card_config": """
+/configure sfm 1 sfm-type sfm-2s
+/configure sfm 2 sfm-type sfm-2s
+/configure card 1 card-type xcm-2s
+/configure card 1 xiom x1 xiom-type iom-s-3.0t level cr1600g+
+/configure card 1 xiom x1 mda 1 mda-type ms8-100gb-sfpdd+2-100gb-qsfp28
+""",
+                "power": {"modules": {"ac/hv": 3, "dc": 4}},
+            },
+        ],
+    },
+    "sr-7s": {  # defaults to FP5 cards
         "deployment_model": "distributed",
         # control plane (CPM)
         "max_nics": 36,
+        "power": {"modules": 10, "shelves": 2},
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=SR-7s sfm=sfm2-s card=cpm2-s",
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 6,
+                "timos_line": "slot=1 chassis=SR-7s sfm=sfm2-s card=xcm2-7s mda/1=x2-s36-800g-qsfpdd-18.0t",
+                "card_config": """
+                /configure sfm 1 sfm-type sfm2-s
+                /configure sfm 2 sfm-type sfm2-s
+                /configure sfm 3 sfm-type sfm2-s
+                /configure sfm 4 sfm-type sfm2-s
+                /configure card 1 card-type xcm2-7s
+                /configure card 1 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+                """,
+            },
+        ],
+    },
+    "sr-7s-fp4": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 36,
+        "power": {"modules": 10, "shelves": 2},
         "cp": {
             "min_ram": 4,
             "timos_line": "slot=A chassis=SR-7s sfm=sfm-s card=cpm2-s",
@@ -167,39 +249,18 @@ SROS_VARIANTS = {
             {
                 "min_ram": 6,
                 "timos_line": "slot=1 chassis=SR-7s sfm=sfm-s card=xcm-7s mda/1=s36-100gb-qsfp28",
-                "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
-             /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 5 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 6 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 7 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 8 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 9 power-module-type ps-a-dc-6000
-             /configure system power-shelf 1 power-module 10 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-shelf-type ps-a10-shelf-dc
-             /configure system power-shelf 2 power-module 1 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 2 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 3 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 4 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 5 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 6 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 7 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 8 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 9 power-module-type ps-a-dc-6000
-             /configure system power-shelf 2 power-module 10 power-module-type ps-a-dc-6000
-             /configure sfm 1 sfm-type sfm-s
-             /configure sfm 2 sfm-type sfm-s
-             /configure sfm 3 sfm-type sfm-s
-             /configure sfm 4 sfm-type sfm-s
-             /configure sfm 5 sfm-type sfm-s
-             /configure sfm 6 sfm-type sfm-s
-             /configure sfm 7 sfm-type sfm-s
-             /configure sfm 8 sfm-type sfm-s
-             /configure card 1 card-type xcm-7s
-             /configure card 1 mda 1 mda-type s36-100gb-qsfp28
-             """,
+                "card_config": """
+                /configure sfm 1 sfm-type sfm-s
+                /configure sfm 2 sfm-type sfm-s
+                /configure sfm 3 sfm-type sfm-s
+                /configure sfm 4 sfm-type sfm-s
+                /configure sfm 5 sfm-type sfm-s
+                /configure sfm 6 sfm-type sfm-s
+                /configure sfm 7 sfm-type sfm-s
+                /configure sfm 8 sfm-type sfm-s
+                /configure card 1 card-type xcm-7s
+                /configure card 1 mda 1 mda-type s36-100gb-qsfp28
+                """,
             }
         ],
     },
@@ -207,6 +268,7 @@ SROS_VARIANTS = {
         "deployment_model": "distributed",
         # control plane (CPM)
         "max_nics": 36,
+        "power": {"modules": 10, "shelves": 2},
         "cp": {
             "min_ram": 4,
             "timos_line": "slot=A chassis=SR-14s sfm=sfm-s card=cpm2-s",
@@ -216,28 +278,7 @@ SROS_VARIANTS = {
             {
                 "min_ram": 6,
                 "timos_line": "slot=1 chassis=SR-14s sfm=sfm-s card=xcm-14s mda/1=s36-100gb-qsfp28",
-                "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
-                /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 4 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 5 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 6 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 7 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 8 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 9 power-module-type ps-a-dc-6000
-                /configure system power-shelf 1 power-module 10 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-shelf-type ps-a10-shelf-dc
-                /configure system power-shelf 2 power-module 1 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 2 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 3 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 4 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 5 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 6 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 7 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 8 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 9 power-module-type ps-a-dc-6000
-                /configure system power-shelf 2 power-module 10 power-module-type ps-a-dc-6000
+                "card_config": """
                 /configure sfm 1 sfm-type sfm-s
                 /configure sfm 2 sfm-type sfm-s
                 /configure sfm 3 sfm-type sfm-s
@@ -257,9 +298,13 @@ SROS_VARIANTS = {
         "min_ram": 5,  # minimum RAM requirements
         "max_nics": 12,
         "timos_line": "chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me12-100gb-qsfp28",
-        "card_config": """/configure card 1 card-type iom-1
-        /configure card 1 mda 1 mda-type me12-100gb-qsfp28
-        """,
+        **line_card_config(
+            chassis="sr-1",
+            card="cpm-1",
+            card_type="iom-1",
+            mda="me12-100gb-qsfp28",
+            integrated=True,
+        ),
     },
     "sr-1e": {
         "deployment_model": "distributed",
@@ -274,11 +319,43 @@ SROS_VARIANTS = {
             {
                 "min_ram": 4,
                 "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me40-1gb-csfp",
-                "card_config": """/configure card 1 card-type iom-e
-                /configure card 1 mda 1 mda-type me40-1gb-csfp
-            """,
+                **line_card_config(chassis="sr-1e", card="iom-e", mda="me40-1gb-csfp"),
             }
         ],
+    },
+    "sr-1e-sec": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 12,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1e card=cpm-e",
+        },
+        # line card (IOM/XCM)
+        "lc": {
+            "min_ram": 4,
+            "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me12-10/1gb-sfp+ mda/2=isa2-tunnel",
+            "card_config": """/configure card 1 card-type iom-e
+            /configure card 1 mda 1 mda-type me12-10/1gb-sfp+
+            /configure card 1 mda 2 mda-type isa2-tunnel
+            """,
+        },
+    },
+    "sr-a4": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 10,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-a4 card=cpm-a",
+        },
+        # line card (IOM/XCM)
+        "lc": {
+            "min_ram": 4,
+            **line_card_config(
+                chassis="sr-a4", card="iom-a", mda="maxp10-10/1gb-msec-sfp+"
+            ),
+        },
     },
     "sr-1x-48d": {
         "deployment_model": "distributed",
@@ -493,6 +570,7 @@ class SROS_vm(vrnetlab.VM):
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
+        self.power = "dc"  # vSR emulates DC only
         self.read_license()
         if not cpu or cpu == 0 or cpu == "0":
             cpu = 2
@@ -567,6 +645,29 @@ class SROS_vm(vrnetlab.VM):
             "License file found for UUID %s with start date %s"
             % (self.uuid, self.fake_start_date)
         )
+
+    # configure power modules
+    def configure_power(self, power_cfg):
+        """
+        Configure power shelf/ves and modules
+        """
+        shelves = power_cfg["shelves"] if "shelves" in power_cfg else 1
+        modules = power_cfg["modules"]
+        if type(modules) is dict:
+            modules = modules[self.power]  # 3(AC) or 4(DC)
+
+        if self.power == "dc":  # vSIM default
+            power_shelf_type = f"ps-a{modules}-shelf-dc"
+            module_type = "ps-a-dc-6000"
+
+        for s in range(1, shelves + 1):
+            self.wait_write(
+                f"/configure system power-shelf {s} power-shelf-type {power_shelf_type}"
+            )
+            for m in range(1, modules + 1):
+                self.wait_write(
+                    f"/configure system power-shelf {s} power-module {m} power-module-type {module_type}"
+                )
 
 
 class SROS_integrated(SROS_vm):
@@ -648,6 +749,10 @@ class SROS_integrated(SROS_vm):
             if "card_config" in self.variant:
                 for l in iter(self.variant["card_config"].splitlines()):
                     self.wait_write(l)
+
+            # configure power modules
+            if "power" in self.variant:
+                self.configure_power(self.variant["power"])
 
             # configure bof
             for l in iter(gen_bof_config()):
@@ -761,6 +866,10 @@ class SROS_cp(SROS_vm):
                 if "card_config" in lc:
                     for l in iter(lc["card_config"].splitlines()):
                         self.wait_write(l)
+
+            # configure power modules
+            if "power" in self.variant:
+                self.configure_power(self.variant["power"])
 
             # configure bof
             for l in iter(gen_bof_config()):

@@ -30,6 +30,8 @@ By selecting a certain variant (referred by its `name`) the VSIM will start with
 |    sr-1s     | integrated  |         xcm-1s         |        s36-100gb-qsfp28         |    6     |    36    |
 | sr-1s-macsec | integrated  |         xcm-1s         | ms16-100gb-sfpdd+4-100gb-qsfp28 |    6     |    20    |
 |    sr-2s     | distributed |         cpm-2s         | ms8-100gb-sfpdd+2-100gb-qsfp28  |   3+4    |    10    |
+|    sr-7s     | distributed |     sfm2-s+xcm2-7s     |    x2-s36-800g-qsfpdd-18.0t     |   4+6    |    36    |
+|  sr-7s-fp4   | distributed |      sfm-s+xcm-7s      |        s36-100gb-qsfp28         |   4+6    |    36    |
 |    sr-14s    | distributed |     sfm-s+xcm-14s      |        s36-100gb-qsfp28         |   4+6    |    36    |
 | ixr-e-small  | distributed | imm14-10g-sfp++4-1g-tx |      m14-10g-sfp++4-1g-tx       |   3+4    |    18    |
 |  ixr-e-big   | distributed |       cpm-ixr-e        |    m24-sfp++8-sfp28+2-qsfp28    |   3+4    |    34    |

@@ -6,7 +6,6 @@ import os
 import re
 import signal
 import sys
-import time
 import shutil
 import vrnetlab
 
@@ -35,7 +34,8 @@ def trace(self, message, *args, **kws):
 
 logging.Logger.trace = trace
 
-#
+
+# line_card_config is a convenience function that generates line card definition strings
 def line_card_config(chassis, card, mda, integrated=False, card_type=None):
     """
     line_card_config is a convenience function that generates line card definition strings
@@ -163,10 +163,11 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=SR-7s sfm=sfm-s card=cpm2-s",
         },
         # line card (IOM/XCM)
-        "lcs": [ {
-            "min_ram": 6,
-            "timos_line": "slot=1 chassis=SR-7s sfm=sfm-s card=xcm-7s mda/1=s36-100gb-qsfp28",
-            "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
+        "lcs": [
+            {
+                "min_ram": 6,
+                "timos_line": "slot=1 chassis=SR-7s sfm=sfm-s card=xcm-7s mda/1=s36-100gb-qsfp28",
+                "card_config": """/configure system power-shelf 1 power-shelf-type ps-a10-shelf-dc
              /configure system power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
              /configure system power-shelf 1 power-module 2 power-module-type ps-a-dc-6000
              /configure system power-shelf 1 power-module 3 power-module-type ps-a-dc-6000
@@ -199,7 +200,8 @@ SROS_VARIANTS = {
              /configure card 1 card-type xcm-7s
              /configure card 1 mda 1 mda-type s36-100gb-qsfp28
              """,
-        } ],
+            }
+        ],
     },
     "sr-14s": {
         "deployment_model": "distributed",
@@ -307,10 +309,10 @@ SROS_VARIANTS = {
         /configure card 1 mda 1 mda-type m20-v
         /configure card 1 mda 2 mda-type isa-tunnel-v
         """,
-            # depending of the Network Function the Multi-Service Integrated Services Module (MS-ISM) card could be also defined as:
-                # isa-aa-v --> Application Assurance (Stateful Firewall)
-                # isa-bb-v --> Broadband (BNG, LAC, LNS)
-                # isa-tunnel-v (Already Configured) --> IP Tunneling (GRE, IPSec)
+        # depending of the Network Function the Multi-Service Integrated Services Module (MS-ISM) card could be also defined as:
+        # isa-aa-v --> Application Assurance (Stateful Firewall)
+        # isa-bb-v --> Broadband (BNG, LAC, LNS)
+        # isa-tunnel-v (Already Configured) --> IP Tunneling (GRE, IPSec)
     },
 }
 
@@ -487,9 +489,7 @@ def gen_bof_config():
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
-        super(SROS_vm, self).__init__(
-            username, password, disk_image="/sros.qcow2", num=num, ram=ram
-        )
+        super().__init__(username, password, disk_image="/sros.qcow2", num=num, ram=ram)
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
@@ -575,12 +575,14 @@ class SROS_integrated(SROS_vm):
     def __init__(
         self, hostname, username, password, mode, num_nics, variant, conn_mode
     ):
-        cpu = variant.get("cpu")
-        super(SROS_integrated, self).__init__(
+        ram: int = vrnetlab.getMem("integrated", variant.get("min_ram"))
+        cpu: int = vrnetlab.getCpu("integrated", variant.get("cpu"))
+
+        super().__init__(
             username,
             password,
             cpu=cpu,
-            ram=1024 * int(variant["min_ram"]),
+            ram=ram,
             conn_mode=conn_mode,
         )
         self.mode = mode
@@ -615,7 +617,7 @@ class SROS_integrated(SROS_vm):
                 "detected ixr-r6 chassis, creating a dummy network device for SFM connection"
             )
             res.append(f"-device virtio-net-pci,netdev=dummy,mac={vrnetlab.gen_mac(0)}")
-            res.append(f"-netdev tap,ifname=sfm-dummy,id=dummy,script=no,downscript=no")
+            res.append("-netdev tap,ifname=sfm-dummy,id=dummy,script=no,downscript=no")
 
         return res
 
@@ -668,17 +670,18 @@ class SROS_integrated(SROS_vm):
 class SROS_cp(SROS_vm):
     """Control plane for distributed VSR-SIM"""
 
-    def __init__(
-        self, hostname, username, password, mode, major_release, variant, conn_mode
-    ):
+    def __init__(self, hostname, username, password, mode, variant, conn_mode):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "cp"
-        cpu = variant["cp"].get("cpu")
+
+        ram: int = vrnetlab.getMem(self.role, variant.get("cp").get("min_ram"))
+        cpu: int = vrnetlab.getCpu(self.role, variant.get("cp").get("cpu"))
+
         super(SROS_cp, self).__init__(
             username,
             password,
             cpu=cpu,
-            ram=1024 * int(variant["cp"]["min_ram"]),
+            ram=ram,
             conn_mode=conn_mode,
         )
         self.mode = mode
@@ -783,13 +786,17 @@ class SROS_lc(SROS_vm):
     def __init__(self, lc_config, conn_mode, num_nics, slot=1, nic_eth_start=1):
         # role lc if for a line card. role is used to create a separate overlay image name
         self.role = "lc"
+
+        ram: int = vrnetlab.getMem(self.role, lc_config.get("min_ram"))
+        cpu: int = vrnetlab.getCpu(self.role, lc_config.get("cpu"))
+
         super(SROS_lc, self).__init__(
             None,
             None,
-            ram=1024 * int(lc_config["min_ram"]),
+            ram=ram,
             conn_mode=conn_mode,
             num=slot,
-            cpu=lc_config.get("cpu"),
+            cpu=cpu,
         )
 
         self.smbios = ["type=1,product=TIMOS:{}".format(lc_config["timos_line"])]
@@ -840,9 +847,10 @@ class SROS_lc(SROS_vm):
         return
 
 
+# SROS is main class for VSR-SIM
 class SROS(vrnetlab.VR):
     def __init__(self, hostname, username, password, mode, variant_name, conn_mode):
-        super(SROS, self).__init__(username, password)
+        super().__init__(username, password)
 
         if variant_name.lower() in SROS_VARIANTS:
             variant = SROS_VARIANTS[variant_name.lower()]
@@ -856,18 +864,7 @@ class SROS(vrnetlab.VR):
         else:
             variant = parse_custom_variant(variant_name)
 
-        major_release = 0
-
-        # move files into place
-        for e in os.listdir("/"):
-            match = re.match(r"[^0-9]+([0-9]+)\S+\.qcow2$", e)
-            if match:
-                major_release = int(match.group(1))
-                self.qcow_name = match.group(0)
-            if re.search(r"\.qcow2$", e):
-                os.rename("/" + e, "/sros.qcow2")
-            if re.search(r"\.license$", e):
-                shutil.move("/" + e, "/tftpboot/license.txt")
+        self.processFiles()
 
         self.license = False
         if os.path.isfile("/tftpboot/license.txt"):
@@ -886,41 +883,7 @@ class SROS(vrnetlab.VR):
         self.logger.info(f"Number of NICs: {variant['max_nics']}")
         self.logger.info("Configuration mode: " + str(mode))
 
-        # set up bridge for management interface to a localhost
-        self.logger.info("Creating br-mgmt bridge for management interface")
-        # This is to whitlist all bridges
-        vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
-        vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
-        # Enable IPv6 inside the container
-        vrnetlab.run_command(["sysctl net.ipv6.conf.all.disable_ipv6=0"], shell=True)
-        # Enable IPv6 routing inside the container
-        vrnetlab.run_command(["sysctl net.ipv6.conf.all.forwarding=1"], shell=True)
-        vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
-        vrnetlab.run_command(
-            ["echo 16384 > /sys/class/net/br-mgmt/bridge/group_fwd_mask"],
-            shell=True,
-        )
-        vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
-        vrnetlab.run_command(
-            [
-                "ip",
-                "addr",
-                "add",
-                "dev",
-                "br-mgmt",
-                f"{BRIDGE_V4_ADDR}/{V4_PREFIX_LENGTH}",
-            ]
-        )
-        vrnetlab.run_command(
-            [
-                "ip",
-                "addr",
-                "add",
-                "dev",
-                "br-mgmt",
-                f"{BRIDGE_V6_ADDR}/{V6_PREFIX_LENGTH}",
-            ]
-        )
+        self.setupMgmtBridge()
 
         if variant["deployment_model"] == "distributed":
             # CP VM instantiation
@@ -930,7 +893,6 @@ class SROS(vrnetlab.VR):
                     username,
                     password,
                     mode,
-                    major_release,
                     variant,
                     conn_mode,
                 )
@@ -999,6 +961,60 @@ class SROS(vrnetlab.VR):
                     conn_mode=conn_mode,
                 )
             ]
+
+    def setupMgmtBridge(self):
+        # set up bridge for management interface to a localhost
+        self.logger.info("Creating br-mgmt bridge for management interface")
+        # This is to whitlist all bridges
+        vrnetlab.run_command(["mkdir", "-p", "/etc/qemu"])
+        vrnetlab.run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
+        # Enable IPv6 inside the container
+        vrnetlab.run_command(["sysctl net.ipv6.conf.all.disable_ipv6=0"], shell=True)
+        # Enable IPv6 routing inside the container
+        vrnetlab.run_command(["sysctl net.ipv6.conf.all.forwarding=1"], shell=True)
+        vrnetlab.run_command(["brctl", "addbr", "br-mgmt"])
+        vrnetlab.run_command(
+            ["echo 16384 > /sys/class/net/br-mgmt/bridge/group_fwd_mask"],
+            shell=True,
+        )
+        vrnetlab.run_command(["ip", "link", "set", "br-mgmt", "up"])
+        vrnetlab.run_command(
+            [
+                "ip",
+                "addr",
+                "add",
+                "dev",
+                "br-mgmt",
+                f"{BRIDGE_V4_ADDR}/{V4_PREFIX_LENGTH}",
+            ]
+        )
+        vrnetlab.run_command(
+            [
+                "ip",
+                "addr",
+                "add",
+                "dev",
+                "br-mgmt",
+                f"{BRIDGE_V6_ADDR}/{V6_PREFIX_LENGTH}",
+            ]
+        )
+
+    # processFiles renames the qcow2 image to sros.qcow2 and the license file to license.txt
+    # as well as returning the major release number extracted from the qcow2 image name
+    def processFiles(self) -> int:
+        major_rel: int = 0
+
+        for e in os.listdir("/"):
+            match = re.match(r"[^0-9]+([0-9]+)\S+\.qcow2$", e)
+            if match:
+                major_rel = int(match.group(1))
+                self.qcow_name = match.group(0)
+            if re.search(r"\.qcow2$", e):
+                os.rename("/" + e, "/sros.qcow2")
+            if re.search(r"\.license$", e):
+                shutil.move("/" + e, "/tftpboot/license.txt")
+        # returned major version isn't used currently
+        return major_rel
 
 
 if __name__ == "__main__":

@@ -211,6 +211,7 @@ SROS_VARIANTS = {
     "sr-2s": {
         "deployment_model": "distributed",
         "max_nics": 10,  # 8+2
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
         "cp": {
             "min_ram": 3,
             # The 7750 SR-2s uses an integrated switch fabric module (SFM) design
@@ -227,7 +228,6 @@ SROS_VARIANTS = {
 /configure card 1 xiom x1 xiom-type iom-s-3.0t level cr1600g+
 /configure card 1 xiom x1 mda 1 mda-type ms8-100gb-sfpdd+2-100gb-qsfp28
 """,
-                "power": {"modules": {"ac/hv": 3, "dc": 4}},
             },
         ],
     },

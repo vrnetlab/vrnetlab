@@ -8,6 +8,8 @@ import shutil
 import signal
 import sys
 from typing import Dict
+from dataclasses import dataclass
+
 
 import vrnetlab
 
@@ -35,6 +37,25 @@ def trace(self, message, *args, **kws):
 
 
 logging.Logger.trace = trace
+
+
+@dataclass
+class SROSVersion:
+    """SROSVersion is a dataclass that stores SROS version components
+
+    version is a string repr of a version number, e.g. "22.10.R1"
+    major, minor, patch are integers representing the version number components
+    patch version that is typically in the form of R1, R2, etc. will be stripped to integer only
+    """
+
+    version: str
+    major: int
+    minor: int
+    patch: int
+
+
+# SROS_VERSION global variable is used to store the SROS version components
+SROS_VERSION = SROSVersion(version="", major=0, minor=0, patch=0)
 
 
 # line_card_config is a convenience function that generates line card definition strings
@@ -190,6 +211,7 @@ SROS_VARIANTS = {
     "sr-2s": {
         "deployment_model": "distributed",
         "max_nics": 10,  # 8+2
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
         "cp": {
             "min_ram": 3,
             # The 7750 SR-2s uses an integrated switch fabric module (SFM) design
@@ -206,7 +228,6 @@ SROS_VARIANTS = {
 /configure card 1 xiom x1 xiom-type iom-s-3.0t level cr1600g+
 /configure card 1 xiom x1 mda 1 mda-type ms8-100gb-sfpdd+2-100gb-qsfp28
 """,
-                "power": {"modules": {"ac/hv": 3, "dc": 4}},
             },
         ],
     },
@@ -393,7 +414,9 @@ SROS_VARIANTS = {
     },
 }
 
-SROS_COMMON_CFG = """/configure system name {name}
+# SR OS Classic CLI common configuration
+SROS_CL_COMMON_CFG = """
+/configure system name {name}
 /configure system netconf no shutdown
 /configure system security profile \"administrative\" netconf base-op-authorization lock
 /configure system login-control ssh inbound-max-sessions 30
@@ -417,6 +440,27 @@ SROS_COMMON_CFG = """/configure system name {name}
 /configure system security user "admin" access grpc
 /configure system security user "admin" access snmp
 /configure system security user "admin" access ftp
+"""
+
+# SR OS Model-Driven CLI common configuration
+SROS_MD_COMMON_CFG = """
+/configure system name {name}
+/configure system security aaa local-profiles profile administrative netconf base-op-authorization lock true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization kill-session true
+/configure system login-control ssh inbound-max-sessions 30
+/configure system grpc admin-state enable
+/configure system grpc allow-unsecure-connection
+/configure system grpc gnmi auto-config-save true
+/configure system grpc rib-api admin-state enable
+/configure system management-interface netconf admin-state enable
+/configure system management-interface netconf auto-config-save true
+/configure system management-interface snmp packet-size 9216
+/configure system management-interface snmp streaming admin-state enable
+/configure system security user-params local-user user "admin" access console true
+/configure system security user-params local-user user "admin" access ftp true
+/configure system security user-params local-user user "admin" access snmp true
+/configure system security user-params local-user user "admin" access netconf true
+/configure system security user-params local-user user "admin" access grpc true
 """
 
 # to allow writing config to tftp location we needed to spin up a normal
@@ -548,17 +592,27 @@ def uuid_rev_part(part):
     return res
 
 
-# generate bof configuration commands based on env vars
 def gen_bof_config():
+    """generate bof configuration commands based on env vars and SR OS version"""
     cmds = []
     if "DOCKER_NET_V4_ADDR" in os.environ and os.getenv("DOCKER_NET_V4_ADDR") != "":
-        cmds.append(
-            f'/bof static-route {os.getenv("DOCKER_NET_V4_ADDR")} next-hop {BRIDGE_V4_ADDR}'
-        )
+        if SROS_VERSION.major >= 23:
+            cmds.append(
+                f'/bof router static-routes route {os.getenv("DOCKER_NET_V4_ADDR")} next-hop {BRIDGE_V4_ADDR}'
+            )
+        else:
+            cmds.append(
+                f'/bof static-route {os.getenv("DOCKER_NET_V4_ADDR")} next-hop {BRIDGE_V4_ADDR}'
+            )
     if "DOCKER_NET_V6_ADDR" in os.environ and os.getenv("DOCKER_NET_V6_ADDR") != "":
-        cmds.append(
-            f'/bof static-route {os.getenv("DOCKER_NET_V6_ADDR")} next-hop {BRIDGE_V6_ADDR}'
-        )
+        if SROS_VERSION.major >= 23:
+            cmds.append(
+                f'/bof router static-routes route {os.getenv("DOCKER_NET_V6_ADDR")} next-hop {BRIDGE_V6_ADDR}'
+            )
+        else:
+            cmds.append(
+                f'/bof static-route {os.getenv("DOCKER_NET_V6_ADDR")} next-hop {BRIDGE_V6_ADDR}'
+            )
     # if "docker-net-v6-addr" in m:
     #     cmds.append(f"/bof static-route {m[docker-net-v6-addr]} next-hop {BRIDGE_ADDR}")
     return cmds
@@ -660,14 +714,117 @@ class SROS_vm(vrnetlab.VM):
             power_shelf_type = f"ps-a{modules}-shelf-dc"
             module_type = "ps-a-dc-6000"
 
+        # power_path sets the configuration path to access power shelf and module
+        # it is different for SR OS version <= 22
+        power_path = "chassis router chassis-number 1"
+        if SROS_VERSION.major <= 22:
+            power_path = "system"
+
         for s in range(1, shelves + 1):
             self.wait_write(
-                f"/configure system power-shelf {s} power-shelf-type {power_shelf_type}"
+                f"/configure {power_path} power-shelf {s} power-shelf-type {power_shelf_type}"
             )
             for m in range(1, modules + 1):
                 self.wait_write(
-                    f"/configure system power-shelf {s} power-module {m} power-module-type {module_type}"
+                    f"/configure {power_path} power-shelf {s} power-module {m} power-module-type {module_type}"
                 )
+
+    def enterConfig(self):
+        """Enter configuration mode. No-op for SR OS version <= 22"""
+        if SROS_VERSION.major <= 22:
+            return
+        self.wait_write("edit-config exclusive")
+
+    def enterBofConfig(self):
+        """Enter bof configuration mode. No-op for SR OS version <= 22"""
+        if SROS_VERSION.major <= 22:
+            return
+        self.wait_write("edit-config bof exclusive")
+
+    def commitConfig(self):
+        """Commit configuration. No-op for SR OS version <= 22"""
+        if SROS_VERSION.major <= 22:
+            return
+        self.wait_write("commit")
+        self.wait_write("/")
+        self.wait_write("quit-config")
+
+    def commitBofConfig(self):
+        """Commit configuration. No-op for SR OS version <= 22"""
+        if SROS_VERSION.major <= 22:
+            return
+        self.wait_write("commit")
+        self.wait_write("/")
+        self.wait_write("quit-config")
+
+    def configureCards(self):
+        """Configure cards"""
+        # integrated vsims have `card_config` in the variant definition
+        if "card_config" in self.variant:
+            for line in iter(self.variant["card_config"].splitlines()):
+                self.wait_write(line)
+        # else this might be a distributed chassis
+        elif self.variant["lcs"] is not None:
+            for lc in self.variant["lcs"]:
+                if "card_config" in lc:
+                    for line in iter(lc["card_config"].splitlines()):
+                        self.wait_write(line)
+
+    def persistBofAndConfig(self):
+        """ "Persist bof and config"""
+        if SROS_VERSION.major <= 22:
+            self.wait_write("/bof save")
+            self.wait_write("/admin save")
+        else:
+            self.wait_write("/admin save bof")
+            self.wait_write("/admin save")
+
+    def switchConfigEngine(self):
+        """Switch configuration engine"""
+        if SROS_VERSION.major <= 22:
+            # for SR OS version <= 22, we enforce MD-CLI by switching to it
+            self.wait_write(
+                f"/configure system management-interface configuration-mode {self.mode}"
+            )
+
+    def bootstrap_config(self):
+        """Common function used to push initial configuration for bof and config to
+        both integrated and distributed nodes."""
+
+        # apply common configuration if config file was not provided
+        if not os.path.isfile("/tftpboot/config.txt"):
+            self.logger.info("Applying basic SR OS configuration...")
+
+            # enter config mode, no-op for sros <=22
+            self.enterConfig()
+
+            for line in iter(
+                getDefaultConfig().format(name=self.hostname).splitlines()
+            ):
+                self.wait_write(line)
+
+            # configure card/mda of a given variant
+            self.configureCards()
+
+            # configure power modules
+            if "power" in self.variant:
+                self.configure_power(self.variant["power"])
+
+            self.commitConfig()
+
+            # configure bof
+            self.enterBofConfig()
+            for line in iter(gen_bof_config()):
+                self.wait_write(line)
+            self.commitBofConfig()
+
+            # save bof config on disk
+            self.persistBofAndConfig()
+
+            self.switchConfigEngine()
+
+            # logout at the end of execution
+            self.wait_write("/logout")
 
 
 class SROS_integrated(SROS_vm):
@@ -687,6 +844,7 @@ class SROS_integrated(SROS_vm):
             conn_mode=conn_mode,
         )
         self.mode = mode
+        self.role = "integrated"
         self.num_nics = num_nics
         self.smbios = [
             f"type=1,product=TIMOS:address={SROS_MGMT_V4_ADDR}/{V4_PREFIX_LENGTH}@active "
@@ -721,55 +879,6 @@ class SROS_integrated(SROS_vm):
             res.append("-netdev tap,ifname=sfm-dummy,id=dummy,script=no,downscript=no")
 
         return res
-
-    def bootstrap_config(self):
-        """Do the actual bootstrap config"""
-
-        # apply common configuration if config file was not provided
-        if not os.path.isfile("/tftpboot/config.txt"):
-            self.logger.info("Applying basic SR OS configuration...")
-            for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
-                self.wait_write(l)
-
-            if self.username and self.password:
-                self.wait_write(
-                    '/configure system security user "%s" password %s'
-                    % (self.username, self.password)
-                )
-                self.wait_write(
-                    '/configure system security user "%s" access console netconf'
-                    % (self.username)
-                )
-                self.wait_write(
-                    '/configure system security user "%s" console member "administrative" "default"'
-                    % (self.username)
-                )
-
-            # configure card/mda of a given variant
-            if "card_config" in self.variant:
-                for l in iter(self.variant["card_config"].splitlines()):
-                    self.wait_write(l)
-
-            # configure power modules
-            if "power" in self.variant:
-                self.configure_power(self.variant["power"])
-
-            # configure bof
-            for l in iter(gen_bof_config()):
-                self.wait_write(l)
-
-            # save bof config on disk
-            self.wait_write("/bof save")
-
-            self.wait_write("/admin save")
-            self.wait_write(
-                "/configure system management-interface configuration-mode {mode}".format(
-                    mode=self.mode
-                )
-            )
-
-            # logout at the end of execution
-            self.wait_write("/logout")
 
 
 class SROS_cp(SROS_vm):
@@ -838,55 +947,6 @@ class SROS_cp(SROS_vm):
         res.append("-netdev")
         res.append("tap,ifname=vcp-int,id=vcp-int,script=no,downscript=no")
         return res
-
-    def bootstrap_config(self):
-        """Do the actual bootstrap config"""
-
-        # apply common configuration if config file was not provided
-        if not os.path.isfile("/tftpboot/config.txt"):
-            for l in iter(SROS_COMMON_CFG.format(name=self.hostname).splitlines()):
-                self.wait_write(l)
-
-            if self.username and self.password:
-                self.wait_write(
-                    '/configure system security user "%s" password %s'
-                    % (self.username, self.password)
-                )
-                self.wait_write(
-                    '/configure system security user "%s" access console netconf'
-                    % (self.username)
-                )
-                self.wait_write(
-                    '/configure system security user "%s" console member "administrative" "default"'
-                    % (self.username)
-                )
-
-            # configure card/mda of a given variant
-            for lc in self.variant["lcs"]:
-                if "card_config" in lc:
-                    for l in iter(lc["card_config"].splitlines()):
-                        self.wait_write(l)
-
-            # configure power modules
-            if "power" in self.variant:
-                self.configure_power(self.variant["power"])
-
-            # configure bof
-            for l in iter(gen_bof_config()):
-                self.wait_write(l)
-
-            # save bof config on disk
-            self.wait_write("/bof save")
-
-            self.wait_write("/admin save")
-            self.wait_write(
-                "/configure system management-interface configuration-mode {mode}".format(
-                    mode=self.mode
-                )
-            )
-
-            # logout at the end of execution
-            self.wait_write("/logout")
 
 
 class SROS_lc(SROS_vm):
@@ -973,6 +1033,7 @@ class SROS(vrnetlab.VR):
         else:
             variant = parse_custom_variant(variant_name)
 
+        self.extractVersion()
         self.processFiles()
 
         self.license = False
@@ -1108,22 +1169,43 @@ class SROS(vrnetlab.VR):
             ]
         )
 
-    # processFiles renames the qcow2 image to sros.qcow2 and the license file to license.txt
-    # as well as returning the major release number extracted from the qcow2 image name
-    def processFiles(self) -> int:
-        major_rel: int = 0
-
+    def extractVersion(self):
+        """extractVersion extracts the SR OS version from the qcow2 image name"""
         for e in os.listdir("/"):
-            match = re.match(r"[^0-9]+([0-9]+)\S+\.qcow2$", e)
+            # https://regex101.com/r/SPefOu/1
+            match = re.match(r"\S+-((\d{1,3})\.(\d{1,2})\.\w(\d{1,2}))\.qcow2", e)
             if match:
-                major_rel = int(match.group(1))
-                self.qcow_name = match.group(0)
-            if re.search(r"\.qcow2$", e):
-                os.rename("/" + e, "/sros.qcow2")
+                # save original qcow2 image name
+                self.qcow_name = e
+
+                SROS_VERSION.version = str(match.group(1))
+                SROS_VERSION.major = int(match.group(2))
+                SROS_VERSION.minor = int(match.group(3))
+                SROS_VERSION.patch = int(match.group(4))
+                self.logger.info(f"Parsed SR OS version: {SROS_VERSION}")
+                break
+
+        self.logger.error("Could not extract version from qcow2 image name")
+
+    def processFiles(self):
+        """processFiles renames the qcow2 image to sros.qcow2 and the license file to license.txt
+        as well as returning the major release number extracted from the qcow2 image name
+        """
+        os.rename("/" + self.qcow_name, "/sros.qcow2")
+        for e in os.listdir("/"):
             if re.search(r"\.license$", e):
                 shutil.move("/" + e, "/tftpboot/license.txt")
-        # returned major version isn't used currently
-        return major_rel
+
+
+def getDefaultConfig() -> str:
+    """Returns the default configuration for the system based on the SR OS version.
+    SR OS >=23 uses model-driven configuration, while SR OS <=22 uses classic configuration.
+    """
+
+    if SROS_VERSION.major <= 22:
+        return SROS_CL_COMMON_CFG
+
+    return SROS_MD_COMMON_CFG
 
 
 if __name__ == "__main__":

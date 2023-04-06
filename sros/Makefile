@@ -9,11 +9,8 @@ IMAGE_GLOB=*.qcow2
 #https_proxy=http://192.168.1.1:3128
 
 ## match versions like:
-# sros-vm-13.0.R7.qcow2
-# sros-vm-14.0.R4.qcow2
-# sros-vm-14.0.R7.qcow2
-# sros-vm-15.0.R1.qcow2
-# sros-vm-16.0.B0.qcow2 (pre-GA / beta image for 16, which is named completely differently when coming from Nokia)
+# sros-vm-22.10.R3.qcow2
+# sros-vm-23.3.R1.qcow2
 VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9]\+\.[0-9]\+\.[A-Z][0-9]\+\(-[0-9]\+\)\?\)[^0-9].*$$/\1/')
 
 -include ../makefile-sanity.include

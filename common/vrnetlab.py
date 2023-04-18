@@ -750,7 +750,7 @@ def getMem(vmMode: str, ram: int) -> int:
     if vmMode == "lc":
         if "LC_MEMORY" in os.environ:
             return 1024 * get_digits(os.getenv("LC_MEMORY"))
-    return 1024 * ram
+    return 1024 * int(ram)
 
 
 # getCpu returns the number of cpu cores for a given VM mode.

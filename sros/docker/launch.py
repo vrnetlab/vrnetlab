@@ -764,7 +764,7 @@ class SROS_vm(vrnetlab.VM):
             for line in iter(self.variant["card_config"].splitlines()):
                 self.wait_write(line)
         # else this might be a distributed chassis
-        elif self.variant["lcs"] is not None:
+        elif self.variant.get("lcs") is not None:
             for lc in self.variant["lcs"]:
                 if "card_config" in lc:
                     for line in iter(lc["card_config"].splitlines()):

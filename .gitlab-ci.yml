@@ -3,13 +3,15 @@ image: vrnetlab/ci-builder
 stages:
   - build
 
-build:
+.build: &build-template
   stage: build
   tags:
     - vrnetlab
   script:
     # make sure we pulled LFS files
-    - git lfs pull
+    - git lfs fetch -I ${CI_JOB_NAME}
+    - git lfs checkout ${CI_JOB_NAME}
+    - ls -l ${CI_JOB_NAME}
     # We allow the user to control which Docker registry is used through the
     # env var DOCKER_REGISTRY. If it is not set then we assume we should use
     # the GitLab built-in Docker registry so we check if it is enabled.
@@ -19,4 +21,43 @@ build:
     # if DOCKER_REGISTRY set, either explicitly by user or implicitly by GitLab
     # (see above) we login to repo, build images and push them
     - if [ -n "${DOCKER_REGISTRY}" ]; then docker login -u ${DOCKER_USER} -p=${DOCKER_PASSWORD} ${DOCKER_REGISTRY}; fi
-    - if [ -n "${DOCKER_REGISTRY}" ]; then make && make docker-push; fi
+    - if [ -n "${DOCKER_REGISTRY}" ]; then make ${CI_JOB_NAME} && make ${CI_JOB_NAME}-push; fi
+
+vr-xcon:
+  <<: *build-template
+
+vr-bgp:
+  <<: *build-template
+
+csr:
+  <<: *build-template
+
+nxos:
+  <<: *build-template
+
+routeros:
+  <<: *build-template
+
+sros:
+  <<: *build-template
+
+veos:
+  <<: *build-template
+
+vmx:
+  <<: *build-template
+
+vsr1000:
+  <<: *build-template
+
+vqfx:
+  <<: *build-template
+
+vrp:
+  <<: *build-template
+
+xrv:
+  <<: *build-template
+
+xrv9k:
+  <<: *build-template

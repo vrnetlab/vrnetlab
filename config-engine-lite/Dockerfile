@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM ubuntu:jammy
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -15,14 +15,13 @@ RUN apt-get update -qy \
     libxml2-dev \
     libxslt1-dev \
     libyaml-dev \
-    python-dev \
-    python-dev \
-    python-ipy \
-    python-lxml \
-    python-pip \
+    python3-dev \
+    python3-ipy \
+    python3-lxml \
+    python3-pip \
     zlib1g-dev \
  && rm -rf /var/lib/apt/lists/* \
- && pip install napalm
+ && pip3 install napalm
 
 ADD configengine /
 

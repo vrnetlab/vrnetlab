@@ -4,10 +4,8 @@ import datetime
 import logging
 import re
 import signal
-import subprocess
 import sys
 import time
-import math
 import os
 import vrnetlab
 
@@ -30,6 +28,8 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 class simulator_VM(vrnetlab.VM):
+    no_paging_command = 'screen-length 0 temporary'
+
     def __init__(self, username, password):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
@@ -111,10 +111,25 @@ class simulator_VM(vrnetlab.VM):
     def bootstrap_config(self):
         """ Do the actual bootstrap config
         """
+        # Wait for GigabitEthernet4/0/X interfaces to appear in running config
+        # NOTE: do not use 'display current-configuration interface GigabitEtherhet 4/0/X'
+        # to check. The output differs from 'display current-configuration'!
+        self.wait_config("display current-configuration", 'interface GigabitEthernet4/0/1')
+        self.wait_config("display current-configuration", 'interface GigabitEthernet4/0/4')
+        self.wait_config("display current-configuration", 'interface GigabitEthernet4/0/14')
+        # The first response might be the log message like
+        # 12/active/linkDown/Major/occurredTime:2019-11-11 23:49:03/-/-/alarmID:0x08520003/VS=Admin-VS-CID=0x807a0404:The interface status changes. (ifName=GigabitEthernet4/0/14, AdminStatus=UP, OperStatus=UP, Reason=Interface physical link is up, mainIfname=GigabitEthernet4/0/14
+        # So wait three more times to make sure we get the correct response
+        self.wait_config("display current-configuration", 'interface GigabitEthernet4/0/14')
+        self.wait_config("display current-configuration", 'interface GigabitEthernet4/0/14')
+        self.wait_config("display current-configuration", 'interface GigabitEthernet4/0/14')
         self.logger.info("applying bootstrap configuration")
+        self.wait_write(cmd="", wait=None)
+        self.wait_write(cmd="", wait=None)
 
-        self.wait_write(cmd="system-view", wait=">")
+        self.wait_write(cmd="system-view", wait=None)
         self.wait_write(cmd="sysname HUAWEI", wait="]")
+        self.wait_write(cmd="ssh server key-exchange dh_group14_sha1", wait="]")
         self.wait_write(cmd="interface GigabitEthernet 0/0/0", wait="]")
         self.wait_write(cmd="ip address 10.0.0.15 24", wait="]")
         self.wait_write(cmd="commit", wait="]")
@@ -139,12 +154,11 @@ class simulator_VM(vrnetlab.VM):
         self.wait_write(cmd="local-user %s user-group manage-ug" % self.username, wait="]")
         self.wait_write(cmd="commit", wait="]")
 
-
 class simulator(vrnetlab.VR):
 
     def __init__(self, username, password):
-         super(simulator, self).__init__(username, password)
-         self.vms = [simulator_VM(username, password)]
+        super(simulator, self).__init__(username, password)
+        self.vms = [simulator_VM(username, password)]
 
 
 if __name__ == '__main__':

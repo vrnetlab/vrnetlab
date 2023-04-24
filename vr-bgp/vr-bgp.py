@@ -85,6 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('--trace', action='store_true', help='enable trace level logging')
     parser.add_argument('--vlan', type=int, help='VLAN ID to use')
     parser.add_argument('--ttl-security', action="store_true", help='Enable TTL security')
+    parser.add_argument('--route-refresh', action="store_true", help='Enable Route Refresh')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
@@ -107,7 +108,8 @@ if __name__ == '__main__':
         'INTERFACE': 'tap0',
         'INTERFACE_VLAN': None,
         'ALLOW_MIXED_AFI_TRANSPORT': args.allow_mixed_afi_transport,
-        'TTLSECURITY': args.ttl_security
+        'TTLSECURITY': args.ttl_security,
+        'ROUTEREFRESH': args.route_refresh
     }
 
     if args.vlan:

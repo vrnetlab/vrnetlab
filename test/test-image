@@ -51,7 +51,9 @@ echo "\n"
 if [ $health = "healthy" ]
 then
   echo -e "\e[32m$name became healthy in $SECONDS seconds\e[0m"
+  docker rm -f $name
 else
   echo -e "\e[31m$name failed to become healthy after $SECONDS seconds\e[0m"
+  # leave the container running for local troubleshooting
   false
 fi

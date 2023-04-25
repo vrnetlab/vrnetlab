@@ -54,13 +54,14 @@ version-test:
 	@echo Version: $(VERSION)
 
 docker-test:
-	for IMAGE in $(IMAGES); do \
+	set -xe; for IMAGE in $(IMAGES); do \
 		$(MAKE) IMAGE=$$IMAGE docker-test-image; \
 	done
 
-CONT_NAME=$(CI_PREFIX)test-image-$(VR_NAME)
+CONTAINER_NAME ?= $(CI_PREFIX)test-image-$(VR_NAME)-$(VERSION)
+TEST_TIMEOUT ?= 2400
 
 docker-test-image:
-	../test/test-image $(TAG_NAME) $(CONT_NAME) $$TEST_PARAMS
+	../test/test-image $(TAG_NAME) $(CONTAINER_NAME) $$TEST_PARAMS
 
 all: docker-image

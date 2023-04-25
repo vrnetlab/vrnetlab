@@ -21,7 +21,16 @@ stages:
     # if DOCKER_REGISTRY set, either explicitly by user or implicitly by GitLab
     # (see above) we login to repo, build images and push them
     - if [ -n "${DOCKER_REGISTRY}" ]; then docker login -u ${DOCKER_USER} -p=${DOCKER_PASSWORD} ${DOCKER_REGISTRY}; fi
-    - if [ -n "${DOCKER_REGISTRY}" ]; then make ${CI_JOB_NAME} && make ${CI_JOB_NAME}-push; fi
+    - if [ -n "${DOCKER_REGISTRY}" ]; then
+    -   make ${CI_JOB_NAME}
+    -   CI_PREFIX=ci-${CI_PIPELINE_ID}- make ${CI_JOB_NAME}-test
+    -   echo "Pushing images"
+    -   make ${CI_JOB_NAME}-push
+    - fi
+  interruptible: true
+  after_script:
+    # clean up leftover (failed) test containers
+    - docker ps -aqf name=ci-${CI_PIPELINE_ID}- | xargs --no-run-if-empty docker rm -f
 
 vr-xcon:
   <<: *build-template

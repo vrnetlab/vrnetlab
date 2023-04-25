@@ -1,11 +1,15 @@
 #!/bin/bash
 
 timeout=1200
-while getopts "t:h" opt;
+pull=false
+while getopts "t:hp" opt;
 do
   case $opt in
     t)
       timeout=$OPTARG
+      ;;
+    p)
+      pull=true
       ;;
     h)
       echo "Usage:"
@@ -21,7 +25,7 @@ image=$1
 name=$2
 shift 2
 #echo $@
-docker pull $image
+if [ "${pull}" == "true" ]; then docker pull $image; fi
 
 # clean up any old instances
 

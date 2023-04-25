@@ -1,4 +1,4 @@
-FROM debian:stretch
+FROM debian:bullseye
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 RUN apt-get update -qy \

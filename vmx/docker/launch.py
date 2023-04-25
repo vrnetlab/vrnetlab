@@ -161,7 +161,7 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("configure", '>', 10)
         self.wait_write("load merge /mnt/extra-config.conf")
         self.wait_write("commit")
-        self.wait_write("exit")
+        self.wait_write("exit", "#")
 
 
     def wait_write(self, cmd, wait='#', timeout=None):

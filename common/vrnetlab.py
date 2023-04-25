@@ -52,7 +52,8 @@ def run_command(cmd, cwd=None, background=False):
 
 class VM:
     def __str__(self):
-        return self.__class__.__name__
+        # TODO: use this in the logger?!
+        return f"{self.__class__.__name__}[{self.num}]"
 
 
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
@@ -92,7 +93,7 @@ class VM:
 
 
     def start(self):
-        self.logger.info("Starting %s" % self.__class__.__name__)
+        self.logger.info("Starting %s" % self)
 
         cmd = list(self.qemu_args)
 
@@ -369,7 +370,7 @@ class VR:
     def start(self):
         """ Start the virtual router
         """
-        self.logger.debug("Starting vrnetlab %s", self.__class__.__name__)
+        self.logger.debug("Starting vrnetlab %s", self)
         self.logger.debug("VMs: %s", self.vms)
         self.start_socat()
 
@@ -398,9 +399,9 @@ class VR_Installer:
     def install(self):
         vm =  self.vm
         while not vm.running:
-            self.logger.trace("%s working", self.__class__.__name__)
+            self.logger.trace("%s working", self)
             vm.work()
-        self.logger.debug("%s running, shutting down", self.__class__.__name__)
+        self.logger.debug("%s running, shutting down", self)
         vm.stop()
         self.logger.info("Installation complete")
 

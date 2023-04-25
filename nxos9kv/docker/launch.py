@@ -41,7 +41,6 @@ class NXOS9K_vm(vrnetlab.VM):
         # so must initialize the other parameters first
         self.bios = bios
         self.prompted = False
-        self.overlay_image = None
         super().__init__(username, password, disk_image=disk_image, ram=8192)
         self.num_nics = num_nics
         self.credentials = [
@@ -50,16 +49,15 @@ class NXOS9K_vm(vrnetlab.VM):
 
 
     def create_overlay_image(self):
-        self.overlay_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', self.image)
         extended_args = ['-nographic', '-bios', self.bios, '-smp', '2']
         # remove previously old overlay image, otherwise boot fails
-        if os.path.exists(self.overlay_image):
-            os.remove(self.overlay_image)
+        if os.path.exists(self.overlay_disk_image):
+            os.remove(self.overlay_disk_image)
         # now re-create it!
         super().create_overlay_image()
         # use SATA driver for disk and set to drive 0
         extended_args.extend(['-device', 'ahci,id=ahci0,bus=pci.0',
-            '-drive', 'if=none,file=%s,id=drive-sata-disk0,format=qcow2' % self.overlay_image,
+            '-drive', 'if=none,file=%s,id=drive-sata-disk0,format=qcow2' % self.overlay_disk_image,
             '-device', 'ide-drive,bus=ahci0.0,drive=drive-sata-disk0,id=drive-sata-disk0'])
         # create initial config and load it
         vrnetlab.run_command(['genisoimage', '-o', '/cfg.iso', '-l', '--iso-level', '2', 'nxos_config.txt'])

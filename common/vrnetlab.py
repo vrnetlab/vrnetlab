@@ -215,18 +215,28 @@ class VM:
                        % { 'i': i, 'j': i + 10000 })
         return res
 
+    @property
+    def overlay_disk_image(self) -> str:
+        """Generate the overlay disk image name for VM instance
+
+        The overlay image name is derived from the base image name and the num
+        attribute (unique per VM instance).  For example the SROS_lc(slot=1)
+        first linecard uses the name sros-1-overlay.qcow2. This ensures that
+        each VM gets its own overlay.
+        """
+        return re.sub(r'(\.[^.]+$)', fr'-{self.num}-overlay\1', self.image)
 
     def create_overlay_image(self):
-        """Creates an overlay image if one does not exist and return
-           an array of parameters to extend qemu_args,
-           A subclass may want to override this for using specific drive id.
-        """
-        overlay_disk_image = re.sub(r'(\.[^.]+$)', r'-overlay\1', self.image)
+        """Creates an overlay disk image
 
-        if not os.path.exists(overlay_disk_image):
+        If one does not exist it is created. Return an array of parameters to
+        extend qemu_args. A subclass may want to override this for using
+        specific drive id.
+        """
+        if not os.path.exists(self.overlay_disk_image):
             self.logger.debug("Creating overlay disk image")
-            run_command(["qemu-img", "create", "-f", "qcow2", "-b", self.image, overlay_disk_image])
-        return ["-drive", "if=ide,file=%s" % overlay_disk_image]
+            run_command(["qemu-img", "create", "-f", "qcow2", "-b", self.image, self.overlay_disk_image])
+        return ["-drive", "if=ide,file=%s" % self.overlay_disk_image]
 
 
     def stop(self):

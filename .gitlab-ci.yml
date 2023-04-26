@@ -55,6 +55,9 @@ topology-machine:
 csr:
   <<: *build-template
 
+c8000v:
+  <<: *build-template
+
 nxos:
   <<: *build-template
 

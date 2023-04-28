@@ -15,10 +15,17 @@ IMAGE_GLOB=*.tgz
 VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9][0-9]\.[0-9][A-Z][0-9]\+\(\.[0-9]\+\|-[SD][0-9]\+\(\.[0-9]\+\)\?\)\)[^0-9].*$$/\1/')
 
 EXTRA_INSTALL_ARGS=--dual-re
+LICENSE?=$(notdir $(wildcard docker/*.lic))
+ifneq ($(LICENSE),)
+EXTRA_INSTALL_ARGS+=--license-file $(LICENSE)
+endif
 
 -include ../makefile-sanity.include
 -include ../makefile.include
 -include ../makefile-install.include
+
+docker-pre-build:
+	-cp *.lic docker/
 
 docker-build-image-copy:
 	./vmx-extract.sh $(IMAGE)

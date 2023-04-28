@@ -10,8 +10,10 @@ import signal
 import subprocess
 import sys
 import time
+from typing import List, Optional
 
 import vrnetlab
+
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -35,7 +37,7 @@ logging.Logger.trace = trace
 vrnetlab.HOST_FWDS.append(('tcp', 57400, 57400))
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, dual_re=False, re_instance=0, install_mode=False):
+    def __init__(self, username, password, dual_re=False, re_instance=0, install_mode=False, license_file: Optional[List[str]]=None):
         self.dual_re = dual_re
         self.num = re_instance
         self.install_mode = install_mode
@@ -51,6 +53,9 @@ class VMX_vcp(vrnetlab.VM):
             product = "VM-vcp_vmx2-161-re-0"
         self.smbios = ["type=0,vendor=Juniper",
                        "type=1,manufacturer=Juniper,product=%s,version=0.1.0" % product]
+
+        self.license_file = license_file
+
         # insert bootstrap config file into metadata image
         if self.install_mode:
             self.insert_bootstrap_config()
@@ -163,7 +168,6 @@ class VMX_vcp(vrnetlab.VM):
         self.wait_write("commit")
         self.wait_write("exit", "#")
 
-
     def wait_write(self, cmd, wait='#', timeout=None):
         """ Wait for something and then send command
         """
@@ -184,8 +188,17 @@ class VMX_vcp(vrnetlab.VM):
         vrnetlab.run_command(["mount", "-o", "loop", self._metadata_usb, "/mnt"])
         vrnetlab.run_command(["mkdir", "/tmp/vmm-config"])
         vrnetlab.run_command(["tar", "-xzvf", "/mnt/vmm-config.tgz", "-C", "/tmp/vmm-config"])
-        vrnetlab.run_command(["mkdir", "/tmp/vmm-config/config"])
+        vrnetlab.run_command(["mkdir", "-p", "/tmp/vmm-config/config"])
+        # It may look strange that we're creating these empty directories here,
+        # but these turn out to be important for the license persistence?!
+        vrnetlab.run_command(["mkdir", "-p", "/tmp/vmm-config/var/db/vmm/yang"])
+        vrnetlab.run_command(["mkdir", "-p", "/tmp/vmm-config/var/db/vmm/etc"])
         vrnetlab.run_command(["cp", "/juniper.conf", "/tmp/vmm-config/config/"])
+        if self.license_file:
+            # https://supportportal.juniper.net/s/article/vMX-is-not-accepting-the-correct-license-keys-release-19-4R2
+            vrnetlab.run_command(["mkdir", "-p", "/tmp/vmm-config/config/license"])
+            for license_file in self.license_file:
+                vrnetlab.run_command(["cp", license_file, "/tmp/vmm-config/config/license/"])
         vrnetlab.run_command(["tar", "zcf", "vmm-config.tgz", "-C", "/tmp/vmm-config", "."])
         vrnetlab.run_command(["cp", "vmm-config.tgz", "/mnt/vmm-config.tgz"])
         vrnetlab.run_command(["umount", "/mnt"])
@@ -304,18 +317,18 @@ class VMX_installer(VMX):
         this "install" when building the docker image we can decrease the
         normal startup time of the vMX.
     """
-    def __init__(self, username, password, dual_re=False):
+    def __init__(self, username, password, dual_re=False, license_file: Optional[List[str]]=None):
         super().__init__(username, password, dual_re)
 
         if not dual_re:
-            self.vms = [ VMX_vcp(username, password, install_mode=True) ]
+            self.vms = [ VMX_vcp(username, password, install_mode=True, license_file=license_file) ]
         else:
             # When installing in dual-RE mode, boot a standalone RE and also 2x
             # dualre. The final image will end up with 3 VMs, but we choose
             # which are started with the `--dual-re` option.
-            self.vms = [ VMX_vcp(username, password, dual_re=True, re_instance=0, install_mode=True),
-                         VMX_vcp(username, password, dual_re=True, re_instance=1, install_mode=True),
-                         VMX_vcp(username, password, dual_re=False, re_instance=2, install_mode=True)]
+            self.vms = [ VMX_vcp(username, password, dual_re=True, re_instance=0, install_mode=True, license_file=license_file),
+                         VMX_vcp(username, password, dual_re=True, re_instance=1, install_mode=True, license_file=license_file),
+                         VMX_vcp(username, password, dual_re=False, re_instance=2, install_mode=True, license_file=license_file)]
 
     def install(self):
         self.logger.info("Installing VMX (%d VCP)" % len(self.vms))
@@ -367,18 +380,25 @@ if __name__ == '__main__':
     parser.add_argument('--install', action='store_true', help='Install vMX')
     parser.add_argument('--dual-re', action='store_true', help='Boot dual Routing Engines')
     parser.add_argument('--num-nics', type=int, default=96, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
+    parser.add_argument('--license-file', nargs='+', help='License filename(s)')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
     logging.basicConfig(format=LOG_FORMAT)
     logger = logging.getLogger()
 
+    if not args.install and args.license_file:
+        # It should be possible to provide the license (text) as an env var to
+        # the container created with an already installed image. Let's wait and
+        # see if anyone really wants that ...
+        logger.error('License file may only be provided for installation')
+
     logger.setLevel(logging.DEBUG)
     if args.trace:
         logger.setLevel(1)
 
     if args.install:
-        vr = VMX_installer(args.username, args.password, args.dual_re)
+        vr = VMX_installer(args.username, args.password, args.dual_re, args.license_file)
         vr.install()
     else:
         vr = VMX(args.username, args.password, args.dual_re)

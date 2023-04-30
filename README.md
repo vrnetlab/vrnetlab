@@ -46,6 +46,7 @@ Since the changes we made in this fork are VM specific, we added a few popular r
 * Cisco XRv9k
 * Cisco XRv
 * Juniper vMX
+* Juniper vSRX
 * Nokia SR OS
 
 The rest are left untouched and can be contributed back by the community.

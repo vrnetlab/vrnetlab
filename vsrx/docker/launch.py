@@ -37,6 +37,7 @@ class VSRX_vm(vrnetlab.VM):
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.num_nics = 10
+        self.hosntmae = hostname
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.

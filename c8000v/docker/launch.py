@@ -73,7 +73,7 @@ class C8000v_vm(vrnetlab.VM):
             cfg_file.write("license accept end user agreement\r\n")
             cfg_file.write("yes\r\n")
             cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
-
+        cfg_file.write("license boot level network-premier addon dna-premier\r\n")
         cfg_file.write("platform console serial\r\n\r\n")
         cfg_file.write("do wr\r\n")
         cfg_file.write("do reload\r\n")
@@ -152,6 +152,7 @@ class C8000v_vm(vrnetlab.VM):
         self.wait_write("exit")
         self.wait_write("restconf")
         self.wait_write("netconf-yang")
+        self.wait_write("ip ssh server algorithm mac hmac-sha2-512")
 
         self.wait_write("line vty 0 4")
         self.wait_write("login local")

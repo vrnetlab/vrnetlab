@@ -1029,7 +1029,6 @@ class SROS(vrnetlab.VR):
                     parse_variant_line(lc.get("timos_line", ""), lc)
                     for lc in variant["lcs"]
                 ]
-                variant["lsc"] = sort_lc_lines_by_slot(variant["lcs"])
         else:
             variant = parse_custom_variant(variant_name)
 

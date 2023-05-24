@@ -622,12 +622,15 @@ class VM:
         self.stop()
         self.start()
 
-    def wait_write(self, cmd, wait="#", con=None):
+    def wait_write(self, cmd, wait="# ", con=None):
         """Wait for something on the serial port and then send command
 
         Defaults to using self.tn as connection but this can be overridden
         by passing a telnetlib.Telnet object in the con argument.
         """
+        if not cmd: # skip empty commands
+            return
+        
         con_name = "custom con"
         if con is None:
             con = self.tn
@@ -640,8 +643,10 @@ class VM:
         if wait:
             self.logger.trace("waiting for '%s' on %s" % (wait, con_name))
             res = con.read_until(wait.encode())
-            self.logger.trace("read from %s: %s" % (con_name, res.decode()))
-        self.logger.debug("writing to %s: %s" % (con_name, cmd))
+            cleanup = con.read_very_eager() # Clear any remaining characters in buffer
+            self.logger.trace("read from %s: '%s' cleanup='%s'" % (con_name, 
+              res.decode().encode('unicode_escape'), cleanup.decode().encode('unicode_escape')))
+        self.logger.debug("writing to %s: '%s'" % (con_name, cmd))
         con.write("{}\r".format(cmd).encode())
 
     def work(self):

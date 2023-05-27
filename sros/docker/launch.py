@@ -631,6 +631,9 @@ class SROS_vm(vrnetlab.VM):
         self.cpu = cpu
         self.qemu_args.extend(["-cpu", "host", "-smp", f"{cpu}"])
 
+        # override default wait patter with hash followed by the space
+        self.wait_pattern = "# "
+
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 
@@ -871,7 +874,10 @@ class SROS_integrated(SROS_vm):
         res.append("-netdev")
         res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
 
-        if "chassis=ixr-r6" in self.variant["timos_line"] or "chassis=ixr-ec" in self.variant["timos_line"]:
+        if (
+            "chassis=ixr-r6" in self.variant["timos_line"]
+            or "chassis=ixr-ec" in self.variant["timos_line"]
+        ):
             logger.debug(
                 "detected ixr-r6/ec chassis, creating a dummy network device for SFM connection"
             )

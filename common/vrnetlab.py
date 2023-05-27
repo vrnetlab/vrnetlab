@@ -89,6 +89,9 @@ class VM:
 
         self.start_nic_eth_idx = 1
 
+        # wait_pattern is the pattern we wait on the serial connection when pushing config commands
+        self.wait_pattern = "#"
+
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
         # append role to overlay name to have different overlay images for control and data plane images
         if hasattr(self, "role"):
@@ -622,15 +625,15 @@ class VM:
         self.stop()
         self.start()
 
-    def wait_write(self, cmd, wait="# ", con=None):
+    def wait_write(self, cmd, wait="__defaultpattern__", con=None):
         """Wait for something on the serial port and then send command
 
         Defaults to using self.tn as connection but this can be overridden
         by passing a telnetlib.Telnet object in the con argument.
         """
-        if not cmd: # skip empty commands
+        if not cmd:  # skip empty commands
             return
-        
+
         con_name = "custom con"
         if con is None:
             con = self.tn
@@ -641,12 +644,22 @@ class VM:
             con_name = "qemu monitor"
 
         if wait:
-            self.logger.trace("waiting for '%s' on %s" % (wait, con_name))
+            # use class default wait pattern if none was explicitly specified
+            if wait == "__defaultpattern__":
+                wait = self.wait_pattern
+            self.logger.trace(f"waiting for '{wait}' on {con_name}")
             res = con.read_until(wait.encode())
-            cleanup = con.read_very_eager() # Clear any remaining characters in buffer
-            self.logger.trace("read from %s: '%s' cleanup='%s'" % (con_name, 
-              res.decode().encode('unicode_escape'), cleanup.decode().encode('unicode_escape')))
-        self.logger.debug("writing to %s: '%s'" % (con_name, cmd))
+
+            cleaned_buf = (
+                con.read_very_eager()
+            )  # Clear any remaining characters in buffer
+
+            self.logger.trace(f"read from {con_name}: '{res.decode()}'")
+            # log the cleaned buffer if it's not empty
+            if cleaned_buf:
+                self.logger.trace(f"cleaned buffer: '{cleaned_buf.decode()}'")
+
+        self.logger.debug(f"writing to {con_name}: '{cmd}'")
         con.write("{}\r".format(cmd).encode())
 
     def work(self):
@@ -655,7 +668,7 @@ class VM:
             try:
                 self.bootstrap_spin()
             except EOFError:
-                self.logger.error("Telnet session was disconncted, restarting")
+                self.logger.error("Telnet session was disconnected, restarting")
                 self.restart()
 
     def check_qemu(self):

@@ -871,7 +871,10 @@ class SROS_integrated(SROS_vm):
         res.append("-netdev")
         res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
 
-        if "chassis=ixr-r6" in self.variant["timos_line"] or "chassis=ixr-ec" in self.variant["timos_line"]:
+        if (
+            "chassis=ixr-r6" in self.variant["timos_line"]
+            or "chassis=ixr-ec" in self.variant["timos_line"]
+        ):
             logger.debug(
                 "detected ixr-r6/ec chassis, creating a dummy network device for SFM connection"
             )
@@ -1170,9 +1173,12 @@ class SROS(vrnetlab.VR):
 
     def extractVersion(self):
         """extractVersion extracts the SR OS version from the qcow2 image name"""
+        # https://regex101.com/r/SPefOu/1
+        pattern = r"\S+-((\d{1,3})\.(\d{1,2})\.\w(\d{1,2}))\.qcow2"
+        match_found = False
+
         for e in os.listdir("/"):
-            # https://regex101.com/r/SPefOu/1
-            match = re.match(r"\S+-((\d{1,3})\.(\d{1,2})\.\w(\d{1,2}))\.qcow2", e)
+            match = re.match(pattern, e)
             if match:
                 # save original qcow2 image name
                 self.qcow_name = e
@@ -1182,9 +1188,12 @@ class SROS(vrnetlab.VR):
                 SROS_VERSION.minor = int(match.group(3))
                 SROS_VERSION.patch = int(match.group(4))
                 self.logger.info(f"Parsed SR OS version: {SROS_VERSION}")
+
+                match_found = True
                 break
 
-        self.logger.error("Could not extract version from qcow2 image name")
+        if not match_found:
+            self.logger.error("Could not extract version from qcow2 image name")
 
     def processFiles(self):
         """processFiles renames the qcow2 image to sros.qcow2 and the license file to license.txt

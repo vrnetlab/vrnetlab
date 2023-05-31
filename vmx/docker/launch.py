@@ -340,7 +340,8 @@ class VMX_installer(VMX):
         self.logger.debug("All %d VCPs running" % len(self.vms))
 
         def waitable_pipes():
-            return [vcp.p.stdout for vcp in self.vms if vcp.running] + [vcp.p.stderr for vcp in self.vms if vcp.running]
+            return [vcp.p.stdout for vcp in self.vms if vcp.running and not vcp.p.stdout.closed] + \
+                [vcp.p.stderr for vcp in self.vms if vcp.running and not vcp.p.stderr.closed]
         # wait for system to shut down cleanly
         while waitable_pipes():
             read_pipes, _, _ = select.select(waitable_pipes(), [],  [])

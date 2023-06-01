@@ -58,6 +58,9 @@ csr:
 c8000v:
   <<: *build-template
 
+c8000v-sd-wan:
+  <<: *build-template
+
 nxos:
   <<: *build-template
 
@@ -92,4 +95,13 @@ xrv:
   <<: *build-template
 
 xrv9k:
+  <<: *build-template
+
+vedge:
+  <<: *build-template
+
+vsmart:
+  <<: *build-template
+
+vmanage:
   <<: *build-template

@@ -273,17 +273,16 @@ class VMX(vrnetlab.VR):
 
     def __init__(self, username, password, dual_re=False):
         self.version = None
-        self.version_info = []
         self.read_version()
         self.dual_re = dual_re
 
         super(VMX, self).__init__(username, password)
 
         if not dual_re:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version), VMX_vfpc(self.version) ]
+            self.vms = [ VMX_vcp(username, password, self.vcp_image), VMX_vfpc(self.version) ]
         else:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=0),
-                         VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=1),
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=0),
+                         VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=1),
                          VMX_vfpc(self.version) ]
 
 
@@ -298,7 +297,6 @@ class VMX(vrnetlab.VR):
             if m:
                 self.vcp_image = e
                 self.version = m.group(1)
-                self.version_info = [int(m.group(2)), int(m.group(3)), m.group(4), int(m.group(5)), int(m.group(7))]
 
     def start(self):
         # Set up socats for re1, with a different offset: $CONTAINER_IP:1022 -> 10.0.0.16:3022
@@ -319,7 +317,6 @@ class VMX_installer(VMX):
     """
     def __init__(self, username, password, dual_re=False):
         self.version = None
-        self.version_info = []
         self.read_version()
 
         super().__init__(username, password, dual_re)

@@ -34,14 +34,16 @@ logging.Logger.trace = trace
 vrnetlab.HOST_FWDS.append(('tcp', 57400, 57400))
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, dual_re=False, re_instance=0, install_mode=False):
+    def __init__(self, username, password, dual_re=False, re_instance=0, install_mode=False):
         self.dual_re = dual_re
         self.num = re_instance
         self.install_mode = install_mode
-        super(VMX_vcp, self).__init__(username, password, disk_image=self._get_file_in_vcp_folder(image), ram=2048, num=re_instance)
+        self.base_vcp_dir = pathlib.Path("/vmx/re{}".format(self.num if self.dual_re else ''))
+        vcp_image = str(self.base_vcp_dir / sorted(self.base_vcp_dir.glob("junos-vmx-*.qcow2"))[0])
+        super(VMX_vcp, self).__init__(username, password, disk_image=vcp_image, ram=2048, num=re_instance)
 
         self.num_nics = 0
-        self.qemu_args.extend(["-drive", "if=ide,file=" + self._get_file_in_vcp_folder("vmxhdd.img")])
+        self.qemu_args.extend(["-drive", "if=ide,file=" + str(self.base_vcp_dir / "vmxhdd.img")])
         if dual_re:
             product = "VM-vcp_vmx2-161-dualre-{}".format(re_instance)
         else:
@@ -59,12 +61,9 @@ class VMX_vcp(vrnetlab.VM):
                  ["-usb", "-drive", "id=my_usb_disk,media=disk,format=raw,file={},if=none".format(self._metadata_usb),
                  "-device", "usb-storage,drive=my_usb_disk"])
 
-    def _get_file_in_vcp_folder(self, file):
-        return "/vmx/re{}/{}".format(self.num if self.dual_re else '', file)
-
     @property
     def _metadata_usb(self):
-        return self._get_file_in_vcp_folder("metadata-usb-re{}.img".format(self.num if self.dual_re else ''))
+        return self.base_vcp_dir / "metadata-usb-re{}.img".format(self.num if self.dual_re else '')
 
     @property
     def _vcp_int(self):
@@ -203,7 +202,7 @@ class VMX_vcp(vrnetlab.VM):
 class VMX_vfpc(vrnetlab.VM):
     def __init__(self):
         # "Hardcode" the num to 3 for this VM. This gives us a static mapping
-        # for the console port (5002) independent of how man VCPs are running
+        # for the console port (5002) independent of how many VCPs are running
         super(VMX_vfpc, self).__init__(None, None, disk_image = "/vmx/vfpc.img", num=3)
         self.num_nics = 96
 
@@ -276,10 +275,10 @@ class VMX(vrnetlab.VR):
         super(VMX, self).__init__(username, password)
 
         if not dual_re:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image), VMX_vfpc() ]
+            self.vms = [ VMX_vcp(username, password), VMX_vfpc() ]
         else:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=0),
-                         VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=1),
+            self.vms = [ VMX_vcp(username, password, dual_re=True, re_instance=0),
+                         VMX_vcp(username, password, dual_re=True, re_instance=1),
                          VMX_vfpc() ]
 
 
@@ -308,14 +307,14 @@ class VMX_installer(VMX):
         super().__init__(username, password, dual_re)
 
         if not dual_re:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, install_mode=True) ]
+            self.vms = [ VMX_vcp(username, password, install_mode=True) ]
         else:
             # When installing in dual-RE mode, boot a standalone RE and also 2x
             # dualre. The final image will end up with 3 VMs, but we choose
             # which are started with the `--dual-re` option.
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=0, install_mode=True),
-                         VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=1, install_mode=True),
-                         VMX_vcp(username, password, self.vcp_image, dual_re=False, re_instance=2, install_mode=True)]
+            self.vms = [ VMX_vcp(username, password, dual_re=True, re_instance=0, install_mode=True),
+                         VMX_vcp(username, password, dual_re=True, re_instance=1, install_mode=True),
+                         VMX_vcp(username, password, dual_re=False, re_instance=2, install_mode=True)]
 
     def install(self):
         self.logger.info("Installing VMX (%d VCP)" % len(self.vms))

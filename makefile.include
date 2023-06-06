@@ -26,7 +26,7 @@ docker-build-common: docker-clean-build docker-pre-build
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
 	cp ../common/* docker/
 	$(MAKE) IMAGE=$$IMAGE docker-build-image-copy
-	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg IMAGE=$(IMAGE) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
+	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg IMAGE=$(IMAGE) --build-arg VERSION=$(VERSION) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
 
 docker-build: docker-build-common
 

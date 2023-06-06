@@ -158,14 +158,18 @@ class C8000v_vm(vrnetlab.VM):
         self.wait_write("exit")
         self.wait_write("restconf")
         self.wait_write("netconf-yang")
+        self.wait_write("netconf max-sessions 16")
+        # I did not find any documentation about this, but is seems like a good idea!?
+        self.wait_write("netconf detailed-error")
         self.wait_write("ip ssh server algorithm mac hmac-sha2-512")
+        self.wait_write("ip ssh maxstartups 128")
 
         self.wait_write("line vty 0 4")
         self.wait_write("login local")
         self.wait_write("transport input all")
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
-        self.wait_write("\r", None)
+        self.wait_write("\r", "Destination")
 
 
 class C8000v(vrnetlab.VR):

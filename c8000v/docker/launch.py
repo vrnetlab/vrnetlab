@@ -146,7 +146,10 @@ class C8000v_vm(vrnetlab.VM):
 
         self.wait_write("hostname c8000v")
         self.wait_write("username %s privilege 15 password %s" % (self.username, self.password))
-        self.wait_write("ip domain-name example.com")
+        if int(self.version.split('.')[0]) >= 16:
+           self.wait_write("ip domain name example.com")
+        else:
+           self.wait_write("ip domain-name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
 
         self.wait_write("interface GigabitEthernet1")

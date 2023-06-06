@@ -34,7 +34,7 @@ logging.Logger.trace = trace
 vrnetlab.HOST_FWDS.append(('tcp', 57400, 57400))
 
 class VMX_vcp(vrnetlab.VM):
-    def __init__(self, username, password, image, version, dual_re=False, re_instance=0, install_mode=False):
+    def __init__(self, username, password, image, dual_re=False, re_instance=0, install_mode=False):
         self.dual_re = dual_re
         self.num = re_instance
         self.install_mode = install_mode
@@ -201,11 +201,10 @@ class VMX_vcp(vrnetlab.VM):
 
 
 class VMX_vfpc(vrnetlab.VM):
-    def __init__(self, version):
+    def __init__(self):
         # "Hardcode" the num to 3 for this VM. This gives us a static mapping
         # for the console port (5002) independent of how man VCPs are running
         super(VMX_vfpc, self).__init__(None, None, disk_image = "/vmx/vfpc.img", num=3)
-        self.version = version
         self.num_nics = 96
 
         self.nic_type = "virtio-net-pci"
@@ -272,31 +271,21 @@ class VMX(vrnetlab.VR):
     """
 
     def __init__(self, username, password, dual_re=False):
-        self.version = None
-        self.read_version()
         self.dual_re = dual_re
 
         super(VMX, self).__init__(username, password)
 
         if not dual_re:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image), VMX_vfpc(self.version) ]
+            self.vms = [ VMX_vcp(username, password, self.vcp_image), VMX_vfpc() ]
         else:
             self.vms = [ VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=0),
                          VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=1),
-                         VMX_vfpc(self.version) ]
+                         VMX_vfpc() ]
 
 
         # set up bridge for connecting VCP with vFPC
         vrnetlab.run_command(["brctl", "addbr", "int_cp"])
         vrnetlab.run_command(["ip", "link", "set", "int_cp", "up"])
-
-
-    def read_version(self):
-        for e in os.listdir("/vmx/re"):
-            m = re.search(r"-(([0-9][0-9])\.([0-9])([A-Z])([0-9]+)(\-[SD][0-9]*)?\.([0-9]+))", e)
-            if m:
-                self.vcp_image = e
-                self.version = m.group(1)
 
     def start(self):
         # Set up socats for re1, with a different offset: $CONTAINER_IP:1022 -> 10.0.0.16:3022
@@ -316,20 +305,17 @@ class VMX_installer(VMX):
         normal startup time of the vMX.
     """
     def __init__(self, username, password, dual_re=False):
-        self.version = None
-        self.read_version()
-
         super().__init__(username, password, dual_re)
 
         if not dual_re:
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version, install_mode=True) ]
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, install_mode=True) ]
         else:
             # When installing in dual-RE mode, boot a standalone RE and also 2x
             # dualre. The final image will end up with 3 VMs, but we choose
             # which are started with the `--dual-re` option.
-            self.vms = [ VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=0, install_mode=True),
-                         VMX_vcp(username, password, self.vcp_image, self.version, dual_re=True, re_instance=1, install_mode=True),
-                         VMX_vcp(username, password, self.vcp_image, self.version, dual_re=False, re_instance=2, install_mode=True)]
+            self.vms = [ VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=0, install_mode=True),
+                         VMX_vcp(username, password, self.vcp_image, dual_re=True, re_instance=1, install_mode=True),
+                         VMX_vcp(username, password, self.vcp_image, dual_re=False, re_instance=2, install_mode=True)]
 
     def install(self):
         self.logger.info("Installing VMX (%d VCP)" % len(self.vms))

@@ -87,20 +87,30 @@ class VSRX_vm(vrnetlab.VM):
         """
         self.logger.info("applying bootstrap configuration")
         self.wait_write("cli", "#")
+        self.wait_write("set cli screen-length 0", ">")
+        self.wait_write("set cli screen-width 511", ">")
+        self.wait_write("set cli complete-on-space off", ">")
         self.wait_write("configure", ">")
         self.wait_write("top delete", "#")
         self.wait_write("yes", "Delete everything under this level? [yes,no] (no) ")
         self.wait_write("set system services ssh", "#")
         self.wait_write("set system services netconf ssh", "#")
         self.wait_write("set system login user %s class super-user authentication plain-text-password" % ( self.username ), "#")
-        self.wait_write("set system management-instance", "#")
         self.wait_write(self.password, "New password:")
         self.wait_write(self.password, "Retype new password:")
         self.wait_write("set system root-authentication plain-text-password", "#")
         self.wait_write(self.password, "New password:")
         self.wait_write(self.password, "Retype new password:")
         self.wait_write("set interfaces fxp0 unit 0 family inet address 10.0.0.15/24", "#")
-        self.wait_write("commit and-quit", "#")
+        # set interface fxp0 on dedicated management vrf, to avoid 10.0.0.0/24 to overlap with any "testing" network
+        self.wait_write("set system management-instance", "#")
+        self.wait_write("set routing-instances mgmt_junos description management-instance", "#")
+        # allow NATed outgoing traffic (set the default route on the management vrf)
+        self.wait_write("set routing-instances mgmt_junos routing-options static route 0.0.0.0/0 next-hop 10.0.0.2", "#")
+        self.wait_write("commit")
+        self.wait_write("exit")
+        # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes
+        self.wait_write("exit", wait=">")
         self.logger.info("completed bootstrap configuration")
 
 class VSRX(vrnetlab.VR):

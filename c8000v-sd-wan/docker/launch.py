@@ -54,6 +54,7 @@ class CSR_vm(vrnetlab.VM):
         # Use vmxnet3 instead of virtio-net-pci to make dot1Q encapsulation
         # work. With other NIC types the router ignores tagged frames.
         self.nic_type = "vmxnet3"
+        self.confd_started = False
 
         if self.install_mode:
             logger.trace("install mode")
@@ -86,27 +87,25 @@ class CSR_vm(vrnetlab.VM):
 
         if self.spins > 300:
             # too many spins with no result ->  give up
-            self.stop()
-            self.start()
+            self.logger.warning("Too many spins, restarting")
+            self.restart()
+            self.spins = 0
             return
 
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!"], 1)
+        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!",
+                                             b"Router>",
+                                             b"Username:",
+                                             b"vip-bootstrap: All daemons up",
+                                             b"IOSXEBOOT-4-FACTORY_RESET"], 1)
         if match: # got a match!
+            self.logger.debug(f"matched {match}")
             if ridx == 0: # login
-                self.logger.debug("matched, Press RETURN to get started.")
-
-                if self.install_mode:
+                if not self.install_mode and not self.confd_started:
+                    self.logger.info("ConfD not running yet, waiting")
+                else:
                     self.wait_write("", wait=None)
-                    self.wait_write("enable", wait=">")
-                    self.wait_write("clear platform software vnic-if nvtable")
-                    self.wait_write("controller-mode enable")
-                    self.wait_write("", wait="[confirm]")
-                    self.wait_write("no", wait="(yes/[no]):")
-                    self.running = True
-                    return
-
-                self.wait_write("", wait=None)
-                self.wait_write("admin", wait="Username:")
+            elif ridx == 2:
+                self.wait_write("admin", wait=None)
                 self.wait_write("admin", wait="Password:")
                 self.wait_write("admin", wait="Enter new password:")
                 self.wait_write("admin", wait="Confirm password:")
@@ -122,6 +121,33 @@ class CSR_vm(vrnetlab.VM):
                 # mark as running
                 self.running = True
                 return
+            elif ridx == 1: # Router>
+                if self.install_mode:
+                    self.wait_write("enable", wait=None)
+                    self.wait_write("clear platform software vnic-if nvtable")
+                    self.wait_write("controller-mode enable")
+                    self.wait_write("", wait="[confirm]")
+                    self.wait_write("no", wait="(yes/[no]):")
+                    self.logger.debug("Now wait for the device to reload")
+                else:
+                    # If we see the unprivileged prompt on an already "installed" router, something is wrong
+                    self.logger.warning("This is not supposed to happen!?")
+                    self.restart()
+                    self.spins = 0
+                    return
+            elif ridx == 3: # vip-bootstrap
+                # This is the true indicator of the routers ability to accept configuration
+                self.confd_started = True
+                self.wait_write("", wait=None)
+            elif ridx == 4: # IOSXEBOOT-4-FACTORY_RESET
+                # Give the device enough time to persist everything and reload
+                # on its own terms before we shut it down and complete the
+                # install phase.
+                if self.install_mode:
+                    self.running = True
+                    install_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Install complete in: %s" % install_time)
+                    return
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -202,7 +228,6 @@ class CSR_installer(CSR):
         csr = self.vms[0]
         while not csr.running:
             csr.work()
-        time.sleep(30)
         csr.stop()
         self.logger.info("Installation complete")
 

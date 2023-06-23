@@ -34,10 +34,11 @@ logging.Logger.trace = trace
 
 class VEOS_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        for e in os.listdir("/"):
-            if re.search(".vmdk$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".vmdk$", e):
                 disk_image = "/" + e
-        for e in os.listdir("/"):
+        for e in sorted(os.listdir("/")):
             if re.search(".iso$", e):
                 boot_iso = "/" + e
         super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)

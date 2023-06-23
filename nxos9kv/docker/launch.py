@@ -34,8 +34,9 @@ logging.Logger.trace = trace
 
 class NXOS9K_vm(vrnetlab.VM):
     def __init__(self, bios, username, password, num_nics):
-        for e in os.listdir("/"):
-            if re.search(".qcow2$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
         # the parent constructor needs to call create_overlay_image,
         # so must initialize the other parameters first

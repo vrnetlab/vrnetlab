@@ -31,7 +31,7 @@ logging.Logger.trace = trace
 
 class VQFX_vcp(vrnetlab.VM):
     def __init__(self, username, password):
-        for e in os.listdir("/"):
+        for e in sorted(os.listdir("/")):
             if re.search("-re-.*.vmdk", e):
                 vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vcp.qcow2"])
         super(VQFX_vcp, self).__init__(username, password, disk_image="/vcp.qcow2", ram=2048)
@@ -156,7 +156,7 @@ class VQFX_vcp(vrnetlab.VM):
 
 class VQFX_vpfe(vrnetlab.VM):
     def __init__(self):
-        for e in os.listdir("/"):
+        for e in sorted(os.listdir("/")):
             if re.search("-pfe-.*.vmdk", e):
                 vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vpfe.qcow2"])
         super(VQFX_vpfe, self).__init__(None, None, disk_image="/vpfe.qcow2", num=1, ram=2048)

@@ -14,6 +14,8 @@ RUN apt-get update -qy \
     genisoimage \
  && rm -rf /var/lib/apt/lists/*
 
+ARG VERSION
+ENV VERSION=${VERSION}
 ARG IMAGE
 COPY $IMAGE* /
 COPY *.py /

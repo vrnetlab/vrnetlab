@@ -637,15 +637,6 @@ class SROS_vm(vrnetlab.VM):
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 
-        if self.spins > 60:
-            # too many spins with no result, probably means SROS hasn't started
-            # successfully, so we restart it
-            self.logger.warning("no output from serial console, restarting VM")
-            self.stop()
-            self.start()
-            self.spins = 0
-            return
-
         (ridx, match, res) = self.tn.expect([b"Login:", b"^[^ ]+#"], 1)
         if match:  # got a match!
             if ridx == 0:  # matched login prompt, so should login

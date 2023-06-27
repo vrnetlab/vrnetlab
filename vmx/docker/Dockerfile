@@ -1,20 +1,20 @@
 FROM ubuntu:20.04
-MAINTAINER Kristian Larsson <kristian@spritelink.net>
+LABEL org.opencontainers.image.authors="roman@dodin.dev"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qy \
- && apt-get upgrade -qy \
- && apt-get install -y \
-    bridge-utils \
-    iproute2 \
-    python3-ipy \
-    socat \
-    qemu-kvm \
-    tcpdump \
-    procps \
-    openvswitch-switch \
- && rm -rf /var/lib/apt/lists/*
+   && apt-get upgrade -qy \
+   && apt-get install -y \
+   bridge-utils \
+   iproute2 \
+   python3-ipy \
+   socat \
+   qemu-kvm \
+   tcpdump \
+   procps \
+   openvswitch-switch \
+   && rm -rf /var/lib/apt/lists/*
 
 COPY vmx /vmx
 COPY *.py /

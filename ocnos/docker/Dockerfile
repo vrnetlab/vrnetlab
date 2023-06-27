@@ -16,6 +16,7 @@ RUN apt-get update -qy \
    dnsutils \
    openvswitch-switch \
    iptables \
+   nftables \
    telnet \
    && rm -rf /var/lib/apt/lists/*
 

@@ -78,17 +78,21 @@ actor main(env):
     while i < len(env.argv):
         arg = env.argv[i]
         print("arg: %s" % (arg))
+        # the --p2p arugment is followed by one or more link specs (python argparse nargs="+")
         if arg == "--p2p":
-            arg_link = env.argv[i+1]
-            parts = arg_link.split("--", None)
-            if len(parts) != 2:
-                print("Bad link", arg_link)
-            link = (
-                 left=parse_side(parts[0]),
-                 right=parse_side(parts[1])
-                )
-            p2p.append(link)
             i += 1
+            while i < len(env.argv) and env.argv[i][0] != "-":
+                arg_link = env.argv[i]
+                print("\t%s" % arg_link)
+                parts = arg_link.split("--", None)
+                if len(parts) != 2:
+                    print("Bad link", arg_link)
+                link = (
+                    left=parse_side(parts[0]),
+                    right=parse_side(parts[1])
+                    )
+                p2p.append(link)
+                i += 1
         i += 1
 
     var links = []

@@ -1,0 +1,102 @@
+import net
+import time
+
+actor TcpEndpoint(connect_auth, dns, name, interface):
+    port = 10000 + interface
+    var _other = None
+    var _conn: ?net.TCPIPConnection = None
+    var backoff = 0
+    var state = 0
+    # 0 = starting / waiting / backoff
+    # 1 = wait for DNS
+    # 2 = wait for connection
+    # 3 = connected
+
+    def _on_tcp_connect(c):
+        state = 3
+        print("TCP Client connection established to %s/%d" % (name, interface))
+        backoff = 0
+
+    def _on_tcp_receive(c, data):
+        if _other is not None:
+            _other.write(data)
+
+    def _on_tcp_error(c, msg):
+        print("Error for %s/%d" % (name, interface))
+        _reconnect(True)
+
+    def _on_dns_resolve(resolved_addresses):
+        if state != 1:
+            print("Got unexpected DNS response, discarding...")
+        else:
+            if len(resolved_addresses) > 0:
+                addr = resolved_addresses[0]
+                print("Resolved %s to %s" % (name, addr))
+                _conn = net.TCPIPConnection(connect_auth, addr, port, _on_tcp_connect, _on_tcp_receive, _on_tcp_error)
+                state = 2
+
+    def _on_dns_error(query, error):
+        print("Error resolving DNS name", query, ":", error)
+        _reconnect(True)
+
+    def _connect():
+        if state != 0:
+            print("Unexpected state for _connect:", state)
+            return
+        state = 1
+        dns.lookup_a(name, _on_dns_resolve, _on_dns_error)
+
+    def _reconnect(error):
+        state = 0
+        if error:
+            backoff = min([backoff + 1.0, 5.0], 1.0)
+        after backoff: _connect()
+
+    _reconnect(False)
+
+    def set_other(o):
+        _other = o
+
+    def write(data):
+        if _conn is not None:
+            _conn.write(data)
+
+
+def parse_side(i):
+    parts = i.split("/", None)
+    if len(parts) != 2:
+        raise ValueError("Bad endpoint definition: %s" % i)
+    return (host=parts[0], interface=int(parts[1]))
+
+actor main(env):
+    print("Xcon starting up")
+    connect_auth = net.TCPConnectAuth(net.TCPAuth(net.NetAuth(env.auth)))
+    dns_auth = net.DNSAuth(net.NetAuth(env.auth))
+    dns = net.DNS(dns_auth)
+    var i = 0
+    var p2p = []
+    while i < len(env.argv):
+        arg = env.argv[i]
+        print("arg: %s" % (arg))
+        if arg == "--p2p":
+            arg_link = env.argv[i+1]
+            parts = arg_link.split("--", None)
+            if len(parts) != 2:
+                print("Bad link", arg_link)
+            link = (
+                 left=parse_side(parts[0]),
+                 right=parse_side(parts[1])
+                )
+            p2p.append(link)
+            i += 1
+        i += 1
+
+    var links = []
+    for link in p2p:
+        left = link.left
+        right = link.right
+        left_ep = TcpEndpoint(connect_auth, dns, right.host, right.interface)
+        right_ep = TcpEndpoint(connect_auth, dns, left.host, left.interface)
+        left_ep.set_other(right_ep)
+        right_ep.set_other(left_ep)
+        links.append((left=left, right=right))

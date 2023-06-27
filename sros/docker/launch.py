@@ -996,11 +996,11 @@ class SROS_lc(SROS_vm):
     def gen_mgmt(self):
         """Generate mgmt interface"""
         res = []
-        # mgmt interface
+        # mgmt interface, dummy on line card VMs just to get correct PCI id order
         res.extend(
             ["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)]
         )
-        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
+        res.extend(["-netdev", "user,id=mgmt,restrict=y"]) # dummy nic, not used
         # internal control plane interface to vFPC
         res.extend(
             ["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)]

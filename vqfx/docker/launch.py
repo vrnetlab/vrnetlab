@@ -3,7 +3,6 @@
 import datetime
 import logging
 import os
-import re
 import signal
 import sys
 
@@ -31,10 +30,8 @@ logging.Logger.trace = trace
 
 class VQFX_vcp(vrnetlab.VM):
     def __init__(self, username, password):
-        for e in os.listdir("/"):
-            if re.search("-re-.*.vmdk", e):
-                vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vcp.qcow2"])
-        super(VQFX_vcp, self).__init__(username, password, disk_image="/vcp.qcow2", ram=2048)
+        re_image_name = open('/re_image').read().strip()
+        super(VQFX_vcp, self).__init__(username, password, disk_image=re_image_name, ram=2048)
         self.num_nics = 12
 
 
@@ -156,10 +153,8 @@ class VQFX_vcp(vrnetlab.VM):
 
 class VQFX_vpfe(vrnetlab.VM):
     def __init__(self):
-        for e in os.listdir("/"):
-            if re.search("-pfe-.*.vmdk", e):
-                vrnetlab.run_command(["qemu-img", "create", "-b", "/" + e, "-f", "qcow", "/vpfe.qcow2"])
-        super(VQFX_vpfe, self).__init__(None, None, disk_image="/vpfe.qcow2", num=1, ram=2048)
+        pfe_image_name = open('/pfe_image').read().strip()
+        super(VQFX_vpfe, self).__init__(None, None, disk_image=pfe_image_name, num=1, ram=2048)
         self.num_nics = 0
 
 

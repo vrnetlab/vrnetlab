@@ -1,0 +1,26 @@
+name: "Build and Test virtual routers"
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    runs-on: ["self-hosted"]
+    container:
+      image: vrnetlab/ci-builder
+      volumes:
+        - /data/gh-runner/vrnetlab-images:/vrnetlab-images
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build vmx
+        run: |
+          cp /vrnetlab-images/vmx/* vmx || true
+          ls -al $vmx
+          make vmx
+      - name: Test vmx
+        run: |
+          CI_PREFIX=ci-${GITHUB_RUN_ID}- make vmx-test

@@ -32,8 +32,14 @@ stages:
     - fi
   interruptible: true
   after_script:
+    # save logs for artifacts
+    - make -C ${CI_JOB_NAME} docker-test-save-logs
     # clean up leftover (failed) test containers
-    - docker ps -aqf name=ci-${CI_PIPELINE_ID}- | xargs --no-run-if-empty docker rm -f
+    - make -C ${CI_JOB_NAME} docker-test-clean
+  artifacts:
+    when: always
+    paths:
+      - ${CI_JOB_NAME}/*.log
 
 vr-xcon:
   <<: *build-template

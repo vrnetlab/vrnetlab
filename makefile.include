@@ -62,10 +62,19 @@ docker-test:
 		$(MAKE) IMAGE=$$IMAGE docker-test-image; \
 	done
 
-CONTAINER_NAME ?= $(PNS)-test-image-$(VR_NAME)-$(VERSION)
+CNT_PREFIX ?= $(PNS)-test-image-$(VR_NAME)
 TEST_TIMEOUT ?= 2400
 
+docker-test-image: CONTAINER_NAME?=$(CNT_PREFIX)-$(VERSION)
 docker-test-image:
 	../test/test-image $(TAG_NAME) $(CONTAINER_NAME) $$TEST_PARAMS
 
-all: docker-image
+docker-test-clean:
+	docker ps -aqf name=$(CNT_PREFIX) | xargs --no-run-if-empty docker rm -f
+
+docker-test-save-logs:
+	for cnt in `docker ps -af name=$(CNT_PREFIX) --format '{{.Names}}'`; do \
+		docker logs $${cnt} > $${cnt}.log 2>&1; \
+	done
+
+all:  docker-image

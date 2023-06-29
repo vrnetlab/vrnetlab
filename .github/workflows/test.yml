@@ -19,7 +19,7 @@ jobs:
         - /data/gh-runner/vrnetlab-images:/vrnetlab-images
     strategy:
       matrix:
-        platform: ["vr-xcon", "vmx"]
+        platform: ['csr', 'nxos', 'routeros', 'sros', 'veos', 'vmx', 'vqfx', 'vr-bgp', 'vr-xcon', 'vrp', 'vsr1000', 'xrv', 'xrv9k']
 
     steps:
       - uses: actions/checkout@v3

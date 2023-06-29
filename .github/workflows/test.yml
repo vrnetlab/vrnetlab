@@ -11,19 +11,23 @@ env:
   PNS: ci-${GITHUB_RUN_ID}
 
 jobs:
-  test:
+  test_matrix:
     runs-on: ["self-hosted"]
     container:
       image: vrnetlab/ci-builder
       volumes:
         - /data/gh-runner/vrnetlab-images:/vrnetlab-images
+    strategy:
+      matrix:
+        platform: ["vr-xcon", "vmx"]
+
     steps:
       - uses: actions/checkout@v3
-      - name: Build vmx
+      - name: Build ${{ matrix.platform }}
         run: |
-          cp /vrnetlab-images/vmx/* vmx || true
-          ls -al $vmx
-          make vmx
-      - name: Test vmx
+          cp /vrnetlab-images/${{ matrix.platform }}/* ${{ matrix.platform }} || true
+          ls -al ${{ matrix.platform }}
+          make ${{ matrix.platform }}
+      - name: Test ${{ matrix.platform }}
         run: |
-          make vmx-test
+          make ${{ matrix.platform }}-test

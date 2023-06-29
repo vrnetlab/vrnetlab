@@ -7,6 +7,9 @@ on:
       - main
       - master
 
+env:
+  PNS: ci-${GITHUB_RUN_ID}
+
 jobs:
   test:
     runs-on: ["self-hosted"]
@@ -23,4 +26,4 @@ jobs:
           make vmx
       - name: Test vmx
         run: |
-          CI_PREFIX=ci-${GITHUB_RUN_ID}- make vmx-test
+          make vmx-test

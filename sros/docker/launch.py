@@ -358,7 +358,7 @@ class SROS(vrnetlab.VR):
         min_non_licensed_major_release = 19
         if num_nics > max_non_licensed_nics or major_release >= min_non_licensed_major_release:
             if not self.license:
-                self.logger.error("More than {} ({} configured) NICs or a major version less than {} ({} detected)".format(max_non_licensed_nics,
+                self.logger.error("More than {} ({} configured) NICs or a major version greater than {} ({} detected)".format(max_non_licensed_nics,
                                                                                                                         num_nics,
                                                                                                                         min_non_licensed_major_release,
                                                                                                                         major_release) +\

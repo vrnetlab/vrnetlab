@@ -36,4 +36,6 @@ ADD xcon.py /
 
 COPY --from=build /xcon /xcon
 
+# The first line in the health file is the exit code: 0 or 1. The following lines are the output message
+HEALTHCHECK --interval=5s --start-period=1s CMD sed 1d /health; exit `head -n1 /health`
 ENTRYPOINT ["/xcon.py"]

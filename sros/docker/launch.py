@@ -343,7 +343,6 @@ class SROS(vrnetlab.VR):
                 major_release = int(match.group(1))
             if re.search("\.qcow2$", e):
                 os.rename("/" + e, "/sros.qcow2")
-
             if re.search("\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.txt")
 

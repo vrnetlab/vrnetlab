@@ -14,6 +14,7 @@ jobs:
   test-tool:
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         platform: ['vr-bgp', 'vr-xcon']
     steps:
@@ -50,6 +51,7 @@ jobs:
       volumes:
         - /data/gh-runner/vrnetlab-images:/vrnetlab-images
     strategy:
+      fail-fast: false
       matrix:
         platform: ['csr', 'nxos', 'routeros', 'sros', 'veos', 'vmx', 'vqfx', 'vrp', 'vsr1000', 'xrv', 'xrv9k']
 

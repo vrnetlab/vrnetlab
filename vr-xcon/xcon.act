@@ -15,10 +15,16 @@ actor Healthcheck(write_file_auth, expected):
         for state in states.values():
             if state == 3:
                 count += 1
-        print("healtcheck:", count == expected)
+        if count == expected:
+            exit_code = 0
+            message = "All %d sockets connected" % expected
+        else:
+            exit_code = 1
+            message = "Expected %d sockets but only %d connected" % (expected, count)
+        print("healthcheck: %d (%s)" % (exit_code, message))
+
         wf = file.WriteFile(write_file_auth, "health")
-        exit_code = 0 if count == expected else 1
-        health = "%d\nExpected %d sockets but only %d connected" % (exit_code, expected, count)
+        health = "%d\n%s" % (exit_code, message)
         wf.write(health.encode())
         wf.close()
 

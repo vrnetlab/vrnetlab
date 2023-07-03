@@ -42,6 +42,7 @@ do
   sleep 2
   echo -n "."
   health=$(docker inspect --format '{{.State.Health.Status}}' $name)
+  if [ $? -ne 0 ]; then exit 1; fi
   if [ $(( SECONDS - last_uptime )) -ge 120 ]
   then
     echo "$name is $health after $SECONDS seconds"

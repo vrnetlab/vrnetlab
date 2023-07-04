@@ -9,6 +9,7 @@ on:
 
 env:
   PNS: ci-${GITHUB_RUN_ID}
+  DOCKER_REGISTRY: ghcr.io/vrnetlab/vrnetlab
 
 jobs:
   test-tool:

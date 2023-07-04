@@ -20,13 +20,19 @@ docker-pre-build: ;
 docker-build-image-copy:
 	cp $(IMAGE)* docker/
 
+TAG_NAME = $(REGISTRY)vr-$(VR_NAME):$(VERSION)
+
+ifeq ($(PNS),)
+PNS:=$(shell whoami | sed 's/[^[:alnum:]._-]\+/_/g')
+endif
+
 docker-build-common: docker-clean-build docker-pre-build
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
 	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string ($(IMAGE)). The regexp for extracting version information is likely incorrect, check the regexp in the Makefile or open an issue at https://github.com/plajjan/vrnetlab/issues/new including the image file name you are using."; exit 1; fi
-	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"
+	@echo "Building docker image using $(IMAGE) as $(TAG_NAME)"
 	cp ../common/* docker/
 	$(MAKE) IMAGE=$$IMAGE docker-build-image-copy
-	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg IMAGE=$(IMAGE) --build-arg VERSION=$(VERSION) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
+	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg https_proxy=$(https_proxy) --build-arg IMAGE=$(IMAGE) --build-arg VERSION=$(VERSION) -t $(TAG_NAME) .)
 
 docker-build: docker-build-common
 
@@ -38,7 +44,7 @@ docker-push:
 docker-push-image:
 	@if [ -z "$$IMAGE" ]; then echo "ERROR: No IMAGE specified"; exit 1; fi
 	@if [ "$(IMAGE)" = "$(VERSION)" ]; then echo "ERROR: Incorrect version string"; exit 1; fi
-	docker push $(REGISTRY)vr-$(VR_NAME):$(VERSION)
+	docker push $(TAG_NAME)
 
 usage:
 	@echo "Usage: put the $(VENDOR) $(NAME) $(IMAGE_FORMAT) image in this directory and run:"
@@ -51,4 +57,24 @@ version-test:
 	@echo Extracting version from filename $(IMAGE)
 	@echo Version: $(VERSION)
 
-all: docker-image
+docker-test:
+	set -xe; for IMAGE in $(IMAGES); do \
+		$(MAKE) IMAGE=$$IMAGE docker-test-image; \
+	done
+
+CNT_PREFIX ?= $(PNS)-test-image-$(VR_NAME)
+TEST_TIMEOUT ?= 2400
+
+docker-test-image: CONTAINER_NAME?=$(CNT_PREFIX)-$(VERSION)
+docker-test-image:
+	../test/test-image $(TAG_NAME) $(CONTAINER_NAME) $$TEST_PARAMS
+
+docker-test-clean:
+	docker ps -aqf name=$(CNT_PREFIX) | xargs --no-run-if-empty docker rm -f
+
+docker-test-save-logs:
+	for cnt in `docker ps -af name=$(CNT_PREFIX) --format '{{.Names}}'`; do \
+		docker logs $${cnt} > $${cnt}.log 2>&1; \
+	done
+
+all:  docker-image

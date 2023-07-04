@@ -1,0 +1,63 @@
+#!/bin/bash
+
+timeout=1200
+pull=false
+while getopts "t:hp" opt;
+do
+  case $opt in
+    t)
+      timeout=$OPTARG
+      ;;
+    p)
+      pull=true
+      ;;
+    h)
+      echo "Usage:"
+      echo "$0 [-t timeout] image-name container-name [options for container]"
+      echo "\t\t timeout: wait for timeout seconds, default 900"
+      exit 0
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))
+image=$1
+name=$2
+shift 2
+#echo $@
+if [ "${pull}" == "true" ]; then docker pull $image; fi
+
+# clean up any old instances
+
+docker rm -f $name > /dev/null 2>&1
+
+set -e
+docker run -d --privileged --name $name $image --trace $@
+SECONDS=0
+last_uptime=0
+echo "Waiting for $name to become healthy"
+set +e
+while [ $SECONDS -lt $timeout -a "$health" != "healthy" -a "$status" != "exited" ]
+do
+  sleep 2
+  echo -n "."
+  health=$(docker inspect --format '{{.State.Health.Status}}' $name)
+  if [ $? -ne 0 ]; then exit 1; fi
+  if [ $(( SECONDS - last_uptime )) -ge 120 ]
+  then
+    echo "$name is $health after $SECONDS seconds"
+    last_uptime=$SECONDS
+  fi
+  status=$(docker inspect --format '{{.State.Status}}' $name)
+done
+
+echo "\n"
+if [ $health = "healthy" ]
+then
+  echo -e "\e[32m$name became healthy in $SECONDS seconds\e[0m"
+  docker stop $name
+else
+  echo -e "\e[31m$name failed to become healthy after $SECONDS seconds\e[0m"
+  # leave the container running for local troubleshooting
+  false
+fi

@@ -1,5 +1,8 @@
 image: vrnetlab/ci-builder
 
+variables:
+  PNS: ci-${CI_PIPELINE_ID}
+
 stages:
   - build
 
@@ -16,12 +19,27 @@ stages:
     # env var DOCKER_REGISTRY. If it is not set then we assume we should use
     # the GitLab built-in Docker registry so we check if it is enabled.
     # CI_REGISTRY is only set when the GitLab Docker registry is enabled
-    - if [ -z "${DOCKER_REGISTRY}" ]; then if [ -n "${CI_REGISTRY}" ]; then export DOCKER_USER=gitlab-ci-token; export DOCKER_PASSWORD=${CI_BUILD_TOKEN}; export DOCKER_REGISTRY=${CI_REGISTRY_IMAGE}; fi; fi
+    - if [ -z "${DOCKER_REGISTRY}" ]; then if [ -n "${CI_REGISTRY}" ]; then export DOCKER_USER=gitlab-ci-token; export DOCKER_PASSWORD=${CI_JOB_TOKEN}; export DOCKER_REGISTRY=${CI_REGISTRY_IMAGE}; fi; fi
     - 'echo "DOCKER_REGISTRY: ${DOCKER_REGISTRY}"'
     # if DOCKER_REGISTRY set, either explicitly by user or implicitly by GitLab
     # (see above) we login to repo, build images and push them
     - if [ -n "${DOCKER_REGISTRY}" ]; then docker login -u ${DOCKER_USER} -p=${DOCKER_PASSWORD} ${DOCKER_REGISTRY}; fi
-    - if [ -n "${DOCKER_REGISTRY}" ]; then make ${CI_JOB_NAME} && make ${CI_JOB_NAME}-push; fi
+    - if [ -n "${DOCKER_REGISTRY}" ]; then
+    -   make ${CI_JOB_NAME}
+    -   make ${CI_JOB_NAME}-test
+    -   echo "Pushing images"
+    -   make ${CI_JOB_NAME}-push
+    - fi
+  interruptible: true
+  after_script:
+    # save logs for artifacts
+    - make -C ${CI_JOB_NAME} docker-test-save-logs
+    # clean up leftover (failed) test containers
+    - make -C ${CI_JOB_NAME} docker-test-clean
+  artifacts:
+    when: always
+    paths:
+      - ${CI_JOB_NAME}/*.log
 
 vr-xcon:
   <<: *build-template

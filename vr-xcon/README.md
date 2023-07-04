@@ -75,6 +75,17 @@ Then, connect the _app_ container with _r1_ using vr-xcon in _TcpBridge_ mode:
 docker run -d --privileged --name vr-xcon --link r1 --link app vr-xcon --p2p r1/1--app/1
 ```
 
+Experimental xcon-ng (acton)
+----------------------------
+An alternative implementation of xcon written in acton
+(https://www.acton-lang.org/) is currently in development. Currently it only
+supports TcpBridge mode but the argument format is equivalent. To use it just
+replace the entrypoint with `--entrypoint /xcon`.
+
+```
+docker run -d --privileged --name vr-xcon-ng --entrypoint /xcon --link vr1 --link vr2 --link vr3 vr-xcon --p2p vr1/1--vr2/1 vr1/2--vr3/1
+```
+
 FUAQ - Frequently or Unfrequently Asked Questions
 -------------------------------------------------
 ##### Q: Can I use '--' in the names of my vrnetlab containers?

@@ -490,6 +490,10 @@ if __name__ == '__main__':
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
+    # Fake healtcheck until supported in xcon.py
+    with open("health", "w") as hc:
+        hc.write("0")
+
     if args.p2p:
         tt = TcpBridge()
         for p2p in args.p2p:

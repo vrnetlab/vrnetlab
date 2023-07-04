@@ -1,0 +1,156 @@
+import net
+import time
+import file
+
+actor Healthcheck(write_file_auth, expected):
+    # keep track of TcpEndpoint actor states (ids, like "r1/1")
+    var states = {}
+
+    def update(endpoint, state):
+        states[endpoint] = state
+        _flush()
+
+    def _flush():
+        count = 0
+        for state in states.values():
+            if state == 3:
+                count += 1
+        if count == expected:
+            exit_code = 0
+            message = "All %d sockets connected" % expected
+        else:
+            exit_code = 1
+            message = "Expected %d sockets but only %d connected" % (expected, count)
+        print("healthcheck: %d (%s)" % (exit_code, message))
+
+        wf = file.WriteFile(write_file_auth, "health")
+        health = "%d\n%s" % (exit_code, message)
+        wf.write(health.encode())
+        wf.close()
+
+    _flush()
+
+actor TcpEndpoint(connect_auth, dns, name, interface, healthcheck):
+    port = 10000 + interface
+    id = "%s/%d" % (name, interface)
+    var _other = None
+    var _conn: ?net.TCPIPConnection = None
+    var backoff = 0
+    var state = 0
+    # 0 = starting / waiting / backoff
+    # 1 = wait for DNS
+    # 2 = wait for connection
+    # 3 = connected
+
+    def _set_state(s):
+        state = s
+        healthcheck.update(id, state)
+
+    def _on_tcp_connect(c):
+        _set_state(3)
+        print("TCP Client connection established to %s" % (id))
+        backoff = 0
+
+    def _on_tcp_receive(c, data):
+        if _other is not None:
+            _other.write(data)
+
+    def _on_tcp_close(c):
+        pass
+
+    def _on_tcp_error(c, msg):
+        print("Error for %s" % (id))
+        _reconnect(True)
+
+    def _on_dns_resolve(resolved_addresses):
+        if state != 1:
+            print("Got unexpected DNS response, discarding...")
+        else:
+            if len(resolved_addresses) > 0:
+                addr = resolved_addresses[0]
+                print("Resolved %s to %s" % (name, addr))
+                # TODO: could potentially use .reconnect() here unless the
+                # resolved address has changed, instead of closing current
+                # connection and replacing it with a new one. The connection
+                # must currently be explicitly closed to clean up resources in
+                # the I/O subsystem.
+                if _conn is not None:
+                    _conn.close(_on_tcp_close)
+                _conn = net.TCPIPConnection(connect_auth, addr, port, _on_tcp_connect, _on_tcp_receive, _on_tcp_error)
+                _set_state(2)
+
+    def _on_dns_error(query, error):
+        print("Error resolving DNS name", query, ":", error)
+        _reconnect(True)
+
+    def _connect():
+        if state != 0:
+            print("Unexpected state for _connect:", state)
+            return
+        _set_state(1)
+        dns.lookup_a(name, _on_dns_resolve, _on_dns_error)
+
+    def _reconnect(error):
+        _set_state(0)
+        if error:
+            backoff = min([backoff + 1.0, 5.0], 1.0)
+        after backoff: _connect()
+
+    _reconnect(False)
+
+    def set_other(o):
+        _other = o
+
+    def write(data):
+        if _conn is not None:
+            _conn.write(data)
+
+
+def parse_side(i):
+    parts = i.split("/", None)
+    if len(parts) != 2:
+        raise ValueError("Bad endpoint definition: %s" % i)
+    return (host=parts[0], interface=int(parts[1]))
+
+
+
+actor main(env):
+    print("Xcon starting up")
+    connect_auth = net.TCPConnectAuth(net.TCPAuth(net.NetAuth(env.auth)))
+    dns_auth = net.DNSAuth(net.NetAuth(env.auth))
+    dns = net.DNS(dns_auth)
+    var i = 0
+    var p2p = []
+    while i < len(env.argv):
+        arg = env.argv[i]
+        print("arg: %s" % (arg))
+        # the --p2p arugment is followed by one or more link specs (python argparse nargs="+")
+        if arg == "--p2p":
+            i += 1
+            while i < len(env.argv) and env.argv[i][0] != "-":
+                arg_link = env.argv[i]
+                print("\t%s" % arg_link)
+                parts = arg_link.split("--", None)
+                if len(parts) != 2:
+                    print("Bad link", arg_link)
+                link = (
+                    left=parse_side(parts[0]),
+                    right=parse_side(parts[1])
+                    )
+                p2p.append(link)
+                i += 1
+        i += 1
+
+    fa = file.FileAuth(env.auth)
+    wfa = file.WriteFileAuth(fa)
+    hc = Healthcheck(wfa, len(p2p) * 2)
+
+    var links = []
+    for link in p2p:
+        left = link.left
+        right = link.right
+        left_ep = TcpEndpoint(connect_auth, dns, right.host, right.interface, hc)
+        right_ep = TcpEndpoint(connect_auth, dns, left.host, left.interface, hc)
+        left_ep.set_other(right_ep)
+        right_ep.set_other(left_ep)
+        links.append((left=left, right=right))

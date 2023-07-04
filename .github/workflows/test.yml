@@ -12,38 +12,46 @@ env:
   DOCKER_REGISTRY: ghcr.io/vrnetlab/vrnetlab
 
 jobs:
-  test-tool:
+  test-vr-xcon-and-vr-bgp:
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: ['vr-bgp', 'vr-xcon']
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build ${{ matrix.platform }}
+      - name: Build vr-xcon
         run: |
-          make ${{ matrix.platform }}
+          make vr-xcon
 
-      - name: Test ${{ matrix.platform }}
+      - name: Test vr-xcon
         run: |
-          make ${{ matrix.platform }}-test
+          make vr-xcon-test
 
-      - name: Save ${{ matrix.platform }} logs
+      - name: Save vr-xcon logs
         if: always()
         run: |
-          make -C ${{ matrix.platform }} docker-test-save-logs
+          make -C vr-xcon docker-test-save-logs
 
-      - uses: actions/upload-artifact@v3
+      - name: Clean test vr-xcon containers
         if: always()
-        with:
-          name: tool-logs
-          path: |
-            ${{ matrix.platform }}/*.log
+        run: make -C vr-xcon docker-test-clean
 
-      - name: Clean test ${{ matrix.platform }} containers
+      # vr-bgp depends on the vr-xcon container image, so let's build it right
+      # now on the same runner ...
+      - name: Build vr-bgp
+        run: |
+          make vr-bgp
+
+      - name: Test vr-bgp
+        run: |
+          make vr-bgp-test
+
+      - name: Save vr-bgp logs
         if: always()
-        run: make -C ${{ matrix.platform }} docker-test-clean
+        run: |
+          make -C vr-bgp docker-test-save-logs
+
+      - name: Clean test vr-bgp containers
+        if: always()
+        run: make -C vr-bgp docker-test-clean
 
   test-vr:
     runs-on: ["self-hosted"]

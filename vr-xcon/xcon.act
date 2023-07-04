@@ -55,6 +55,9 @@ actor TcpEndpoint(connect_auth, dns, name, interface, healthcheck):
         if _other is not None:
             _other.write(data)
 
+    def _on_tcp_close(c):
+        pass
+
     def _on_tcp_error(c, msg):
         print("Error for %s" % (id))
         _reconnect(True)
@@ -66,6 +69,13 @@ actor TcpEndpoint(connect_auth, dns, name, interface, healthcheck):
             if len(resolved_addresses) > 0:
                 addr = resolved_addresses[0]
                 print("Resolved %s to %s" % (name, addr))
+                # TODO: could potentially use .reconnect() here unless the
+                # resolved address has changed, instead of closing current
+                # connection and replacing it with a new one. The connection
+                # must currently be explicitly closed to clean up resources in
+                # the I/O subsystem.
+                if _conn is not None:
+                    _conn.close(_on_tcp_close)
                 _conn = net.TCPIPConnection(connect_auth, addr, port, _on_tcp_connect, _on_tcp_receive, _on_tcp_error)
                 _set_state(2)
 

@@ -14,5 +14,5 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/.*-\([0-9]\.\([0-9]\+\.\)\{1,2\}[0-9]\
 -include ../makefile-sanity.include
 -include ../makefile.include
 
-docker-pre-build:
+docker-pre-build::
 	cp *.iso docker/

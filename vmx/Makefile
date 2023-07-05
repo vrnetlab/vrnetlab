@@ -24,7 +24,7 @@ endif
 -include ../makefile.include
 -include ../makefile-install.include
 
-docker-pre-build:
+docker-pre-build::
 	-cp *.lic docker/
 
 docker-build-image-copy:

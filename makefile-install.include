@@ -28,7 +28,7 @@
 # contains the committed changes from the install phase of the previous build.
 # Include this makefile to have your image automatically do that dance.
 
-docker-pre-build:
+docker-pre-build::
 	-cat cidfile | xargs --no-run-if-empty docker rm -f
 	-rm cidfile
 	-docker tag $(REGISTRY)vr-$(VR_NAME):$(VERSION) $(REGISTRY)vr-$(VR_NAME):$(VERSION)-previous-build

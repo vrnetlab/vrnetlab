@@ -46,7 +46,8 @@ def main():
         base_x86_64= f'{base_url}/{release}/targets/x86/64'
         for filename in get_hrefs(base_x86_64):
             # ignore if not ext4 fs
-            if not re.match('^openwrt-.*-combined-ext4.img.gz', filename):
+            if not re.match('^openwrt-.*-combined-ext4.img.gz', filename) and \
+               not re.match('^openwrt-.*-ext4-combined.img.gz', filename):
                 continue
 
             remote_file = f'{base_x86_64}/{filename}'

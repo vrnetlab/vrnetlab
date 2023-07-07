@@ -5,6 +5,9 @@ import file
 actor Healthcheck(write_file_auth, expected):
     # keep track of TcpEndpoint actor states (ids, like "r1/1")
     var states = {}
+    # Single actor for writing to the file to ensure the updates are flushed in
+    # the same order as they are received by Healthcheck.
+    var wf = file.WriteFile(write_file_auth, "health")
 
     def update(endpoint, state):
         states[endpoint] = state
@@ -23,10 +26,8 @@ actor Healthcheck(write_file_auth, expected):
             message = "Expected %d sockets but only %d connected" % (expected, count)
         print("healthcheck: %d (%s)" % (exit_code, message))
 
-        wf = file.WriteFile(write_file_auth, "health")
         health = "%d\n%s" % (exit_code, message)
         wf.write(health.encode())
-        wf.close()
 
     _flush()
 

@@ -1,4 +1,4 @@
-FROM debian:stable
+FROM debian:bullseye
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,6 +11,7 @@ RUN apt-get update -qy \
     python3-ipy \
     socat \
     qemu-kvm \
+    qemu-utils=1:5.2+dfsg-11+deb11u2 \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

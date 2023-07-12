@@ -11,8 +11,8 @@ IMAGE_GLOB=*.qcow2
 ## Example overrides
 #http_proxy=http://192.168.1.1:3128
 #https_proxy=http://192.168.1.1:3128
-http_proxy=$HTTP_PROXY
-https_proxy=$HTTPS_PROXY
+http_proxy=$(HTTP_PROXY)
+https_proxy=$(HTTPS_PROXY)
 
 ## match versions like:
 # sros-vm-22.10.R3.qcow2

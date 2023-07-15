@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import json
 import logging
 import math
 import os
@@ -226,6 +227,14 @@ class VM:
         """
         return re.sub(r'(\.[^.]+$)', fr'-{self.num}-overlay\1', self.image)
 
+    def _overlay_disk_image_format(self) -> str:
+        res = run_command(["qemu-img", "info", "--output", "json", self.image])
+        if res is not None:
+            image_info = json.loads(res[0])
+            if "format" in image_info:
+                return image_info["format"]
+        raise ValueError(f"Could not read image format for {self.image}")
+
     def create_overlay_image(self):
         """Creates an overlay disk image
 
@@ -234,8 +243,9 @@ class VM:
         specific drive id.
         """
         if not os.path.exists(self.overlay_disk_image):
-            self.logger.debug("Creating overlay disk image")
-            run_command(["qemu-img", "create", "-f", "qcow2", "-b", self.image, self.overlay_disk_image])
+            self.logger.debug(f"Creating overlay disk image {self.overlay_disk_image} for {self.image}")
+            format = self._overlay_disk_image_format()
+            self.logger.debug(run_command(["qemu-img", "create", "-f", "qcow2", "-F", format, "-b", self.image, self.overlay_disk_image]))
         return ["-drive", "if=ide,file=%s" % self.overlay_disk_image]
 
 

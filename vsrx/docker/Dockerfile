@@ -10,7 +10,7 @@ RUN apt-get update -qy \
     iproute2 \
     python3-ipy \
     socat \
-    qemu-kvm \
+    qemu-system-x86=1:5.2+dfsg-11+deb11u2 \
     qemu-utils=1:5.2+dfsg-11+deb11u2 \
  && rm -rf /var/lib/apt/lists/*
 

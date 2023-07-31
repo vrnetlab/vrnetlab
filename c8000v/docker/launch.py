@@ -47,7 +47,7 @@ class C8000v_vm(vrnetlab.VM):
             self.license = True
 
         super(C8000v_vm, self).__init__(username, password, disk_image=disk_image)
-        self.nic_type = "virtio-net-pci"
+        self.nic_type = "vmxnet3"
         self.install_mode = install_mode
         self.num_nics = 9
 

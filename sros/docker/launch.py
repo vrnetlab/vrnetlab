@@ -637,15 +637,6 @@ class SROS_vm(vrnetlab.VM):
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 
-        if self.spins > 60:
-            # too many spins with no result, probably means SROS hasn't started
-            # successfully, so we restart it
-            self.logger.warning("no output from serial console, restarting VM")
-            self.stop()
-            self.start()
-            self.spins = 0
-            return
-
         (ridx, match, res) = self.tn.expect([b"Login:", b"^[^ ]+#"], 1)
         if match:  # got a match!
             if ridx == 0:  # matched login prompt, so should login
@@ -996,11 +987,11 @@ class SROS_lc(SROS_vm):
     def gen_mgmt(self):
         """Generate mgmt interface"""
         res = []
-        # mgmt interface
+        # mgmt interface, dummy on line card VMs just to get correct PCI id order
         res.extend(
             ["-device", "virtio-net-pci,netdev=mgmt,mac=%s" % vrnetlab.gen_mac(0)]
         )
-        res.extend(["-netdev", "user,id=mgmt,net=10.0.0.0/24"])
+        res.extend(["-netdev", "user,id=mgmt,restrict=y"]) # dummy nic, not used
         # internal control plane interface to vFPC
         res.extend(
             ["-device", "virtio-net-pci,netdev=vfpc-int,mac=%s" % vrnetlab.gen_mac(0)]
@@ -1266,6 +1257,7 @@ if __name__ == "__main__":
             "-s",
             "-c",
             "-v",
+            "-p",
             "/tftpboot",
         ]
     )

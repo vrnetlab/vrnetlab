@@ -3,10 +3,16 @@ NAME=VSR
 IMAGE_FORMAT=qcow2
 IMAGE_GLOB=*.qcow2
 
-## Configure proxy support here for the build process.
-## Uncomment and complete the following lines as appropriate.
+## The system environment variables will be used as http and https
+## proxies.  They may be specifically overridden.  
+## If the system environment variables are not set no proxy will
+## be used.
+##
+## Example overrides
 #http_proxy=http://192.168.1.1:3128
 #https_proxy=http://192.168.1.1:3128
+http_proxy=$(HTTP_PROXY)
+https_proxy=$(HTTPS_PROXY)
 
 ## match versions like:
 # sros-vm-22.10.R3.qcow2

@@ -37,6 +37,7 @@ ROS_MGMT_ADDR = "172.31.255.30"
 PREFIX_LENGTH = "30"
 CONFIG_FILE = "/ftpboot/config.auto.rsc"
 
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
@@ -100,7 +101,7 @@ class ROS_vm(vrnetlab.VM):
 
         (ridx, match, res) = self.tn.expect([b"MikroTik Login", b"RouterOS Login"], 1)
         if match:  # got a match!
-            if ridx in (0,1):  # login
+            if ridx in (0, 1):  # login
                 self.logger.debug("VM started")
 
                 # Login
@@ -125,14 +126,13 @@ class ROS_vm(vrnetlab.VM):
                     self.wait_write(f"{self.password}", wait="new password>")
                     self.wait_write(f"{self.password}", wait="repeat new password>")
 
-
                 self.logger.debug("Login completed")
 
                 # run main config!
                 self.bootstrap_config()
                 # close telnet connection
                 self.tn.close()
-                
+
                 # If a config file exists, push it to the device
                 if os.path.exists(CONFIG_FILE):
                     self.push_ftp_config()
@@ -174,25 +174,26 @@ class ROS_vm(vrnetlab.VM):
         else:
             # Create new user if username != admin
             self.wait_write(
-                    f"/user add name={self.username} password={self.password} group=full",
-                    f"[admin@{self.hostname}] > ",
-                )
+                f"/user add name={self.username} password={self.password} group=full",
+                f"[admin@{self.hostname}] > ",
+            )
 
-        
         self.wait_write("\r", f"[admin@{self.hostname}] > ")
         self.logger.info("completed bootstrap configuration")
 
     def push_ftp_config(self):
-        """ Push the config file via """
+        """Push the config file via"""
         self.logger.info("Pushing config via FTP")
-        #Adding a retry field as FTP sometimes fails with a lot of nodes
+        # Adding a retry field as FTP sometimes fails with a lot of nodes
         max_attempts = 5
-        for i in range(1,max_attempts+1):
+        for i in range(1, max_attempts + 1):
             try:
-                with ftplib.FTP(ROS_MGMT_ADDR,self.username,self.password) as session:
-                    with open(CONFIG_FILE,'rb') as file:                  # file to send
-                        session.storbinary('STOR config.auto.rsc', file)     # send the file
-                        file.close()                                    # close file and FTP
+                with ftplib.FTP(ROS_MGMT_ADDR, self.username, self.password) as session:
+                    with open(CONFIG_FILE, "rb") as file:  # file to send
+                        session.storbinary(
+                            "STOR config.auto.rsc", file
+                        )  # send the file
+                        file.close()  # close file and FTP
                         session.quit()
                         break
             except ftplib.all_errors as e:
@@ -246,20 +247,19 @@ if __name__ == "__main__":
 
     # redirecting incoming tcp traffic (except serial port 5000) from eth0 to RouterOS management interface
     vrnetlab.run_command(
-        f"iptables -t nat -A PREROUTING -i eth0 -p tcp ! --dport 5000 -j DNAT --to-destination {ROS_MGMT_ADDR}".split()
+        f"iptables-nft -t nat -A PREROUTING -i eth0 -p tcp ! --dport 5000 -j DNAT --to-destination {ROS_MGMT_ADDR}".split()
     )
     # same redirection but for UDP
     vrnetlab.run_command(
-        f"iptables -t nat -A PREROUTING -i eth0 -p udp -j DNAT --to-destination {ROS_MGMT_ADDR}".split()
+        f"iptables-nft -t nat -A PREROUTING -i eth0 -p udp -j DNAT --to-destination {ROS_MGMT_ADDR}".split()
     )
     # masquerading the incoming traffic so RouterOS is able to reply back
     vrnetlab.run_command(
-        "iptables -t nat -A POSTROUTING -o br-mgmt -j MASQUERADE".split()
+        "iptables-nft -t nat -A POSTROUTING -o br-mgmt -j MASQUERADE".split()
     )
 
     # allow RouterOS breakout to management network by NATing via eth0
     vrnetlab.run_command("iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE".split())
-
 
     logger.debug(
         f"acting flags: username '{args.username}', password '{args.password}', connection-mode '{args.connection_mode}'"
@@ -276,4 +276,3 @@ if __name__ == "__main__":
         conn_mode=args.connection_mode,
     )
     vr.start(add_fwd_rules=False)
-

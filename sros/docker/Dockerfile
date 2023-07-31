@@ -1,25 +1,25 @@
 FROM ubuntu:20.04
-MAINTAINER Kristian Larsson <kristian@spritelink.net>
-MAINTAINER Roman Dodin <dodin.roman@gmail.com>
+LABEL org.opencontainers.image.authors="roman@dodin.dev"
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
- && apt-get upgrade -qy \
- && apt-get install -y \
-    bridge-utils \
-    iproute2 \
-    python3-ipy \
-    socat \
-    qemu-kvm \
-    tcpdump \
-    tftpd-hpa \
-    ssh \
-    inetutils-ping \
-    dnsutils \
-    openvswitch-switch \
-    iptables \
-    telnet \
- && rm -rf /var/lib/apt/lists/*
+   && apt-get upgrade -qy \
+   && apt-get install -y \
+   bridge-utils \
+   iproute2 \
+   python3-ipy \
+   socat \
+   qemu-kvm \
+   tcpdump \
+   tftpd-hpa \
+   ssh \
+   inetutils-ping \
+   dnsutils \
+   openvswitch-switch \
+   iptables \
+   nftables \
+   telnet \
+   && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
 COPY $IMAGE* /

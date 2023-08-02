@@ -631,9 +631,6 @@ class VM:
         Defaults to using self.tn as connection but this can be overridden
         by passing a telnetlib.Telnet object in the con argument.
         """
-        if not cmd:  # skip empty commands
-            return
-
         con_name = "custom con"
         if con is None:
             con = self.tn

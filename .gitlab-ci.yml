@@ -67,6 +67,9 @@ routeros:
 sros:
   <<: *build-template
 
+ucpe-oneos:
+  <<: *build-template
+
 veos:
   <<: *build-template
 

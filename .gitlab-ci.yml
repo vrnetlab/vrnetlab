@@ -27,8 +27,10 @@ stages:
     - if [ -n "${DOCKER_REGISTRY}" ]; then
     -   make ${CI_JOB_NAME}
     -   make ${CI_JOB_NAME}-test
-    -   echo "Pushing images"
-    -   make ${CI_JOB_NAME}-push
+    -   if [ "${CI_COMMIT_REF_NAME}" = "${CI_DEFAULT_BRANCH}" ]; then
+    -     echo "Pushing images"
+    -     make ${CI_JOB_NAME}-push
+    -   fi
     - fi
   interruptible: true
   after_script:

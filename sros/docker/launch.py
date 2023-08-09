@@ -636,7 +636,7 @@ class SROS_vm(vrnetlab.VM):
 
     # override wait_write clean_buffer parameter default
     def wait_write(self, cmd, wait="__defaultpattern__", con=None, clean_buffer=True):
-        super.wait_write( cmd, wait, con, clean_buffer)
+        super().wait_write( cmd, wait, con, clean_buffer)
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""

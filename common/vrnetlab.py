@@ -625,7 +625,7 @@ class VM:
         self.stop()
         self.start()
 
-    def wait_write(self, cmd, wait="__defaultpattern__", con=None):
+    def wait_write(self, cmd, wait="__defaultpattern__", con=None, clean_buffer=False):
         """Wait for something on the serial port and then send command
 
         Defaults to using self.tn as connection but this can be overridden
@@ -649,7 +649,7 @@ class VM:
 
             cleaned_buf = (
                 con.read_very_eager()
-            )  # Clear any remaining characters in buffer
+            ) if clean_buffer else None  # Clear any remaining characters in buffer
 
             self.logger.trace(f"read from {con_name}: '{res.decode()}'")
             # log the cleaned buffer if it's not empty

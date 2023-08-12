@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import json
 import logging
 import math
 import os
@@ -58,6 +59,14 @@ class VM:
     def __str__(self):
         return self.__class__.__name__
 
+    def _overlay_disk_image_format(self) -> str:
+        res = run_command(["qemu-img", "info", "--output", "json", self.image])
+        if res is not None:
+            image_info = json.loads(res[0])
+            if "format" in image_info:
+                return image_info["format"]
+        raise ValueError(f"Could not read image format for {self.image}")
+
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
         self.logger = logging.getLogger()
 
@@ -107,6 +116,8 @@ class VM:
                     "create",
                     "-f",
                     "qcow2",
+                    "-F",
+                    self._overlay_disk_image_format(),
                     "-b",
                     disk_image,
                     overlay_disk_image,

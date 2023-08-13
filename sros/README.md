@@ -68,3 +68,17 @@ Custom variants WILL NOT have cards/mda auto-configured, user needs to configure
 ## Usage with containerlab
 
 Refer to containerlab documentation piece on [vrnetlab integration](https://containerlab.srlinux.dev/manual/vrnetlab/) and vr-sros.
+
+## Extracting qcow2 from container image
+
+It is possible to extract the original qcow2 disk image from an existing container image. This might be useful when you want to rebuild the container image with a different vrnetlab codebase.
+
+The following script takes an image name and the qcow2 image name to copy out from the container image:
+
+```bash
+IMAGE=registry.srlinux.dev/pub/vr-sros:23.7.R1
+VERSION=$(cut -d ':' -f 2 <<< $IMAGE)
+docker create --name sros-copy $IMAGE
+docker cp sros-copy:sros-vm-$VERSION.qcow2 .
+docker rm sros-copy
+```

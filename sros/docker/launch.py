@@ -631,8 +631,12 @@ class SROS_vm(vrnetlab.VM):
         self.cpu = cpu
         self.qemu_args.extend(["-cpu", "host", "-smp", f"{cpu}"])
 
-        # override default wait patter with hash followed by the space
+        # override default wait pattern with hash followed by the space
         self.wait_pattern = "# "
+
+    # override wait_write clean_buffer parameter default
+    def wait_write(self, cmd, wait="__defaultpattern__", con=None, clean_buffer=True):
+        super().wait_write( cmd, wait, con, clean_buffer)
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""

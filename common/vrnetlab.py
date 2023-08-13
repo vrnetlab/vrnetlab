@@ -648,8 +648,8 @@ class VM:
             res = con.read_until(wait.encode())
 
             cleaned_buf = (
-                con.read_very_eager()
-            ) if clean_buffer else None  # Clear any remaining characters in buffer
+                (con.read_very_eager()) if clean_buffer else None
+            )  # Clear any remaining characters in buffer
 
             self.logger.trace(f"read from {con_name}: '{res.decode()}'")
             # log the cleaned buffer if it's not empty

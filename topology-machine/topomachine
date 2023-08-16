@@ -34,21 +34,34 @@ class VrTopo:
             else:
                 return sorted(d)
 
-        # expand p2p links
         links = []
-        if 'p2p' in config:
-            for router in maybe_sorted(config['p2p']):
-                neighbors = config['p2p'][router]
-                for neighbor in neighbors:
-                    links.append({ 'left': { 'router': router }, 'right': {
-                        'router': neighbor }})
+
+        # expand p2p links
+        def p2p():
+            nonlocal links
+            if 'p2p' in config:
+                for router in maybe_sorted(config['p2p']):
+                    neighbors = config['p2p'][router]
+                    for neighbor in neighbors:
+                        links.append({ 'left': { 'router': router }, 'right': {
+                            'router': neighbor }})
 
         # expand fullmesh into links
-        if 'fullmeshes' in config:
-            for name in maybe_sorted(config['fullmeshes']):
-                val = config['fullmeshes'][name]
-                fmlinks = self.expand_fullmesh(val)
-                links.extend(fmlinks)
+        def fullmesh():
+            nonlocal links
+            if 'fullmeshes' in config:
+                for name in maybe_sorted(config['fullmeshes']):
+                    val = config['fullmeshes'][name]
+                    fmlinks = self.expand_fullmesh(val)
+                    links.extend(fmlinks)
+
+        # expand fullmeshes before p2p if keep_order is set and fullmeshes is defined before p2p
+        if keep_order and 'fullmeshes' in config and 'p2p' in config and tuple(config).index('fullmeshes') < tuple(config).index('p2p'):
+            fullmesh()
+            p2p()
+        else:
+            p2p()
+            fullmesh()
 
         self.links = self.assign_interfaces(links)
 
@@ -82,9 +95,8 @@ class VrTopo:
                 for num_id in val['interfaces']:
                     val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
 
-
-
-    def expand_fullmesh(self, routers):
+    @staticmethod
+    def expand_fullmesh(routers):
         """ Flatten a full-mesh into a list of links
 
             Links are considered bi-directional, so you will only see a link A->B

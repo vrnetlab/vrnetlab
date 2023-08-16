@@ -27,10 +27,17 @@ class VrTopo:
             if val['type'] not in ('dummy', 'xcon', 'bgp', 'xrv', 'xrv9k', 'vmx', 'sros', 'csr', 'nxos', 'nxos9kv', 'vqfx', 'vrp', 'veos', 'openwrt'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
+        # preserve order of entries if keep_order is set
+        def maybe_sorted(d):
+            if keep_order:
+                return d
+            else:
+                return sorted(d)
+
         # expand p2p links
         links = []
         if 'p2p' in config:
-            for router in sorted(config['p2p']):
+            for router in maybe_sorted(config['p2p']):
                 neighbors = config['p2p'][router]
                 for neighbor in neighbors:
                     links.append({ 'left': { 'router': router }, 'right': {
@@ -38,7 +45,7 @@ class VrTopo:
 
         # expand fullmesh into links
         if 'fullmeshes' in config:
-            for name in sorted(config['fullmeshes']):
+            for name in maybe_sorted(config['fullmeshes']):
                 val = config['fullmeshes'][name]
                 fmlinks = self.expand_fullmesh(val)
                 links.extend(fmlinks)

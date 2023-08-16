@@ -238,7 +238,14 @@ def run_topology(config, dry_run, with_trace=False, xcon_ng=False):
         if trace:
             cmd.append(trace)
         if 'run_args' in val:
-            cmd.extend(val["run_args"].split())
+            if isinstance(val['run_args'], str):
+                cmd.extend(val["run_args"].split())
+            # pass the keys and values unquoted, leave it up to the user to quote/escape or add dashes
+            elif isinstance(val['run_args'], list):
+                cmd.extend([str(v) for v in val['run_args']])
+            elif isinstance(val['run_args'], dict):
+                for k, v in val['run_args'].items():
+                    cmd.extend([str(k), str(v)])
 
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
         if not dry_run and output.strip() == "true":

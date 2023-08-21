@@ -22,7 +22,7 @@ RUN apt-get update -qy \
  && apt-get -y install docker-ce \
  && rm -rf /var/lib/apt/lists/*
 
-ADD topomachine /
-ADD *example* /
+ADD topomachine /usr/local/bin
+ADD *example* /data/
 
-ENTRYPOINT ["/topomachine"]
+ENTRYPOINT ["/usr/local/bin/topomachine"]

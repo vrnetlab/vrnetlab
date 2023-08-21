@@ -194,7 +194,7 @@ def run_command(cmd, dry_run=False):
     return p.communicate()
 
 
-def run_topology(config, dry_run, with_trace=False):
+def run_topology(config, dry_run, with_trace=False, xcon_ng=False):
     if 'routers' not in config:
         print("No routers in config")
         sys.exit(1)
@@ -250,6 +250,8 @@ def run_topology(config, dry_run, with_trace=False):
     if 'links' in config:
         name = "%svr-xcon" % args.prefix
         cmd = ["docker", "run", "--rm", "--privileged", "-d", "--name", name]
+        if xcon_ng:
+            cmd.extend(["--entrypoint", "/xcon"])
 
         if docker_network:
             cmd.extend(["--network", docker_network])
@@ -296,6 +298,7 @@ if __name__ == '__main__':
     parser.add_argument("--template", nargs=2, help="produce output based on topology information and a template")
     parser.add_argument("--variable", action='append', help="store variables")
     parser.add_argument("--with-trace", action='store_true', help="run virtual routers with --trace")
+    parser.add_argument("--xcon-ng", action='store_true', help="use xcon-ng (acton)")
     args = parser.parse_args()
 
     if args.dry_run and not args.run:
@@ -323,7 +326,7 @@ if __name__ == '__main__':
         input_file.close()
         if args.dry_run:
             print("The following commands would be executed:")
-        run_topology(config, args.dry_run, args.with_trace)
+        run_topology(config, args.dry_run, args.with_trace, args.xcon_ng)
 
     if args.template:
         input_file = open(args.template[0], "r")

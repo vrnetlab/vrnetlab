@@ -1,4 +1,4 @@
-FROM debian:bullseye AS build
+FROM debian:bookworm AS build
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,6 +9,7 @@ RUN apt-get update -qy \
     gnupg \
     wget \
  && wget -q -O - https://apt.acton-lang.io/acton.gpg | apt-key add - \
+ # Keep using bullseye for a bit until the acton repository is updated
  && echo "deb [arch=amd64] http://apt.acton-lang.io/ bullseye main" >> /etc/apt/sources.list.d/acton.list \
  && apt-get update \
  && apt-get install -qy acton \
@@ -17,7 +18,7 @@ RUN apt-get update -qy \
 COPY xcon.act /xcon.act
 RUN actonc /xcon.act
 
-FROM debian:bullseye
+FROM debian:bookworm
 MAINTAINER Kristian Larsson <kristian@spritelink.net>
 
 ENV DEBIAN_FRONTEND=noninteractive

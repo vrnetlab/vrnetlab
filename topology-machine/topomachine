@@ -22,7 +22,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('dummy', 'xcon', 'bgp', 'xrv', 'xrv9k', 'vmx', 'sros', 'csr', 'vqfx', 'vrp', 'vsrx'):
+            if val['type'] not in ('dummy', 'xcon', 'bgp', 'xrv', 'xrv9k', 'vmx', 'sros', 'csr', 'vjunosswitch', 'vqfx', 'vrp', 'vsrx'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # expand p2p links
@@ -138,7 +138,9 @@ class VrTopo:
             return "GigabitEthernet4/0/%d" % (interface)
         elif r['type'] == 'vsrx':
             return "ge-0/0/%d" % (interface-1)
- 
+        elif r['type'] == 'vjunosswitch':
+            return "ge-0/0/%d" % (interface-1)
+
         return None
 
 

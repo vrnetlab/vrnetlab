@@ -188,19 +188,20 @@ generate the docker run commands:
 ```
 $ docker run -v $(pwd):/data topomachine --run /data/example-lltopo.json --dry-run
 The following commands would be executed:
-docker run --privileged -d --name ams-core-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name ams-core-2 vr-xrv:5.1.1.54U
-docker run --privileged -d --name ams-edge-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name fra-core-1 vr-vmx:16.1R1.7
-docker run --privileged -d --name fra-core-2 vr-vmx:16.1R1.7
-docker run --privileged -d --name fra-edge-1 vr-vmx:16.1R1.7
-docker run --privileged -d --name kul-core-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name par-core-1 vr-sros:13.0.B1-4281
-docker run --privileged -d --name par-core-2 vr-sros:13.0.B1-4281
-docker run --privileged -d --name par-edge-1 vr-sros:13.0.B1-4281
-docker run --privileged -d --name png-edge-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name sgp-core-1 vr-xrv:5.1.1.54U
-docker run --privileged -d --name vr-xcon --link ams-core-1:ams-core-1 --link ams-core-2:ams-core-2 --link ams-edge-1:ams-edge-1 --link fra-core-1:fra-core-1 --link fra-core-2:fra-core-2 --link fra-edge-1:fra-edge-1 --link kul-core-1:kul-core-1 --link par-core-1:par-core-1 --link par-core-2:par-core-2 --link par-edge-1:par-edge-1 --link png-edge-1:png-edge-1 --link sgp-core-1:sgp-core-1 vr-xcon --p2p ams-edge-1/1--ams-core-1/1 ams-edge-1/2--ams-core-2/1 fra-core-2/1--sgp-core-1/1 fra-core-2/2--kul-core-1/1 fra-edge-1/1--fra-core-1/1 fra-edge-1/2--fra-core-2/3 par-core-1/1--sgp-core-1/2 par-core-1/2--kul-core-1/2 par-edge-1/1--par-core-1/3 par-edge-1/2--par-core-2/1 png-edge-1/1--sgp-core-1/3 png-edge-1/2--kul-core-1/3 kul-core-1/4--sgp-core-1/4 ams-core-1/2--ams-core-2/2 ams-core-1/3--fra-core-1/2 ams-core-1/4--fra-core-2/4 ams-core-1/5--par-core-1/4 ams-core-1/6--par-core-2/2 ams-core-2/3--fra-core-1/3 ams-core-2/4--fra-core-2/5 ams-core-2/5--par-core-1/5 ams-core-2/6--par-core-2/3 fra-core-1/4--fra-core-2/6 fra-core-1/5--par-core-1/6 fra-core-1/6--par-core-2/4 fra-core-2/7--par-core-1/7 fra-core-2/8--par-core-2/5 par-core-1/8--par-core-2/6
+docker run --privileged -d --name ams-core-1 vrnetlab/vr-xrv:5.1.1.54U --foo bar 1
+docker run --privileged -d --name ams-core-2 vrnetlab/vr-xrv:5.1.1.54U --foo bar 1
+docker run --privileged -d --name ams-edge-1 vrnetlab/vr-xrv:5.1.1.54U
+docker run --privileged -d --name fra-core-1 vrnetlab/vr-vmx:16.1R1.7 --foo ['bar', 1]
+docker run --privileged -d --name fra-core-2 vrnetlab/vr-vmx:16.1R1.7
+docker run --privileged -d --name fra-edge-1 vrnetlab/vr-vmx:16.1R1.7
+docker run --privileged -d --name kul-core-1 vrnetlab/vr-xrv:5.1.1.54U
+docker run --privileged -d --name par-core-1 vrnetlab/vr-sros:13.0.B1-4281
+docker run --privileged -d --name par-core-2 vrnetlab/vr-sros:13.0.B1-4281
+docker run --privileged -d --name par-edge-1 vrnetlab/vr-sros:13.0.B1-4281
+docker run --privileged -d --name png-edge-1 vrnetlab/vr-xrv:5.1.1.54U
+docker run --privileged -d --name sgp-core-1 vrnetlab/vr-xrv:5.1.1.54U
+docker run --rm --privileged -d --name vr-xcon --link ams-core-1:ams-core-1 --link ams-core-2:ams-core-2 --link ams-edge-1:ams-edge-1 --link fra-core-1:fra-core-1 --link fra-core-2:fra-core-2 --link fra-edge-1:fra-edge-1 --link kul-core-1:kul-core-1 --link par-core-1:par-core-1 --link par-core-2:par-core-2 --link par-edge-1:par-edge-1 --link png-edge-1:png-edge-1 --link sgp-core-1:sgp-core-1 vrnetlab/vr-xcon --p2p ams-edge-1/1--ams-core-1/1 ams-edge-1/2--ams-core-2/1 fra-core-2/1--sgp-core-1/1 fra-core-2/2--kul-core-1/1 fra-edge-1/1--fra-core-1/1 fra-edge-1/2--fra-core-2/3 par-core-1/1--sgp-core-1/2 par-core-1/2--kul-core-1/2 par-edge-1/1--par-core-1/3 par-edge-1/2--par-core-2/1 png-edge-1/1--sgp-core-1/3 png-edge-1/2--kul-core-1/3 kul-core-1/4--sgp-core-1/4 ams-core-1/2--ams-core-2/2 ams-core-1/3--fra-core-1/2 ams-core-1/4--fra-core-2/4 ams-core-1/5--par-core-1/4 ams-core-1/6--par-core-2/2 ams-core-2/3--fra-core-1/3 ams-core-2/4--fra-core-2/5 ams-core-2/5--par-core-1/5 ams-core-2/6--par-core-2/3 fra-core-1/4--fra-core-2/6 fra-core-1/5--par-core-1/6 fra-core-1/6--par-core-2/4 fra-core-2/7--par-core-1/7 fra-core-2/8--par-core-2/5 par-core-1/8--par-core-2/6
+docker run --privileged -d --name vr-xcon-hub-ams-mgmt --link ams-core-1:ams-core-1 --link ams-core-2:ams-core-2 --link ams-edge-1:ams-edge-1 --link fra-core-1:fra-core-1 --link fra-core-2:fra-core-2 --link fra-edge-1:fra-edge-1 --link kul-core-1:kul-core-1 --link par-core-1:par-core-1 --link par-core-2:par-core-2 --link par-edge-1:par-edge-1 --link png-edge-1:png-edge-1 --link sgp-core-1:sgp-core-1 vrnetlab/vr-xcon --hub ams-core-1/7 ams-core-2/7 ams-edge-1/3
 ```
 
 start the topology:

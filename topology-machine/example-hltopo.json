@@ -1,8 +1,8 @@
 {
 	"routers": {
-		"ams-core-1": { "id": 1, "type": "xrv", "version": "5.1.1.54U" },
-		"ams-core-2": { "id": 2, "type": "xrv", "version": "5.1.1.54U" },
-		"fra-core-1": { "id": 3, "type": "vmx", "version": "16.1R1.7" },
+		"ams-core-1": { "id": 1, "type": "xrv", "version": "5.1.1.54U", "run_args": "--foo bar 1" },
+		"ams-core-2": { "id": 2, "type": "xrv", "version": "5.1.1.54U", "run_args": ["--foo", "bar", 1] },
+		"fra-core-1": { "id": 3, "type": "vmx", "version": "16.1R1.7", "run_args": { "--foo": [ "bar", 1 ] } },
 		"fra-core-2": { "id": 4, "type": "vmx", "version": "16.1R1.7" },
 		"par-core-1": { "id": 5, "type": "sros", "version": "13.0.B1-4281" },
 		"par-core-2": { "id": 6, "type": "sros", "version": "13.0.B1-4281" },

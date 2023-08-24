@@ -79,7 +79,7 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
                 self.wait_write("\r", None)
                 self.wait_write("admin", wait="login:")
                 self.wait_write(self.password, wait="Password:")
-                self.wait_write("", wait="admin@HOST>")
+                self.wait_write("\r", wait="admin@vJunos-switch>")
                 self.logger.info("Login completed")
 
                 # run startup config

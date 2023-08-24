@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os
+import subprocess
 import re
 import signal
 import sys
@@ -10,9 +11,6 @@ import vrnetlab
 
 # loadable startup config
 STARTUP_CONFIG_FILE = "/config/startup-config.cfg"
-
-# generate mountable config disk based on juniper.conf file with base vrnetlab configs
-os.system("./make-config.sh juniper.conf config.img")
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -39,6 +37,22 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(VJUNOSSWITCH_vm, self).__init__(username, password, disk_image=disk_image, ram=5120)
+        # device hostname
+        self.hostname = hostname
+        
+        # read juniper.conf configuration file
+        with open('juniper.conf', 'r') as file:
+            info = file.read()
+
+        # replace HOSTNAME file var with nodes given hostname
+        new_info = info.replace('{HOSTNAME}', hostname)
+
+        # write changed to juniper.conf file
+        with open('juniper.conf', 'w') as file:
+            file.write(new_info)
+
+        # generate mountable config disk based on juniper.conf file with base vrnetlab configs
+        subprocess.run(["./make-config.sh", "juniper.conf", "config.img"], check=True)
 
         # these QEMU cmd line args are translated from the shipped libvirt XML file
         self.qemu_args.extend(["-smp", "4,sockets=1,cores=4,threads=1"])
@@ -53,7 +67,6 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         self.qemu_args.extend(["-display", "none", "-no-user-config", "-nodefaults", "-boot", "strict=on"])
         self.nic_type = "virtio-net-pci"
         self.num_nics = 11
-        self.hostname = hostname
         self.smbios = ["type=1,product=VM-VEX"]
         self.qemu_args.extend(["-machine", "pc-i440fx-focal,usb=off,dump-guest-core=off,accel=kvm"])
         self.qemu_args.extend(["-device", "piix3-usb-uhci,id=usb,bus=pci.0,addr=0x1.0x2"])
@@ -62,14 +75,14 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
         """
-
         if self.spins > 300:
             # too many spins with no result ->  give up
             self.stop()
             self.start()
             return
 
-        # lets wait for the OS/platform log to determine if VM is booted 
+        # lets wait for the OS/platform log to determine if VM is booted,
+        # login prompt can get lost in boot logs
         (ridx, match, res) = self.tn.expect([b"FreeBSD/amd64"], 1)
         if match: # got a match!
             if ridx == 0: # login
@@ -79,7 +92,7 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
                 self.wait_write("\r", None)
                 self.wait_write("admin", wait="login:")
                 self.wait_write(self.password, wait="Password:")
-                self.wait_write("\r", wait="admin@vJunos-switch>")
+                self.wait_write("\r", wait= f"{self.hostname}>")
                 self.logger.info("Login completed")
 
                 # run startup config

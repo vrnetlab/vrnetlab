@@ -13,6 +13,9 @@ RUN apt-get update -qy \
     curl \
     gnupg2 \
     software-properties-common \
+# Install git & make so that we can use topomachine in CI to check for uncommitted topology and scripts changes
+    git \
+    make \
  && curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
  && add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/debian \

@@ -9,7 +9,7 @@ IMAGE_GLOB=*.qcow2
 # vJunos-switch-21.2R4.3.qcow2
 # ...
 
-VERSION=$(shell echo $(IMAGE) | sed -e 's/vJunos-switch-//' | sed -e 's/.qcow2//')
+VERSION=$(shell echo $(IMAGE) | sed -e 's/vjunos-switch-//i' | sed -e 's/.qcow2//i')
 
 -include ../makefile-sanity.include
 -include ../makefile.include

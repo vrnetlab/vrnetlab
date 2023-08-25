@@ -43,6 +43,8 @@ class Router:
             driver = napalm.get_network_driver("junos")
         elif self.type == "vsrx":
             driver = napalm.get_network_driver("junos")
+        elif self.type == "vjunosswitch":
+            driver = napalm.get_network_driver("junos")
         elif self.type == "csr":
             driver = napalm.get_network_driver("ios")
         else:
@@ -159,6 +161,9 @@ class ConfigBootstrap:
                 router.template = junos
 
             if router.type == "vsrx":
+                router.template = junos
+
+            if router.type == "vjunosswitch":
                 router.template = junos
 
             if router.type == "csr":
@@ -287,7 +292,7 @@ if __name__ == '__main__':
         if not args.config or not os.path.isfile(args.config):
             print("Configuration template doesn't exist")
             sys.exit(1)
-        if args.type not in [ "vmx", "csr", "xrv", "vsrx"]:
+        if args.type not in [ "vmx", "csr", "xrv", "vsrx", "vjunosswitch"]:
             print("Invalid router type {}".format(args.type))
             sys.exit(1)
 

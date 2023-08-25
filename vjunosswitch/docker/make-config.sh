@@ -40,7 +40,7 @@ if [ $? != 0 ]; then
 fi
 mount -t vfat $LOOPDEV $MNTDIR
 if [ $? != 0 ]; then
-        echo "Failed to mount metadisk $LOOPDEV; exiting"
+		echo "Failed to mount metadisk $LOOPDEV; exiting"
 	cleanup_failed;
 
 fi

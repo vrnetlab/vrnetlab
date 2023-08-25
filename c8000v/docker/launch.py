@@ -75,6 +75,7 @@ class C8000v_vm(vrnetlab.VM):
             cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
         cfg_file.write("license boot level network-premier addon dna-premier\r\n")
         cfg_file.write("platform console serial\r\n\r\n")
+        cfg_file.write("do clear platform software vnic-if nvtable\r\n")
         cfg_file.write("do wr\r\n")
         cfg_file.write("do reload\r\n")
         cfg_file.close()
@@ -94,31 +95,33 @@ class C8000v_vm(vrnetlab.VM):
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!"], 1)
+        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!", b"IOSXEBOOT-4-FACTORY_RESET"], 1)
         if match: # got a match!
             if ridx == 0: # login
+                self.logger.debug("matched, Press RETURN to get started.")
                 if self.install_mode:
+                    self.logger.debug("Now we wait for the device to reload")
+                else:
                     self.wait_write("", wait=None)
-                    self.wait_write("", None)
-                    self.wait_write("enable", wait=">")
-                    self.wait_write("clear platform software vnic-if nvtable")
-                    self.wait_write("")
+
+                    # run main config!
+                    self.bootstrap_config()
+                    # close telnet connection
+                    self.tn.close()
+                    # startup time?
+                    startup_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Startup complete in: %s" % startup_time)
+                    # mark as running
                     self.running = True
                     return
-
-                self.logger.debug("matched, Press RETURN to get started.")
-                self.wait_write("", wait=None)
-
-                # run main config!
-                self.bootstrap_config()
-                # close telnet connection
-                self.tn.close()
-                # startup time?
-                startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
-                # mark as running
-                self.running = True
-                return
+            elif ridx == 1: # IOSXEBOOT-4-FACTORY_RESET
+                if self.install_mode:
+                    install_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Install complete in: %s" % install_time)
+                    self.running = True
+                    return
+                else:
+                    self.log.warning("Unexpected reload while running")
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -183,7 +186,6 @@ class C8000v_installer(C8000v):
         csr = self.vms[0]
         while not csr.running:
             csr.work()
-        time.sleep(30)
         csr.stop()
         self.logger.info("Installation complete")
 

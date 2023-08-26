@@ -116,7 +116,7 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
                 self.wait_write("\r", None)
                 self.wait_write("admin", wait="login:")
                 self.wait_write(self.password, wait="Password:")
-                self.wait_write("\r", wait=f"{self.hostname}>")
+                self.wait_write("\r", wait=None)
                 self.logger.info("Login completed")
 
                 # run startup config

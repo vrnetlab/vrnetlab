@@ -12,7 +12,7 @@ VERSION=$(shell echo $(IMAGE) | sed -e 's/^vqfx10k-re-\([0-9][0-9]\.[0-9][A-Z][0
 
 # vqfx10k-pfe-20160609-2.vmdk
 # TODO: we should make sure we only copy one PFE image (the latest?), in case there are many
-docker-pre-build:
+docker-pre-build::
 	cp vqfx10k-pfe*.vmdk docker/
 
 # TODO: upstream the rest of the fixes to make it work

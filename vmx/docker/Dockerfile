@@ -18,6 +18,7 @@ ENV VERSION=${VERSION}
 COPY vmx /vmx
 COPY *.py /
 COPY juniper.conf /
+COPY *.lic /
 
 EXPOSE 22 161/udp 830 5000 57400 10000-10099
 # mgmt and console ports for re1

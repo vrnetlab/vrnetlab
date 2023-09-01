@@ -60,6 +60,14 @@ It is NOT working with the following images:
 
  * vmx-15.1F3.11.tgz  MD5:978fc8c0db05179564d0680040db8196
 
+### License
+
+You can bundle one or more license files with the vMX image to unlock the full
+throughput (bandwidth) capability of the device or additional features. If you
+have a valid license file, like JUNOS12345678.lic, just place it next to the
+image. The license file will be copied to the drive containing bootstrap config
+and will be automatically applied when the device boots up.
+
 Usage
 -----
 The container must be `--privileged` to start KVM.

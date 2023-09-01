@@ -15,7 +15,7 @@ endif
 docker-clean-build:
 	-rm -f docker/*.qcow2* docker/*.tgz* docker/*.vmdk* docker/*.iso
 
-docker-pre-build: ;
+docker-pre-build:: ;
 
 docker-build-image-copy:
 	cp $(IMAGE)* docker/

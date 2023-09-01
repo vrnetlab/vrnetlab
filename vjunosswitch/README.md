@@ -7,7 +7,7 @@ This is the vrnetlab docker image for Juniper's vJunos-switch.
 ## Building the docker image
 
 Download the vJunos-switch .qcow2 image from  <https://www.juniper.net/us/en/dm/vjunos-labs.html>
-and place it in this directory. After typing `make`, a new image will appear called `vrnetlab/vjunos-switch`.
+and place it in this directory. After typing `make`, a new image will appear called `vrnetlab/vjunosswitch`.
 Run `docker images` to confirm this.
 
 ## System requirements

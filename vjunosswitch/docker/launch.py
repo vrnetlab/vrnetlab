@@ -49,20 +49,20 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         # device hostname
         self.hostname = hostname
 
-        # read juniper.conf configuration file
-        # to replace hostname placehodler with given hostname
-        with open("juniper.conf", "r") as file:
+        # read init.conf configuration file to replace hostname placehodler 
+        # with given hostname
+        with open("init.conf", "r") as file:
             cfg = file.read()
 
         # replace HOSTNAME file var with nodes given hostname
         new_cfg = cfg.replace("{HOSTNAME}", hostname)
 
-        # write changed to juniper.conf file
-        with open("juniper.conf", "w") as file:
+        # write changes to init.conf file
+        with open("init.conf", "w") as file:
             file.write(new_cfg)
 
-        # generate mountable config disk based on juniper.conf file with base vrnetlab configs
-        subprocess.run(["./make-config.sh", "juniper.conf", "config.img"], check=True)
+        # pass in user startup config
+        self.startup_config()
 
         # these QEMU cmd line args are translated from the shipped libvirt XML file
         self.qemu_args.extend(["-smp", "4,sockets=1,cores=4,threads=1"])
@@ -97,6 +97,26 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         )
         self.conn_mode = conn_mode
 
+    def startup_config(self):
+        """Load additional config provided by user and append initial 
+        configurations set by vrnetlab."""
+        # if startup cfg DNE
+        if not os.path.exists(STARTUP_CONFIG_FILE):
+            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
+            # rename init.conf to juniper.conf, this is our startup config
+            mv_cfg = ['mv', 'init.conf', 'juniper.conf']
+            subprocess.run(mv_cfg, shell=True)
+
+        # if startup cfg file is found
+        else:
+            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} found, appending initial configuration")
+            # append startup cfg to inital configuration
+            append_cfg = f'cat init.conf {STARTUP_CONFIG_FILE} >> juniper.conf'
+            subprocess.run(append_cfg, shell=True)
+
+        # generate mountable config disk based on juniper.conf file with base vrnetlab configs
+        subprocess.run(["./make-config.sh", "juniper.conf", "config.img"], check=True)
+
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
         if self.spins > 300:
@@ -116,11 +136,9 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
                 self.wait_write("\r", None)
                 self.wait_write("admin", wait="login:")
                 self.wait_write(self.password, wait="Password:")
-                self.wait_write("\r", wait=f"{self.hostname}>")
+                self.wait_write("\r", None)
                 self.logger.info("Login completed")
 
-                # run startup config
-                self.startup_config()
                 # close telnet connection
                 self.tn.close()
                 # startup time?
@@ -140,31 +158,6 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         self.spins += 1
 
         return
-
-    def startup_config(self):
-        """Load additional config provided by user."""
-
-        if not os.path.exists(STARTUP_CONFIG_FILE):
-            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
-            return
-
-        self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} exists")
-        with open(STARTUP_CONFIG_FILE) as file:
-            config_lines = file.readlines()
-            config_lines = [line.rstrip() for line in config_lines]
-            self.logger.trace(f"Parsed startup config file {STARTUP_CONFIG_FILE}")
-
-        self.logger.info(f"Writing lines from {STARTUP_CONFIG_FILE}")
-
-        self.wait_write("cli", "#")
-        self.wait_write("configure", ">")
-        # Apply lines from file
-        for line in config_lines:
-            self.wait_write(line)
-
-        self.wait_write("commit")
-        self.wait_write("exit")
-
 
 class VJUNOSSWITCH(vrnetlab.VR):
     def __init__(self, hostname, username, password, conn_mode):

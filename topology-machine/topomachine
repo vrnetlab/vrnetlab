@@ -25,7 +25,7 @@ class VrTopo:
         for r, val in self.routers.items():
             if 'type' not in val:
                 raise ValueError("'type' is not defined for router %s" % r)
-            if val['type'] not in ('dummy', 'xcon', 'bgp', 'xrv', 'xrv9k', 'vmx', 'sros', 'csr', 'c8000v', 'nxos', 'nxos9kv', 'ucpe-oneos', 'vqfx', 'vrp', 'veos', 'openwrt'):
+            if val['type'] not in ('dummy', 'xcon', 'bgp', 'xrv', 'xrv9k', 'vmx', 'sros', 'csr', 'c8000v', 'nxos', 'nxos9kv', 'ucpe-oneos', 'vqfx', 'vrp', 'veos', 'openwrt', 'vmanage', 'vsmart', 'vedge', 'c8000v-sd-wan'):
                 raise ValueError("Unknown type %s for router %s" % (val['type'], r))
 
         # preserve order of entries if keep_order is set
@@ -170,7 +170,7 @@ class VrTopo:
             return "{}/1/{}".format(1+int((interface-1)/6), 1+(interface-1)%6)
         elif r['type'] == 'bgp':
             return "tap%d" % (interface-1)
-        elif r['type'] == 'csr' or r['type'] == 'c8000v':
+        elif r['type'] in ('csr', 'c8000v', 'c8000v-sd-wan'):
             return "GigabitEthernet%d" % (interface+1)
         elif r['type'] == 'ucpe-oneos':
             return "eth%d" % (interface)
@@ -182,6 +182,10 @@ class VrTopo:
             return "Ethernet%d" % (interface)
         elif r['type'] == 'openwrt':
             return "eth%d" % (interface)
+        elif r['type'] in ('vmanage', 'vsmart'):
+            return "eth%d" % (interface)
+        elif r['type'] == 'vedge':
+            return "ge-0/%d" % (interface-1)
 
         return None
 

@@ -2,11 +2,51 @@
 
 from flask import Flask, json, request
 import sys
+import subprocess
+import ipaddress
 
 # keep track of what we announce so we can easily withdraw
 announced_routes = {}
 # keep track of received routes
 received_routes = {}
+
+def log(msg):
+    with open("/tmp/bgpapi.log", "a") as f:
+        if isinstance(msg, bytes):
+            f.write(msg.decode("utf-8"))
+        else:
+            f.write(str(msg))
+        f.write("\n")
+        f.flush()
+
+def add_address(prefix, address=None):
+    """ Add the first host address from given prefix to the loopback interface
+    """
+    if address is None:
+        net = ipaddress.ip_network(prefix)
+        address = f"{next(net.hosts())}/{net.prefixlen}"
+    try:
+        cmd = f"sudo ip address add {address} dev lo"
+        log(cmd)
+        subprocess.check_output(cmd,  stderr=subprocess.STDOUT, shell=True)
+        log(f"Configured {address} on lo")
+    except subprocess.CalledProcessError as cpe:
+        log(f"Failed to configure {address} on lo")
+        log(cpe.output)
+
+def remove_address(prefix, address=None):
+    """ Remove the first host address from given prefix from the loopback interface
+    """
+    if address is None:
+        net = ipaddress.ip_network(prefix)
+        address = f"{next(net.hosts())}/{net.prefixlen}"
+    try:
+        cmd = f"sudo ip address del {address} dev lo"
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        log(f"Removed {address} from lo")
+    except subprocess.CalledProcessError as cpe:
+        log(f"Failed to remove {address} from lo")
+        log(cpe.output)
 
 app = Flask(__name__)
 
@@ -38,12 +78,23 @@ def announce():
         sys.stdout.write('%s\n' % command)
         sys.stdout.flush()
 
+        if 'pingable-auto' in route and route['pingable-auto']:
+            add_address(prefix)
+        elif 'pingable-address' in route:
+            add_address(prefix, route['pingable-address'])
+
     # withdraw old routes
     to_withdraw = set(announced_routes) - set(new_routes)
     for prefix in to_withdraw:
         command = "withdraw route %s" % prefix
         sys.stdout.write('%s\n' % command)
         sys.stdout.flush()
+
+        route = announced_routes[prefix]
+        if 'pingable-auto' in route and route['pingable-auto']:
+            remove_address(prefix)
+        elif 'pingable-address' in route:
+            remove_address(prefix, route['pingable-address'])
 
     announced_routes = new_routes
 

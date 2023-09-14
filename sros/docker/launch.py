@@ -182,6 +182,19 @@ SROS_VARIANTS = {
             integrated=True,
         ),
     },
+
+    "ixr-e2": {
+        "deployment_model": "integrated",
+        "min_ram": 4,  # minimum RAM requirements
+        "max_nics": 30,
+        **line_card_config(
+            chassis="ixr-e2",
+            card="cpm-ixr-e2",
+            card_type="cpm-ixr-e2",
+            mda="m2-qsfpdd+2-qsfp28+24-sfp28",
+            integrated=True,
+        ),
+    },
     "sr-1s": {
         "deployment_model": "integrated",
         "min_ram": 6,  # minimum RAM requirements

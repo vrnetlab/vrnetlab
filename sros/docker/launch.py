@@ -182,6 +182,21 @@ SROS_VARIANTS = {
             integrated=True,
         ),
     },
+
+    "ixr-e2": {
+        "deployment_model": "integrated",
+        "min_ram": 4, # minimum RAM requirements
+        "max_nics": 30,
+        **line_card_config(
+            chassis="ixr-e2",
+            card="cpm-ixr-e2",
+            card_type="imm2-qsfpdd+2-qsfp28+24-sfp28",
+            mda="m2-qsfpdd+2-qsfp28+24-sfp28",
+            integrated=True,
+        ),
+    },
+
+
     "sr-1s": {
         "deployment_model": "integrated",
         "min_ram": 6,  # minimum RAM requirements
@@ -870,12 +885,10 @@ class SROS_integrated(SROS_vm):
         res.append("-netdev")
         res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
 
-        if (
-            "chassis=ixr-r6" in self.variant["timos_line"]
-            or "chassis=ixr-ec" in self.variant["timos_line"]
-        ):
+        if any(chassis in self.variant["timos_line"] for chassis in ["chassis=ixr-r6", "chassis=ixr-ec", "chassis=ixr-e2"]):
+
             logger.debug(
-                "detected ixr-r6/ec chassis, creating a dummy network device for SFM connection"
+                "detected ixr-r6/ec/ixr-e2 chassis, creating a dummy network device for SFM connection"
             )
             res.append(f"-device virtio-net-pci,netdev=dummy,mac={vrnetlab.gen_mac(0)}")
             res.append("-netdev tap,ifname=sfm-dummy,id=dummy,script=no,downscript=no")

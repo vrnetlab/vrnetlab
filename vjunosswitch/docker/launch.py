@@ -104,8 +104,7 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         if not os.path.exists(STARTUP_CONFIG_FILE):
             self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
             # rename init.conf to juniper.conf, this is our startup config
-            mv_cfg = ['mv', 'init.conf', 'juniper.conf']
-            subprocess.run(mv_cfg, shell=True)
+            os.rename('init.conf', 'juniper.conf')
 
         # if startup cfg file is found
         else:

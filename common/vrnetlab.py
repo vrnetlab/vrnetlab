@@ -422,7 +422,9 @@ class VR:
 
     def start_socat(self, src_offset=0, dst_offset=2000):
         for proto, src_port, dst_port in HOST_FWDS:
-            run_command(["socat", "%s-LISTEN:%d,fork" % (proto.upper(), src_port + src_offset),
+            # TCP6-LISTEN and UDP6-LISTEN are actually dual-stack and will work
+            # for an IPv4 only host too
+            run_command(["socat", "%s6-LISTEN:%d,fork" % (proto.upper(), src_port + src_offset),
                          "%s:127.0.0.1:%d" % (proto.upper(), dst_port + dst_offset)],
                          background=True)
 

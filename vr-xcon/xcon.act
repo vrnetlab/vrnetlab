@@ -2,12 +2,12 @@ import net
 import time
 import file
 
-actor Healthcheck(write_file_auth, expected):
+actor Healthcheck(write_file_cap, expected):
     # keep track of TcpEndpoint actor states (ids, like "r1/1")
     var states = {}
     # Single actor for writing to the file to ensure the updates are flushed in
     # the same order as they are received by Healthcheck.
-    var wf = file.WriteFile(write_file_auth, "health")
+    var wf = file.WriteFile(write_file_cap, "health")
 
     def update(endpoint, state):
         states[endpoint] = state
@@ -31,11 +31,11 @@ actor Healthcheck(write_file_auth, expected):
 
     _flush()
 
-actor TcpEndpoint(connect_auth, dns, name, interface, healthcheck):
+actor TcpEndpoint(connect_cap, dns_cap, name, interface, healthcheck):
     port = 10000 + interface
     id = "%s/%d" % (name, interface)
     var _other = None
-    var _conn: ?net.TCPIPConnection = None
+    var _conn: ?net.TCPConnection = None
     var backoff = 0
     var state = 0
     # 0 = starting / waiting / backoff
@@ -77,7 +77,7 @@ actor TcpEndpoint(connect_auth, dns, name, interface, healthcheck):
                 # the I/O subsystem.
                 if _conn is not None:
                     _conn.close(_on_tcp_close)
-                _conn = net.TCPIPConnection(connect_auth, addr, port, _on_tcp_connect, _on_tcp_receive, _on_tcp_error)
+                _conn = net.TCPConnection(connect_cap, addr, port, _on_tcp_connect, _on_tcp_receive, _on_tcp_error)
                 _set_state(2)
 
     def _on_dns_error(query, error):
@@ -89,7 +89,7 @@ actor TcpEndpoint(connect_auth, dns, name, interface, healthcheck):
             print("Unexpected state for _connect:", state)
             return
         _set_state(1)
-        dns.lookup_a(name, _on_dns_resolve, _on_dns_error)
+        net.lookup_a(dns_cap, name, _on_dns_resolve, _on_dns_error)
 
     def _reconnect(error):
         _set_state(0)
@@ -117,9 +117,8 @@ def parse_side(i):
 
 actor main(env):
     print("Xcon starting up")
-    connect_auth = net.TCPConnectAuth(net.TCPAuth(net.NetAuth(env.auth)))
-    dns_auth = net.DNSAuth(net.NetAuth(env.auth))
-    dns = net.DNS(dns_auth)
+    connect_cap = net.TCPConnectCap(net.TCPCap(net.NetCap(env.cap)))
+    dns_cap = net.DNSCap(net.NetCap(env.cap))
     var i = 0
     var p2p = []
     while i < len(env.argv):
@@ -142,16 +141,15 @@ actor main(env):
                 i += 1
         i += 1
 
-    fa = file.FileAuth(env.auth)
-    wfa = file.WriteFileAuth(fa)
-    hc = Healthcheck(wfa, len(p2p) * 2)
+    wfc = file.WriteFileCap(file.FileCap(env.cap))
+    hc = Healthcheck(wfc, len(p2p) * 2)
 
     var links = []
     for link in p2p:
         left = link.left
         right = link.right
-        left_ep = TcpEndpoint(connect_auth, dns, right.host, right.interface, hc)
-        right_ep = TcpEndpoint(connect_auth, dns, left.host, left.interface, hc)
+        left_ep = TcpEndpoint(connect_cap, dns_cap, right.host, right.interface, hc)
+        right_ep = TcpEndpoint(connect_cap, dns_cap, left.host, left.interface, hc)
         left_ep.set_other(right_ep)
         right_ep.set_other(left_ep)
         links.append((left=left, right=right))

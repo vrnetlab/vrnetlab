@@ -2,7 +2,7 @@ import net
 import time
 import file
 
-actor Healthcheck(write_file_cap, expected):
+actor Healthcheck(write_file_cap, expected, trace):
     # keep track of TcpEndpoint actor states (ids, like "r1/1")
     var states = {}
     # Single actor for writing to the file to ensure the updates are flushed in
@@ -25,13 +25,15 @@ actor Healthcheck(write_file_cap, expected):
             exit_code = 1
             message = "Expected %d sockets but only %d connected" % (expected, count)
         print("healthcheck: %d (%s)" % (exit_code, message))
+        if trace:
+           print("state", states)
 
         health = "%d\n%s" % (exit_code, message)
         wf.write(health.encode())
 
     _flush()
 
-actor TcpEndpoint(connect_cap, dns_cap, name, interface, healthcheck):
+actor TcpEndpoint(connect_cap, dns_cap, name, interface, healthcheck, trace):
     port = 10000 + interface
     id = "%s/%d" % (name, interface)
     var _other = None
@@ -52,9 +54,14 @@ actor TcpEndpoint(connect_cap, dns_cap, name, interface, healthcheck):
         print("TCP Client connection established to %s" % (id))
         backoff = 0
 
-    def _on_tcp_receive(c, data):
+    # We need not declare the type of the data parameter as it should be
+    # inferred automatically as __builtin__.bytes. This avoids
+    # https://github.com/actonlang/acton/issues/1717
+    def _on_tcp_receive(c, data: bytes):
         if _other is not None:
             _other.write(data)
+            if trace:
+                print("%s -> %s: %d bytes" % (id, _other.id, len(data)))
 
     def _on_tcp_close(c):
         pass
@@ -121,6 +128,7 @@ actor main(env):
     dns_cap = net.DNSCap(net.NetCap(env.cap))
     var i = 0
     var p2p = []
+    var trace = False
     while i < len(env.argv):
         arg = env.argv[i]
         print("arg: %s" % (arg))
@@ -139,17 +147,20 @@ actor main(env):
                     )
                 p2p.append(link)
                 i += 1
+            i -= 1
+        elif arg == "--trace":
+            trace = True
         i += 1
 
     wfc = file.WriteFileCap(file.FileCap(env.cap))
-    hc = Healthcheck(wfc, len(p2p) * 2)
+    hc = Healthcheck(wfc, len(p2p) * 2, trace)
 
     var links = []
     for link in p2p:
         left = link.left
         right = link.right
-        left_ep = TcpEndpoint(connect_cap, dns_cap, right.host, right.interface, hc)
-        right_ep = TcpEndpoint(connect_cap, dns_cap, left.host, left.interface, hc)
+        left_ep = TcpEndpoint(connect_cap, dns_cap, right.host, right.interface, hc, trace)
+        right_ep = TcpEndpoint(connect_cap, dns_cap, left.host, left.interface, hc, trace)
         left_ep.set_other(right_ep)
         right_ep.set_other(left_ep)
         links.append((left=left, right=right))

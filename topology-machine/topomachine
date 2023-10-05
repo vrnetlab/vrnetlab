@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from collections import OrderedDict
+from typing import Optional, Tuple
 
 import jinja2
 
@@ -37,14 +38,15 @@ class VrTopo:
         links = []
 
         # expand p2p links
-        def p2p():
+        def p2p(instance):
             nonlocal links
             if 'p2p' in config:
                 for router in maybe_sorted(config['p2p']):
                     neighbors = config['p2p'][router]
                     for neighbor in neighbors:
+                        name, numeric = instance.router_name_interface(neighbor)
                         links.append({ 'left': { 'router': router }, 'right': {
-                            'router': neighbor }})
+                            'router': name, 'numeric': numeric }})
 
         # expand fullmesh into links
         def fullmesh():
@@ -58,9 +60,9 @@ class VrTopo:
         # expand fullmeshes before p2p if keep_order is set and fullmeshes is defined before p2p
         if keep_order and 'fullmeshes' in config and 'p2p' in config and tuple(config).index('fullmeshes') < tuple(config).index('p2p'):
             fullmesh()
-            p2p()
+            p2p(self)
         else:
-            p2p()
+            p2p(self)
             fullmesh()
 
         self.links = self.assign_interfaces(links)
@@ -82,9 +84,10 @@ class VrTopo:
             for hub in sorted(config['hubs']):
                 self.hubs[hub] = []
                 for router in config['hubs'][hub]:
+                    name, interface = self.router_name_interface(router)
                     ep = {
-                        'router': router,
-                        'numeric': self.get_interface(router)
+                        'router': name,
+                        'numeric': self.get_interface(name, interface)
                     }
                     ep['interface'] = self.intf_num_to_name(router, ep['numeric'])
                     self.hubs[hub].append(ep)
@@ -94,6 +97,14 @@ class VrTopo:
             if 'interfaces' in val:
                 for num_id in val['interfaces']:
                     val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
+
+    @staticmethod
+    def router_name_interface(router: str) -> Tuple[str, Optional[int]]:
+        if ':' in router:
+            s = router.split(':')
+            return s[0], int(s[1])
+        else:
+            return router, None
 
     @staticmethod
     def expand_fullmesh(routers):
@@ -126,14 +137,20 @@ class VrTopo:
     def assign_interfaces(self, links):
         """ Assign numeric interfaces to links
         """
+        # first pass - reserve and validate static interface assignments
+        for link in links:
+            right = link['right']
+            if right_numeric := right.get('numeric', None):
+                self.get_interface(right['router'], right_numeric)
+
         # assign interfaces to links
         for link in links:
             left = link['left']
-            left['numeric'] = self.get_interface(left['router'])
+            left['numeric'] = self.get_interface(left['router'], left.get('numeric', None))
             left['interface'] = self.intf_num_to_name(left['router'], left['numeric'])
 
             right = link['right']
-            right['numeric'] = self.get_interface(right['router'])
+            right['numeric'] = self.get_interface(right['router'], right.get('numeric', None))
             right['interface'] = self.intf_num_to_name(right['router'], right['numeric'])
 
         return links
@@ -169,14 +186,19 @@ class VrTopo:
         return None
 
 
-    def get_interface(self, router):
-        """ Return next available interface
+    def get_interface(self, router, interface=None):
+        """ Return next available interface, or allocate desired numeric interface
         """
         if router not in self.routers:
             raise ValueError("Router %s is not defined in config" % router)
         if 'interfaces' not in self.routers[router]:
             self.routers[router]['interfaces'] = {}
         intfs = self.routers[router]['interfaces']
+        if interface:
+            if interface in intfs and intfs[interface] != interface:
+                raise ValueError(f"Interface {interface} already assigned for {router}")
+            intfs[interface] = interface
+            return interface
 
         i = 1
         for intf in range(len(intfs)):

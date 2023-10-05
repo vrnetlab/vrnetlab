@@ -41,7 +41,9 @@ and routers in *fullmeshes* are defined in the configuration file. This makes
 the interface assignment more stable when changing the topology. It also makes
 the assignment more natural, as we tend to list the important routers (like PE
 routers) in the topology first, followed by CPEs and the like. The interfaces on
-the devices listed first will be assigned lower numbers.
+the devices listed first will be assigned lower numbers. As a last resort when
+you really really need to use a specific interface for a link, you can assign a
+static numeric interface ID in the *p2p* section of the topology file.
 
 topology machine is able to run the machines for you, i.e. execute docker run
 for the routers defined in the configuration file and start vr-xcon with the
@@ -145,6 +147,19 @@ router twice:
 
  * foo <-> a
  * foo <-> a
+
+The array of routers on the right side may also include static interface assignment. Use the format `router:interface` to assign a specific interface to a link. For example:
+
+```
+{
+    "p2p": {
+        "foo": [ "a", "b:2" ]
+    }
+}
+```
+
+ * foo <-> a/1
+ * foo <-> b/2
 
 Configuration section "fullmeshes"
 ----------------------------------

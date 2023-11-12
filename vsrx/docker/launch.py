@@ -8,6 +8,7 @@ import signal
 import sys
 
 import vrnetlab
+STARTUP_CONFIG_FILE = "/config/startup-config.cfg"
 
 def handle_SIGCHLD(signal, frame):
     os.waitpid(-1, os.WNOHANG)
@@ -107,6 +108,16 @@ class VSRX_vm(vrnetlab.VM):
         self.wait_write("set routing-instances mgmt_junos description management-instance", "#")
         # allow NATed outgoing traffic (set the default route on the management vrf)
         self.wait_write("set routing-instances mgmt_junos routing-options static route 0.0.0.0/0 next-hop 10.0.0.2", "#")
+        if os.path.exists(STARTUP_CONFIG_FILE):
+            self.logger.trace("Config File %s exists" % STARTUP_CONFIG_FILE)
+            with open(STARTUP_CONFIG_FILE) as file:
+                self.logger.trace("Opening Config File %s" % STARTUP_CONFIG_FILE)
+                config_lines = file.readlines()
+                config_lines = [line.rstrip() for line in config_lines]
+                self.logger.trace("Parsed Config File %s" % STARTUP_CONFIG_FILE)
+            self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)
+            for line in config_lines:
+                self.wait_write(line, "#")
         self.wait_write("commit")
         self.wait_write("exit")
         # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes

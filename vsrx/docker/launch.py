@@ -108,6 +108,9 @@ class VSRX_vm(vrnetlab.VM):
         self.wait_write("set routing-instances mgmt_junos description management-instance", "#")
         # allow NATed outgoing traffic (set the default route on the management vrf)
         self.wait_write("set routing-instances mgmt_junos routing-options static route 0.0.0.0/0 next-hop 10.0.0.2", "#")
+        # commit now in case the user defined startup config has errors in it.
+        self.wait_write("commit")
+        #if the user has added a startup-config add it now.
         if os.path.exists(STARTUP_CONFIG_FILE):
             self.logger.trace("Config File %s exists" % STARTUP_CONFIG_FILE)
             with open(STARTUP_CONFIG_FILE) as file:

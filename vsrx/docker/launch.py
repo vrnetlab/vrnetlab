@@ -112,15 +112,30 @@ class VSRX_vm(vrnetlab.VM):
         self.wait_write("commit")
         #if the user has added a startup-config add it now.
         if os.path.exists(STARTUP_CONFIG_FILE):
-            self.logger.trace("Config File %s exists" % STARTUP_CONFIG_FILE)
+            self.logger.trace(f"Config File %s exists" % STARTUP_CONFIG_FILE)
             with open(STARTUP_CONFIG_FILE) as file:
-                self.logger.trace("Opening Config File %s" % STARTUP_CONFIG_FILE)
-                config_lines = file.readlines()
-                config_lines = [line.rstrip() for line in config_lines]
-                self.logger.trace("Parsed Config File %s" % STARTUP_CONFIG_FILE)
-            self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)
-            for line in config_lines:
-                self.wait_write(line, "#")
+                self.logger.info(f"Reading user startup-config from %s" % STARTUP_CONFIG_FILE)
+                first_line = file.readline()
+                #Check to see if the user startup config file starts with a set command or not.
+                if first_line.startswith('set'):
+                    self.logger.trace("User startup-config file %s is in Junos set commands" % STARTUP_CONFIG_FILE)
+                    config_lines = file.readlines()
+                    config_lines = [line.rstrip() for line in config_lines]
+                    self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)
+                    for line in config_lines:
+                        self.wait_write(line, "#")
+                else:
+                    #If not in set command format the user Juniper config is in Junos format, use load merge terminal
+                    self.logger.info(f"User startup-config %s file is in Junos command format" % STARTUP_CONFIG_FILE)
+                    self.wait_write("load merge terminal", "#")
+                    #read the contents of the startup config from the beginning and dump it to the terminal
+                    self.wait_write(first_line, "[Type ^D at a new line to end input]")
+                    self.wait_write(file.read(), None)
+                    #send CTL-D and CTL-R x2.
+                    self.wait_write('\x04', None)
+                    self.wait_write('\x04', None)
+                    self.wait_write('\x0d', None)
+                    self.wait_write('\x0d', None)
         self.wait_write("commit")
         self.wait_write("exit")
         # write another exist as sometimes the first exit from exclusive edit abrupts before command finishes

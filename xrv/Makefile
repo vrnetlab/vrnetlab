@@ -9,7 +9,7 @@ IMAGE_GLOB=*vmdk*
 # iosxrv-k9-demo-6.2.2.15I.DT_IMAGE.vmdk
 # iosxrv-k9-demo-6.2.2.1T-dhcpfix.vmdk
 # iosxrv-k9-demo-6.2.2.22I.vmdk
-VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9][^0-9]\([0-9]\.[0-9]\.[0-9]\(\.[0-9A-Z]\+\)\?\)\([^0-9].*\|$$\)/\1/')
+VERSION=$(shell echo $(IMAGE) | sed -e 's/.\+[^0-9]\([0-9]\+\.[0-9]\+\.[0-9]\+\(\.[0-9A-Z]\+\)\?\)\([^0-9].*\|$$\)/\1/')
 
 -include ../makefile-sanity.include
 -include ../makefile.include

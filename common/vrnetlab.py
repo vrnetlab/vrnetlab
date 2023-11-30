@@ -408,13 +408,7 @@ class VM:
         res = []
         # mgmt interface is special - we use qemu user mode network
         res.append("-device")
-        # we need to place mgmt interface on the same bus with other interfaces in OpenBSD,
-        # otherwise, it will be assigned the last index by the OS,
-        # and not the first (i.e., vio0) as desired
-        if "openbsd" in self.image:
-            res.append(self.nic_type + f",netdev=p00,mac={gen_mac(0)},bus=pci.1")
-        else:
-            res.append(self.nic_type + f",netdev=p00,mac={gen_mac(0)}")
+        res.append(self.nic_type + f",netdev=p00,mac={gen_mac(0)}")
         res.append("-netdev")
         res.append(
             "user,id=p00,net=10.0.0.0/24,"

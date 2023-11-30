@@ -8,7 +8,6 @@ import signal
 import subprocess
 import sys
 
-# import time
 
 import vrnetlab
 
@@ -94,7 +93,7 @@ class OpenBSD_vm(vrnetlab.VM):
         net_cfg_file = open("/network_config.yaml", "w")
         net_cfg_file.write("version: 2\n")
         net_cfg_file.write("ethernets:\n")
-        net_cfg_file.write(f"  vio0:\n")
+        net_cfg_file.write("  vio0:\n")
         net_cfg_file.write("    addresses: [10.0.0.15/24]\n")
         net_cfg_file.write("    gateway4: 10.0.0.2\n")
         net_cfg_file.close()
@@ -160,6 +159,20 @@ class OpenBSD_vm(vrnetlab.VM):
         self.spins += 1
 
         return
+
+    def gen_mgmt(self):
+        """
+        Augment the parent class function to change the PCI bus
+        """
+        # call parent function to generate the mgmt interface
+        res = super(OpenBSD_vm, self).gen_mgmt()
+
+        # we need to place mgmt interface on the same bus with other interfaces in OpenBSD,
+        # otherwise, it will be assigned the last index by the OS,
+        # and not the first (i.e., vio0) as desired
+        if "bus=pci.1" not in res[-3]:
+            res[-3] = res[-3] + ",bus=pci.1"
+        return res
 
 
 class OpenBSD(vrnetlab.VR):

@@ -55,6 +55,29 @@ echo "\n"
 if [ $health = "healthy" ]
 then
   echo -e "\e[32m$name became healthy in $SECONDS seconds\e[0m"
+  container_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$name")
+
+  if [ -z "$container_ip" ]; then
+    echo "Error: Unable to retrieve container IP address."
+    exit 1
+  fi
+
+  echo "Container IP address: $container_ip"
+
+  ssh_user="vrnetlab"
+  ssh_password="VR-netlab9"
+
+  # Test SSH connection using sshpass. We run the "exit" command, but since not
+  # all platforms support it, we instead check whether an interactive session
+  # was started by checking the output for the string "Entering interactive session"
+  sshpass -v -p "$ssh_password" ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$ssh_user@$container_ip" exit 2>&1 | rg --passthru "Entering interactive session"
+
+  if [ $? -eq 0 ]; then
+    echo "SSH connection test passed."
+  else
+    echo "SSH connection test failed."
+    exit 1
+  fi
   docker stop $name
 else
   echo -e "\e[31m$name failed to become healthy after $SECONDS seconds\e[0m"

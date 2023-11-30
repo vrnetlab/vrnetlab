@@ -119,6 +119,8 @@ class VSRX_vm(vrnetlab.VM):
                 #Check to see if the user startup config file starts with a set command or not.
                 if first_line.startswith('set'):
                     self.logger.trace("User startup-config file %s is in Junos set commands" % STARTUP_CONFIG_FILE)
+                    #Write the first line then read the remainder of the file. 
+                    self.wait_write(first_line, "#")
                     config_lines = file.readlines()
                     config_lines = [line.rstrip() for line in config_lines]
                     self.logger.info("Writing lines from %s" % STARTUP_CONFIG_FILE)

@@ -69,34 +69,31 @@ class OpenBSD_vm(vrnetlab.VM):
     def create_boot_image(self):
         """Creates a cloud-init iso image with a bootstrap configuration"""
 
-        cfg_file = open("/bootstrap_config.yaml", "w")
-        cfg_file.write("#cloud-config\n")
-        cfg_file.write(f"hostname: {self.hostname}\n")
-        cfg_file.write("fqdn: example.com\n")
-        cfg_file.write("users:\n")
-        cfg_file.write(f"  - name: {self.username}\n")
-        cfg_file.write('    sudo: "ALL=(ALL) NOPASSWD: ALL"\n')
-        cfg_file.write("    groups: wheel\n")
-        cfg_file.write(f"    home: /home/{self.username}\n")
-        cfg_file.write("    shell: /bin/ksh\n")
-        cfg_file.write(f"    plain_text_passwd: {self.password}\n")
-        cfg_file.write("    lock_passwd: false\n")
-        cfg_file.write("ssh_pwauth: true\n")
-        cfg_file.write("disable_root: false\n")
-        cfg_file.write("timezone: UTC\n")
-        # Disable cloud-init for the subsequent boots
-        cfg_file.write("runcmd:\n")
-        cfg_file.write("  - rm /etc/rc.local\n")
+        with open("/bootstrap_config.yaml", "w") as cfg_file:
+            cfg_file.write("#cloud-config\n")
+            cfg_file.write(f"hostname: {self.hostname}\n")
+            cfg_file.write("fqdn: example.com\n")
+            cfg_file.write("users:\n")
+            cfg_file.write(f"  - name: {self.username}\n")
+            cfg_file.write('    sudo: "ALL=(ALL) NOPASSWD: ALL"\n')
+            cfg_file.write("    groups: wheel\n")
+            cfg_file.write(f"    home: /home/{self.username}\n")
+            cfg_file.write("    shell: /bin/ksh\n")
+            cfg_file.write(f"    plain_text_passwd: {self.password}\n")
+            cfg_file.write("    lock_passwd: false\n")
+            cfg_file.write("ssh_pwauth: true\n")
+            cfg_file.write("disable_root: false\n")
+            cfg_file.write("timezone: UTC\n")
+            # Disable cloud-init for the subsequent boots
+            cfg_file.write("runcmd:\n")
+            cfg_file.write("  - rm /etc/rc.local\n")
 
-        cfg_file.close()
-
-        net_cfg_file = open("/network_config.yaml", "w")
-        net_cfg_file.write("version: 2\n")
-        net_cfg_file.write("ethernets:\n")
-        net_cfg_file.write("  vio0:\n")
-        net_cfg_file.write("    addresses: [10.0.0.15/24]\n")
-        net_cfg_file.write("    gateway4: 10.0.0.2\n")
-        net_cfg_file.close()
+        with open("/network_config.yaml", "w") as net_cfg_file:
+            net_cfg_file.write("version: 2\n")
+            net_cfg_file.write("ethernets:\n")
+            net_cfg_file.write("  vio0:\n")
+            net_cfg_file.write("    addresses: [10.0.0.15/24]\n")
+            net_cfg_file.write("    gateway4: 10.0.0.2\n")
 
         cloud_localds_args = [
             "cloud-localds",
@@ -146,7 +143,7 @@ class OpenBSD_vm(vrnetlab.VM):
                 self.tn.close()
                 # startup time?
                 startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
+                self.logger.info("Startup complete in: %s", startup_time)
                 return
 
         # no match, if we saw some output from the router it's probably

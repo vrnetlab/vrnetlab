@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM debian:bookworm-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DISK_SIZE=4G

@@ -2,7 +2,7 @@
 
 This is the vrnetlab docker image for Juniper's vJunosEvolved.
 
-> Available with [containerlab](https://containerlab.dev) as vr-vjunosevolved.
+> Available with [containerlab](https://containerlab.dev) as juniper_vjunosevolved.
 
 ## Building the docker image
 
@@ -14,4 +14,4 @@ Run `docker images` to confirm this.
 
 CPU: 4 cores
 RAM: 8GB
-DISK: ~2GB
+DISK: ~2.5GB

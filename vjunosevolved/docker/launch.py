@@ -83,13 +83,12 @@ class VJUNOSEVOLVED_vm(vrnetlab.VM):
             "usb-storage,bus=usb.0,port=1,drive=config_disk,id=usb-disk0,removable=off,write-cache=on",
         ])
 
-        self.qemu_args.extend(["-display", "none", "-no-user-config", "-nodefaults", "-boot", "strict=on"])
+        self.qemu_args.extend(["-no-user-config", "-nodefaults", "-boot", "strict=on"])
         self.nic_type = "virtio-net-pci"
         self.num_nics = 17
         self.hostname = hostname
         self.smbios = [
             "type=0,vendor=Bochs,version=Bochs", "type=3,manufacturer=Bochs", "type=1,manufacturer=Bochs,product=Bochs,serial=chassis_no=0:slot=0:type=1:assembly_id=0x0D20:platform=251:master=0:channelized=no"            ]
-        self.qemu_args.extend(["-machine", "pc-i440fx-focal,usb=off,dump-guest-core=off,accel=kvm"])
         self.conn_mode = conn_mode
 
     def startup_config(self):

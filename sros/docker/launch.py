@@ -290,10 +290,6 @@ SROS_VARIANTS = {
                 /configure sfm 2 sfm-type sfm-s
                 /configure sfm 3 sfm-type sfm-s
                 /configure sfm 4 sfm-type sfm-s
-                /configure sfm 5 sfm-type sfm-s
-                /configure sfm 6 sfm-type sfm-s
-                /configure sfm 7 sfm-type sfm-s
-                /configure sfm 8 sfm-type sfm-s
                 /configure card 1 card-type xcm-7s
                 /configure card 1 mda 1 mda-type s36-100gb-qsfp28
                 """,
@@ -368,7 +364,8 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=sr-1e card=cpm-e",
         },
         # line card (IOM/XCM)
-        "lc": {
+        "lcs": [
+            {
             "min_ram": 4,
             "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me12-10/1gb-sfp+ mda/2=isa2-tunnel",
             "card_config": """/configure card 1 card-type iom-e
@@ -376,6 +373,7 @@ SROS_VARIANTS = {
             /configure card 1 mda 2 mda-type isa2-tunnel
             """,
         },
+        ],
     },
     "sr-a4": {
         "deployment_model": "distributed",
@@ -386,12 +384,13 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=sr-a4 card=cpm-a",
         },
         # line card (IOM/XCM)
-        "lc": {
+        "lcs":  [
+            {
             "min_ram": 4,
-            **line_card_config(
-                chassis="sr-a4", card="iom-a", mda="maxp10-10/1gb-msec-sfp+"
-            ),
+            "timos_line": "slot=A chassis=sr-a4 card=cpm-a",
+            **line_card_config(chassis="sr-a4", card="iom-a", mda="maxp10-10/1gb-msec-sfp+"),
         },
+        ],
     },
     "sr-1x-48d": {
         "deployment_model": "distributed",

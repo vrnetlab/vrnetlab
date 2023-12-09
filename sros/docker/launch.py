@@ -7,9 +7,8 @@ import re
 import shutil
 import signal
 import sys
-from typing import Dict
 from dataclasses import dataclass
-
+from typing import Dict
 
 import vrnetlab
 
@@ -182,10 +181,9 @@ SROS_VARIANTS = {
             integrated=True,
         ),
     },
-
     "ixr-e2": {
         "deployment_model": "integrated",
-        "min_ram": 4, # minimum RAM requirements
+        "min_ram": 4,  # minimum RAM requirements
         "max_nics": 30,
         **line_card_config(
             chassis="ixr-e2",
@@ -195,8 +193,6 @@ SROS_VARIANTS = {
             integrated=True,
         ),
     },
-
-
     "sr-1s": {
         "deployment_model": "integrated",
         "min_ram": 6,  # minimum RAM requirements
@@ -366,13 +362,13 @@ SROS_VARIANTS = {
         # line card (IOM/XCM)
         "lcs": [
             {
-            "min_ram": 4,
-            "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me12-10/1gb-sfp+ mda/2=isa2-tunnel",
-            "card_config": """/configure card 1 card-type iom-e
+                "min_ram": 4,
+                "timos_line": "chassis=sr-1e slot=1 card=iom-e mda/1=me12-10/1gb-sfp+ mda/2=isa2-tunnel",
+                "card_config": """/configure card 1 card-type iom-e
             /configure card 1 mda 1 mda-type me12-10/1gb-sfp+
             /configure card 1 mda 2 mda-type isa2-tunnel
             """,
-        },
+            },
         ],
     },
     "sr-a4": {
@@ -384,12 +380,14 @@ SROS_VARIANTS = {
             "timos_line": "slot=A chassis=sr-a4 card=cpm-a",
         },
         # line card (IOM/XCM)
-        "lcs":  [
+        "lcs": [
             {
-            "min_ram": 4,
-            "timos_line": "slot=A chassis=sr-a4 card=cpm-a",
-            **line_card_config(chassis="sr-a4", card="iom-a", mda="maxp10-10/1gb-msec-sfp+"),
-        },
+                "min_ram": 4,
+                "timos_line": "slot=A chassis=sr-a4 card=cpm-a",
+                **line_card_config(
+                    chassis="sr-a4", card="iom-a", mda="maxp10-10/1gb-msec-sfp+"
+                ),
+            },
         ],
     },
     "sr-1x-48d": {
@@ -884,8 +882,10 @@ class SROS_integrated(SROS_vm):
         res.append("-netdev")
         res.append("bridge,br=br-mgmt,id=br-mgmt" % {"i": 0})
 
-        if any(chassis in self.variant["timos_line"] for chassis in ["chassis=ixr-r6", "chassis=ixr-ec", "chassis=ixr-e2"]):
-
+        if any(
+            chassis in self.variant["timos_line"]
+            for chassis in ["chassis=ixr-r6", "chassis=ixr-ec", "chassis=ixr-e2"]
+        ):
             logger.debug(
                 "detected ixr-r6/ec/ixr-e2 chassis, creating a dummy network device for SFM connection"
             )

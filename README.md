@@ -48,6 +48,7 @@ Since the changes we made in this fork are VM specific, we added a few popular r
 * Juniper vMX
 * Juniper vSRX
 * Juniper vJunos-switch
+* Juniper vJunosEvolved
 * Nokia SR OS
 * OpenBSD
 

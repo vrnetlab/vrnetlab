@@ -151,6 +151,18 @@ SROS_VARIANTS = {
             }
         ],
     },
+    "ixr-x1": {
+        "deployment_model": "distributed",
+        "min_ram": 4,  # minimum RAM requirements
+        "max_nics": 36,
+        **line_card_config(
+            chassis="ixr-x",
+            card="cpm-ixr-x",
+            card_type="imm32-qsfp28+4-qsfpdd",
+            mda="m32-qsfp28+4-qsfpdd",
+            integrated=False,
+        ),
+    },
     "ixr-e-small": {
         "deployment_model": "distributed",
         # control plane (CPM)

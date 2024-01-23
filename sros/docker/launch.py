@@ -72,7 +72,7 @@ class SROS_vm(vrnetlab.VM):
         """ This function should be called periodically to do work.
         """
 
-        if self.spins > 60:
+        if self.spins > 600:
             # too many spins with no result, probably means SROS hasn't started
             # successfully, so we restart it
             self.logger.warning("no output from serial console, restarting VM")

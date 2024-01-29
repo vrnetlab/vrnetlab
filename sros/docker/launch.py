@@ -640,7 +640,7 @@ def gen_bof_config():
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
-        super().__init__(username, password, disk_image="/sros.qcow2", num=num, ram=ram)
+        super().__init__(username, password, disk_image="/sros.qcow2", num=num, ram=ram, driveif='virtio')
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
@@ -675,7 +675,7 @@ class SROS_vm(vrnetlab.VM):
             diskidx=1
         elif cfname == 'cf2':
             diskidx=2
-        self.qemu_args.extend(["-drive",f"if=ide,index={diskidx},file={path}"])
+        self.qemu_args.extend(["-drive",f"if=virtio,index={diskidx},file={path}"])
 
     # override wait_write clean_buffer parameter default
     def wait_write(self, cmd, wait="__defaultpattern__", con=None, clean_buffer=True):

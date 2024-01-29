@@ -67,7 +67,7 @@ class VM:
                 return image_info["format"]
         raise ValueError(f"Could not read image format for {self.image}")
 
-    def __init__(self, username, password, disk_image=None, num=0, ram=4096):
+    def __init__(self, username, password, disk_image=None, num=0, ram=4096, driveif='ide'):
         self.logger = logging.getLogger()
 
         # username / password to configure
@@ -135,7 +135,7 @@ class VM:
                 "-serial",
                 "telnet:0.0.0.0:50%02d,server,nowait" % self.num,
                 "-drive",
-                "if=ide,file=%s" % overlay_disk_image,
+                f"if={driveif},file={overlay_disk_image}",
             ]
         )
         # enable hardware assist if KVM is available

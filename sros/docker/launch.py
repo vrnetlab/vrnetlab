@@ -505,8 +505,8 @@ def parse_variant_line(cfg, obj, skip_nics=False):
         if "ram=" in elem:
             obj["min_ram"] = elem.split("=")[1]
             continue
-        
-        #Optional CF. This indicate SIZE to be passed directly to qemu-img create (eg: cf1=1G)
+
+        # Optional CF. This indicates the SIZE to be passed directly to qemu-img create (eg: cf1=1G)
         if "cf1=" in elem:
             obj["cf1"] = elem.split("=")[1]
             continue
@@ -640,7 +640,14 @@ def gen_bof_config():
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
-        super().__init__(username, password, disk_image="/sros.qcow2", num=num, ram=ram, driveif='virtio')
+        super().__init__(
+            username,
+            password,
+            disk_image="/sros.qcow2",
+            num=num,
+            ram=ram,
+            driveif="virtio",
+        )
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
@@ -654,28 +661,25 @@ class SROS_vm(vrnetlab.VM):
         # override default wait pattern with hash followed by the space
         self.wait_pattern = "# "
 
-    def attach_cf(self,slot,cfname,size):
-        '''Attach extra CF. Create if needed.'''
-        path="/tftpboot/"+cfname+'_'+slot+".qcow2"
+    def attach_cf(self, slot, cfname, size):
+        """Attach extra CF. Create if needed."""
+        path = f"/tftpboot/{cfname}_{slot}.qcow2"
+
         if not os.path.exists(path):
-            logger.debug(f"Slot {slot}: creating {cfname} disk with size {size} -> {path}")
-            vrnetlab.run_command(
-                [
-                    "qemu-img",
-                    "create",
-                    "-f",
-                    "qcow2",
-                    path,
-                    size
-                ]
+            logger.debug(
+                f"Slot {slot}: creating {cfname} disk with size {size} -> {path}"
             )
+            vrnetlab.run_command(["qemu-img", "create", "-f", "qcow2", path, size])
         else:
-            logger.debug(f"Slot {slot}: bypassed creation of {cfname} disk because it already exist -> {path}. ")
-        if cfname == 'cf1':
-            diskidx=1
-        elif cfname == 'cf2':
-            diskidx=2
-        self.qemu_args.extend(["-drive",f"if=virtio,index={diskidx},file={path}"])
+            logger.debug(
+                f"Slot {slot}: bypassed creation of {cfname} disk because it already exist -> {path}. "
+            )
+
+        disk_idx = 1
+        if cfname == "cf2":
+            disk_idx = 2
+
+        self.qemu_args.extend(["-drive", f"if=virtio,index={disk_idx},file={path}"])
 
     # override wait_write clean_buffer parameter default
     def wait_write(self, cmd, wait="__defaultpattern__", con=None, clean_buffer=True):
@@ -877,7 +881,7 @@ class SROS_integrated(SROS_vm):
     ):
         ram: int = vrnetlab.getMem("integrated", variant.get("min_ram"))
         cpu: int = vrnetlab.getCpu("integrated", variant.get("cpu"))
-        slot: str = variant.get('slot')
+        slot: str = variant.get("slot")
 
         super().__init__(
             username,
@@ -899,10 +903,10 @@ class SROS_integrated(SROS_vm):
         self.variant = variant
         self.hostname = hostname
 
-        for cf in ['cf1','cf2']:
+        for cf in ["cf1", "cf2"]:
             size: str = variant.get(cf)
             if size is not None:
-                self.attach_cf(slot=slot,cfname=cf,size=size)
+                self.attach_cf(slot=slot, cfname=cf, size=size)
 
     def gen_mgmt(self):
         """
@@ -942,7 +946,7 @@ class SROS_cp(SROS_vm):
         ram: int = vrnetlab.getMem(self.role, variant.get("cp").get("min_ram"))
         cpu: int = vrnetlab.getCpu(self.role, variant.get("cp").get("cpu"))
         slot: str = variant.get("cp").get("slot")
-    
+
         super(SROS_cp, self).__init__(
             username,
             password,
@@ -964,10 +968,10 @@ class SROS_cp(SROS_vm):
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
 
-        for cf in ['cf1','cf2']:
+        for cf in ["cf1", "cf2"]:
             size: str = variant.get("cp").get(cf)
             if size is not None:
-                self.attach_cf(slot=slot,cfname=cf,size=size)
+                self.attach_cf(slot=slot, cfname=cf, size=size)
 
     def start(self):
         # use parent class start() function

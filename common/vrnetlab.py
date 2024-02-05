@@ -442,8 +442,10 @@ class VM:
         inf_path = Path("/sys/class/net/")
         while True:
             provisioned_nics = list(inf_path.glob("eth*"))
-            # if we see num provisioned +1 (for mgmt) we have all nics ready to roll!
-            if len(provisioned_nics) >= self.num_provisioned_nics + 1:
+            # if we see num provisioned interfaces we have all nics ready to roll!
+            # the management interface is counted as well and is included in CLAB_INTFS env var
+            # since containerlab v0.51.0
+            if len(provisioned_nics) >= self.num_provisioned_nics:
                 nics = [
                     int(re.search(pattern=r"\d+", string=nic.name).group())
                     for nic in provisioned_nics

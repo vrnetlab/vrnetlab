@@ -151,63 +151,43 @@ SROS_VARIANTS = {
             }
         ],
     },
-    ## IXR-X1
-    ## cpu=2 ram=4 slot=A chassis=ixr-x card=cpm-ixr-x/imm32-qsfp28+4-qsfpdd
     "ixr-x1": {
         "deployment_model": "distributed",
         # control plane (CPM)
-        "max_nics": 36,
+        "max_nics": 36, # 32 * qsfp28 + 4 * qsfpdd
         "cp": {
-            "min_ram": 4,
-            "timos_line": "slot=A chassis=ixr-x card=cpm-ixr-x",
+            "min_ram": 3,
+            "timos_line": "chassis=ixr-x slot=A card=cpm-ixr-x/imm32-qsfp28+4-qsfpdd",
         },
         # line card (IOM/XCM)
         "lcs": [
             {
                 "min_ram": 4,
-                "timos_line": "chassis=ixr-x slot=1 card=imm32-qsfp28+4-qsfpdd",
-                "card_config": """
-            """,
+                **line_card_config(
+                    chassis="ixr-x",
+                    card="imm32-qsfp28+4-qsfpdd",
+                    mda="m32-qsfp28+4-qsfpdd",
+                ),
             }
         ],
     },
-    ## IXR-X3
-    ## cpu=2 ram=4 slot=A chassis=ixr-x card=cpm-ixr-x/imm36-qsfpdd
-    "ixr-x3": {
-        "deployment_model": "distributed",
-        # control plane (CPM)
-        "max_nics": 36,
-        "cp": {
-            "min_ram": 4,
-            "timos_line": "slot=A chassis=ixr-x card=cpm-ixr-x",
-        },
-        # line card (IOM/XCM)
-        "lcs": [
-            {
-                "min_ram": 4,
-                "timos_line": "chassis=ixr-x slot=1 card=imm36-qsfpdd",
-                "card_config": """
-            """,
-            }
-        ],
-    },
-    ## IXR-Xs
-    ## cpu=2 ram=4 slot=A chassis=ixr-x card=cpm-ixr-x/imm6-qsfpdd+48-sfp56
     "ixr-xs": {
         "deployment_model": "distributed",
         # control plane (CPM)
-        "max_nics": 54,
+        "max_nics": 54, # 6 * qsfpdd + 48 * sfp56
         "cp": {
-            "min_ram": 4,
-            "timos_line": "slot=A chassis=ixr-x card=cpm-ixr-x",
+            "min_ram": 3,
+            "timos_line": "chassis=ixr-x slot=A card=cpm-ixr-x/imm6-qsfpdd+48-sfp56",
         },
         # line card (IOM/XCM)
         "lcs": [
             {
                 "min_ram": 4,
-                "timos_line": "chassis=ixr-x slot=1 card=imm6-qsfpdd+48-sfp56",
-                "card_config": """
-            """,
+                **line_card_config(
+                    chassis="ixr-x",
+                    card="imm6-qsfpdd+48-sfp56",
+                    mda="m6-qsfpdd+48-sfp56",
+                ),
             }
         ],
     },

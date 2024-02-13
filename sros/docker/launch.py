@@ -191,6 +191,26 @@ SROS_VARIANTS = {
             }
         ],
     },
+    "ixr-x3": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 36, # 36 * qsfpdd
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "chassis=ixr-x3 slot=A card=cpm-ixr-x/imm36-qsfpdd",
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 5,
+                **line_card_config(
+                    chassis="ixr-x3",
+                    card="imm36-qsfpdd",
+                    mda="m36-qsfpdd",
+                ),
+            }
+        ],
+    },
     "ixr-e-small": {
         "deployment_model": "distributed",
         # control plane (CPM)

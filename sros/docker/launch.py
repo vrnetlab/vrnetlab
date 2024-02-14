@@ -450,8 +450,8 @@ SROS_CL_COMMON_CFG = """
 /configure system security user "admin" access netconf
 /configure system security user "admin" access console
 /configure system security user "admin" access grpc
-/configure system security user "admin" access snmp
 /configure system security user "admin" access ftp
+/configure system security snmp community "public" r version v2c
 """
 
 # SR OS Model-Driven CLI common configuration
@@ -470,9 +470,10 @@ SROS_MD_COMMON_CFG = """
 /configure system management-interface snmp streaming admin-state enable
 /configure system security user-params local-user user "admin" access console true
 /configure system security user-params local-user user "admin" access ftp true
-/configure system security user-params local-user user "admin" access snmp true
 /configure system security user-params local-user user "admin" access netconf true
 /configure system security user-params local-user user "admin" access grpc true
+/configure system security snmp community "public" access-permissions r
+/configure system security snmp community "public" version v2c
 """
 
 # to allow writing config to tftp location we needed to spin up a normal

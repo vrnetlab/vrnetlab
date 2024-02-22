@@ -38,7 +38,8 @@ By selecting a certain variant (referred by its `name`) the VSIM will start with
 | ixr-e-small  | distributed | imm14-10g-sfp++4-1g-tx |       m14-10g-sfp++4-1g-tx       |   3+4    |    18    |
 |  ixr-e-big   | distributed |       cpm-ixr-e        |    m24-sfp++8-sfp28+2-qsfp28     |   3+4    |    34    |
 |    ixr-e2    | integrated  |       cpm-ixr-e2        |  m2-qsfpdd+2-qsfp28+24-sfp28   |    4     |    34    |
-|    ixr-ec    | integrated  |       cpm-ixr-e        |  m4-1g-tx+20-1g-sfp+6-10g-sfp+   |    4     |    34    |
+|    ixr-ec    | integrated  |       cpm-ixr-ec        |  m4-1g-tx+20-1g-sfp+6-10g-sfp+   |    4     |    34    |
+|    ixr-ec    | integrated  |       cpm-ixr-e        |  m12-sfp28+2-qsfp28   |    4     |    34    |
 |    ixr-r6    | integrated  |      cpiom-ixr-r6      |    m6-10g-sfp++1-100g-qsfp28     |    6     |    10    |
 |    ixr-s     | integrated  |       cpm-ixr-s        |        m48-sfp++6-qsfp28         |   3+4    |    54    |
 

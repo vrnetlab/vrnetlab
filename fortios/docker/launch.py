@@ -5,10 +5,9 @@ import os
 import re
 import signal
 import sys
-import time
-import vrnetlab
-import requests
 import uuid
+
+import vrnetlab
 
 
 def handle_SIGCHLD(signal, frame):
@@ -36,13 +35,14 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 
-class FortinetOS(vrnetlab.VM):
+class FortiOS_vm(vrnetlab.VM):
     def __init__(self, hostname, username, password, conn_mode):
-         
         for e in os.listdir("."):
             if re.search(".qcow2$", e):
                 disk_image = "./" + e
-        super(FortinetOS, self).__init__(username, password, disk_image=disk_image, ram=2048)
+        super(FortiOS_vm, self).__init__(
+            username, password, disk_image=disk_image, ram=2048
+        )
         self.conn_mode = conn_mode
         self.hostname = hostname
         self.api_key = ""
@@ -52,7 +52,7 @@ class FortinetOS(vrnetlab.VM):
 
     def start(self):
         # use parent class start() function
-        super(FortinetOS, self).start()
+        super(FortiOS_vm, self).start()
 
     def gen_mgmt(self):
         """Generate mgmt interface(s)
@@ -61,13 +61,13 @@ class FortinetOS(vrnetlab.VM):
         vFPC
         """
         # call parent function to generate first mgmt interface (e1000)
-        res = super(FortinetOS, self).gen_mgmt()
+        res = super(FortiOS_vm, self).gen_mgmt()
 
         return res
 
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""
-        res = super(FortinetOS, self).gen_nics()
+        res = super(FortiOS_vm, self).gen_nics()
 
         if res:
             netdev_list = list(filter(lambda ports: "netdev=" in ports, res))
@@ -102,7 +102,7 @@ class FortinetOS(vrnetlab.VM):
             if ridx == 0:  # matched login prompt, so should login
                 self.logger.debug("ridx == 0")
                 self.logger.info("matched login prompt")
-                
+
                 self.wait_write("admin", wait=None)
                 self.wait_write("", wait="admin")
                 self.wait_write("admin", wait="Password")
@@ -110,8 +110,7 @@ class FortinetOS(vrnetlab.VM):
                 self.wait_write("admin", wait=None)
                 # self.wait_write("", wait=None)
 
-#               self.wait_write("exit")
-                
+            #               self.wait_write("exit")
 
             if ridx == 1:
                 # if we dont match the FortiGate-VM64-KVM # we assume we already have some configuration and
@@ -151,20 +150,20 @@ class FortinetOS(vrnetlab.VM):
         return False
 
 
-
-
-class Fortinet(vrnetlab.VR):
+class FortiOS(vrnetlab.VR):
     def __init__(self, hostname, username, password, conn_mode):
-        super(Fortinet, self).__init__(username, password)
+        super(FortiOS, self).__init__(username, password)
 
-        self.vms = [FortinetOS(hostname, username, password, conn_mode)]
+        self.vms = [FortiOS_vm(hostname, username, password, conn_mode)]
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("--trace", action="store_true", help="enable trace level logging")
+    parser.add_argument(
+        "--trace", action="store_true", help="enable trace level logging"
+    )
     parser.add_argument("--hostname", default="vr-fortinet", help="Fortinet hostname")
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
@@ -183,5 +182,7 @@ if __name__ == "__main__":
     if args.trace:
         logger.setLevel(1)
     vrnetlab.boot_delay()
-    vr = Fortinet(args.hostname, args.username, args.password, conn_mode=args.connection_mode)
+    vr = FortiOS(
+        args.hostname, args.username, args.password, conn_mode=args.connection_mode
+    )
     vr.start()

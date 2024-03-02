@@ -10,11 +10,11 @@ import uuid
 import vrnetlab
 
 
-def handle_SIGCHLD(signal, frame):
+def handle_SIGCHLD(_unused_signal, _unused_frame):
     os.waitpid(-1, os.WNOHANG)
 
 
-def handle_SIGTERM(signal, frame):
+def handle_SIGTERM(_unused_signal, _unused_frame):
     sys.exit(0)
 
 

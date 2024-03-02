@@ -49,7 +49,8 @@ class FortiOS_vm(vrnetlab.VM):
         self.num_nics = 12
         self.highest_port = 0
         self.qemu_args.extend(["-uuid", str(uuid.uuid4())])
-        self.spins = None
+        self.spins = 0
+        self.running = None 
 
     def start(self):
         # use parent class start() function

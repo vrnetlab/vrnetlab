@@ -9,7 +9,6 @@ import uuid
 
 import vrnetlab
 
-
 def handle_SIGCHLD(_unused_signal, _unused_frame):
     os.waitpid(-1, os.WNOHANG)
 
@@ -25,6 +24,7 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
+
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
@@ -39,6 +39,7 @@ class FortiOS_vm(vrnetlab.VM):
         for e in os.listdir("."):
             if re.search(".qcow2$", e):
                 disk_image = "./" + e
+        # call parents __init__ function here
         super(FortiOS_vm, self).__init__(
             username, password, disk_image=disk_image, ram=2048
         )
@@ -137,6 +138,11 @@ class FortiOS_vm(vrnetlab.VM):
         self.spins += 1
 
     def _wait_reset(self):
+        """
+        This function waits for the login prompt after the VM was resetted. 
+        If commands are issued that enforce a reboot this comes in hand. 
+        e.g factoryreset or factoryreset2 
+        """
         self.logger.debug("waiting for reset")
         wait_spins = 0
         while wait_spins < 90:

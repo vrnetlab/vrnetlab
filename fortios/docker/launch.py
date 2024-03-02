@@ -25,11 +25,10 @@ signal.signal(signal.SIGCHLD, handle_SIGCHLD)
 TRACE_LEVEL_NUM = 9
 logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
 
-# pylint: disable=W0212
 def trace(self, message, *args, **kws):
     # Yes, logger takes its '*args' as 'args'.
     if self.isEnabledFor(TRACE_LEVEL_NUM):
-        self._log(TRACE_LEVEL_NUM, message, args, **kws)
+        self.log(TRACE_LEVEL_NUM, message, *args, **kws)
 
 
 logging.Logger.trace = trace

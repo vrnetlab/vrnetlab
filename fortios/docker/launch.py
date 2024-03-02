@@ -103,10 +103,10 @@ class FortiOS_vm(vrnetlab.VM):
                 self.logger.debug("ridx == 0")
                 self.logger.info("matched login prompt")
 
-                self.wait_write("admin", wait=None)
-                self.wait_write("", wait="admin")
-                self.wait_write("admin", wait="Password")
-                self.wait_write("admin", wait=None)
+                self.wait_write(self.username, wait=None)
+                self.wait_write("", wait=self.username)
+                self.wait_write(self.password, wait="Password")
+                self.wait_write(self.password, wait=None)
 
             if ridx == 1:
                 # if we dont match the FortiGate-VM64-KVM # we assume we already have some configuration and

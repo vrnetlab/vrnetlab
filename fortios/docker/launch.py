@@ -107,18 +107,15 @@ class FortiOS_vm(vrnetlab.VM):
                 self.wait_write("", wait="admin")
                 self.wait_write("admin", wait="Password")
                 self.wait_write("admin", wait=None)
-                self.wait_write("admin", wait=None)
-                # self.wait_write("", wait=None)
-
-            #               self.wait_write("exit")
 
             if ridx == 1:
                 # if we dont match the FortiGate-VM64-KVM # we assume we already have some configuration and
                 # may continue with configure the system to our needs.
                 self.logger.debug("ridx == 1")
                 self.wait_write("config system global", wait=None)
-                self.wait_write("set hostname fortinet-in-container", wait="global")
-                self.wait_write("end", wait="set hostname fortinet-in-container")
+                hostname_command = "set hostname " + self.hostname
+                self.wait_write(hostname_command, wait="global")
+                self.wait_write("end", wait=hostname_command)
                 self.running = True
                 self.tn.close()
                 # calc startup time
@@ -153,7 +150,8 @@ class FortiOS_vm(vrnetlab.VM):
 class FortiOS(vrnetlab.VR):
     def __init__(self, hostname, username, password, conn_mode):
         super(FortiOS, self).__init__(username, password)
-
+        self.logger.debug("Hostname")
+        self.logger.debug(hostname)
         self.vms = [FortiOS_vm(hostname, username, password, conn_mode)]
 
 

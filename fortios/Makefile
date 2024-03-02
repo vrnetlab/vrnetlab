@@ -9,6 +9,7 @@ print-all:
 	@echo "$(VERSION)"
 
 docker-build-fortigate: 
+	rm docker/$(IMAGE) docker/healthcheck.py docker/vrnetlab.py || true
 	cp $(IMAGE) docker
 	cp ../common/* docker/
 	@echo "Building docker image using $(IMAGE) as $(REGISTRY)vr-$(VR_NAME):$(VERSION)"

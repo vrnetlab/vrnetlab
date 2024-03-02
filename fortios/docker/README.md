@@ -3,4 +3,10 @@
 Experimental support for Fortinet fortigate launched by containerlab.
 
 ## Building the docker image
-To be added.
+Add your qcow2 image to the root of this folder.
+Naming format: fortios-vX.Y.Z.qcow2
+
+`make docker-build-fortigate`
+
+## Running the docker image
+`make docker-run-fortigate`

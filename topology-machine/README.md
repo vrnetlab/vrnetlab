@@ -34,6 +34,15 @@ topomachine does not currently use any information from the low level topology
 will very likely result in changes to the majority of links in the topology as
 they will be re-assigned to new interfaces.
 
+The default behavior is to sort the routers and links and assign interfaces
+numbers to links in this sorted order. There is however an option called
+`--keep-order` that will take into account the order in which the *p2p* links
+and routers in *fullmeshes* are defined in the configuration file. This makes
+the interface assignment more stable when changing the topology. It also makes
+the assignment more natural, as we tend to list the important routers (like PE
+routers) in the topology first, followed by CPEs and the like. The interfaces on
+the devices listed first will be assigned lower numbers.
+
 topology machine is able to run the machines for you, i.e. execute docker run
 for the routers defined in the configuration file and start vr-xcon with the
 relevant arguments to complete the topology:

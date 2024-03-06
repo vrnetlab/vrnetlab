@@ -62,12 +62,20 @@ docker-test:
 		$(MAKE) IMAGE=$$IMAGE docker-test-image; \
 	done
 
-CNT_PREFIX ?= $(PNS)-test-image-$(VR_NAME)
+CNT_PREFIX ?= $(PNS)-test-image-$(VR_NAME)-$(VERSION)
 TEST_TIMEOUT ?= 2400
 
-docker-test-image: CONTAINER_NAME?=$(CNT_PREFIX)-$(VERSION)
+docker-test-image: CONTAINER_NAME?=$(CNT_PREFIX)-dut
 docker-test-image:
-	../test/test-image $(TAG_NAME) $(CONTAINER_NAME) $$TEST_PARAMS
+# Run the test script in a container to ensure:
+# 1. we have all the tooling available,
+# 2. the test container and the device under test container end up in the same network.
+# We attach the hosts docker socket to allow creating new containers, but cannot
+# bind mount the working directory from a sibling container ..
+	-docker rm -f $(CNT_PREFIX)
+	docker create -t --name $(CNT_PREFIX) -v /var/run/docker.sock:/var/run/docker.sock vrnetlab/ci-builder /test-image -t $(TEST_TIMEOUT) $(TAG_NAME) $(CONTAINER_NAME) $(TEST_PARAMS)
+	docker cp $(CURDIR)/../test/test-image $(CNT_PREFIX):/
+	docker start --attach $(CNT_PREFIX)
 
 docker-test-clean:
 	docker ps -aqf name=$(CNT_PREFIX) | xargs --no-run-if-empty docker rm -f

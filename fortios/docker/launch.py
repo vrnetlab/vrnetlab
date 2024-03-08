@@ -9,6 +9,7 @@ import uuid
 
 import vrnetlab
 
+
 def handle_SIGCHLD(_unused_signal, _unused_frame):
     os.waitpid(-1, os.WNOHANG)
 
@@ -50,7 +51,7 @@ class FortiOS_vm(vrnetlab.VM):
         self.highest_port = 0
         self.qemu_args.extend(["-uuid", str(uuid.uuid4())])
         self.spins = 0
-        self.running = None 
+        self.running = None
 
     def start(self):
         # use parent class start() function
@@ -129,8 +130,6 @@ class FortiOS_vm(vrnetlab.VM):
             # no match, if we saw some output from the router it's probably
             # booting, so let's give it some more time
             if res != b"":
-                
-
                 self.logger.trace(f"OUTPUT FORTIGATE: {res.decode()}")
                 # reset spins if we saw some output
                 self.spins = 0
@@ -139,9 +138,9 @@ class FortiOS_vm(vrnetlab.VM):
 
     def _wait_reset(self):
         """
-        This function waits for the login prompt after the VM was resetted. 
-        If commands are issued that enforce a reboot this comes in hand. 
-        e.g factoryreset or factoryreset2 
+        This function waits for the login prompt after the VM was resetted.
+        If commands are issued that enforce a reboot this comes in hand.
+        e.g factoryreset or factoryreset2
         """
         self.logger.debug("waiting for reset")
         wait_spins = 0

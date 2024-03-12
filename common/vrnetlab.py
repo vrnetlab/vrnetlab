@@ -86,7 +86,8 @@ class VM:
         self.qemu_args.extend(["-monitor", "tcp:0.0.0.0:40%02d,server,nowait" % self.num])
         self.qemu_args.extend(["-m", str(ram),
                                "-serial", "telnet:0.0.0.0:50%02d,server,nowait" % self.num])
-        self.qemu_args.extend(self.create_overlay_image())
+        self.pre_start_cmds, overlay_qemu_args = self.create_overlay_image()
+        self.qemu_args.extend(overlay_qemu_args)
         # enable hardware assist if KVM is available
         if os.path.exists("/dev/kvm"):
             self.qemu_args.insert(1, '-enable-kvm')
@@ -120,6 +121,13 @@ class VM:
         cmd.extend(self.gen_nics())
 
         self.logger.debug(cmd)
+
+        # run pre-start-cmds before starting QEMU
+        if self.pre_start_cmds:
+            for pre_start_cmd in self.pre_start_cmds:
+                self.logger.info(f"Running pre-start-cmd: {pre_start_cmd}")
+                res = run_command(pre_start_cmd)
+                self.logger.debug(f"Result: {res}")
 
         self.p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE, universal_newlines=True)
@@ -238,16 +246,17 @@ class VM:
     def create_overlay_image(self):
         """Creates an overlay disk image
 
-        If one does not exist it is created. Return an array of parameters to
-        extend qemu_args. A subclass may want to override this for using
-        specific drive id.
+        *Always* create the overlay image. Return a tuple of pre-start-cmds and
+        an array of parameters to extend qemu_args. A subclass may want to
+        override this for using specific drive id. If the overlay image already
+        exists raise an exception.
         """
-        if not os.path.exists(self.overlay_disk_image):
-            self.logger.debug(f"Creating overlay disk image {self.overlay_disk_image} for {self.image}")
-            format = self._overlay_disk_image_format()
-            self.logger.debug(run_command(["qemu-img", "create", "-f", "qcow2", "-F", format, "-b", self.image, self.overlay_disk_image]))
-        return ["-drive", "if=ide,file=%s" % self.overlay_disk_image]
-
+        if os.path.exists(self.overlay_disk_image):
+            raise Exception(f"Overlay image {self.overlay_disk_image} already exists for base {self.image}")
+        self.logger.debug(f"Adding creation of overlay disk image {self.overlay_disk_image} with base {self.image} to pre_start_cmds")
+        format = self._overlay_disk_image_format()
+        pre_start_cmds = ["qemu-img", "create", "-f", "qcow2", "-F", format, "-b", self.image, self.overlay_disk_image]
+        return [pre_start_cmds], ["-drive", "if=ide,file=%s" % self.overlay_disk_image]
 
     def stop(self):
         """ Stop this VM
@@ -274,14 +283,16 @@ class VM:
                 # just assume it's dead or will die?
                 self.p.wait(timeout=10)
 
-
-
     def restart(self):
         """ Restart this VM
+
+        Also removes the overlay disk image, effectively restoring the state of
+        the VM to initial image.
         """
         self.stop()
+        if os.path.exists(self.overlay_disk_image):
+            os.remove(self.overlay_disk_image)
         self.start()
-
 
 
     def wait_write(self, cmd, wait='#', con=None):

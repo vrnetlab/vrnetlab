@@ -34,8 +34,9 @@ logging.Logger.trace = trace
 
 class NXOS9K_vm(vrnetlab.VM):
     def __init__(self, bios, username, password, num_nics):
-        for e in os.listdir("/"):
-            if re.search(".qcow2$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
         # the parent constructor needs to call create_overlay_image,
         # so must initialize the other parameters first
@@ -49,22 +50,17 @@ class NXOS9K_vm(vrnetlab.VM):
 
 
     def create_overlay_image(self):
+        pre_start_cmds, _ = super().create_overlay_image()
         extended_args = ['-nographic', '-bios', self.bios, '-smp', '2']
-        # remove previously old overlay image, otherwise boot fails
-        if os.path.exists(self.overlay_disk_image):
-            os.remove(self.overlay_disk_image)
-        # now re-create it!
-        super().create_overlay_image()
         # use SATA driver for disk and set to drive 0
         extended_args.extend(['-device', 'ahci,id=ahci0,bus=pci.0',
             '-drive', 'if=none,file=%s,id=drive-sata-disk0,format=qcow2' % self.overlay_disk_image,
             '-device', 'ide-drive,bus=ahci0.0,drive=drive-sata-disk0,id=drive-sata-disk0'])
         # create initial config and load it
-        vrnetlab.run_command(['genisoimage', '-o', '/cfg.iso', '-l', '--iso-level', '2', 'nxos_config.txt'])
+        pre_start_cmds.append(['genisoimage', '-o', '/cfg.iso', '-l', '--iso-level', '2', 'nxos_config.txt'])
         extended_args.extend(['-drive', 'file=cfg.iso,media=cdrom'])
 
-
-        return extended_args
+        return pre_start_cmds, extended_args
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -76,10 +72,7 @@ class NXOS9K_vm(vrnetlab.VM):
         if self.spins > 300:
             # too many spins with no result ->  give up
             self.prompted = False
-            self.stop()
-            # re-create overlay image
-            self.create_overlay_image()
-            self.start()
+            self.restart()
             return
 
         username, password = self.credentials[0]

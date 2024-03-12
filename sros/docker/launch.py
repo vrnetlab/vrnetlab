@@ -337,7 +337,7 @@ class SROS(vrnetlab.VR):
         major_release = 0
 
         # move files into place
-        for e in os.listdir("/"):
+        for e in sorted(os.listdir("/")):
             match = re.match(r'[^0-9]+([0-9]+)\S+\.qcow2$', e)
             if match:
                 major_release = int(match.group(1))

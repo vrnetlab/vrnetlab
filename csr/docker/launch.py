@@ -34,10 +34,11 @@ logging.Logger.trace = trace
 
 class CSR_vm(vrnetlab.VM):
     def __init__(self, username, password, install_mode=False):
-        for e in os.listdir("/"):
-            if re.search(".qcow2$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
-            if re.search("\.license$", e):
+            if re.search(r"\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.lic")
 
         self.license = False

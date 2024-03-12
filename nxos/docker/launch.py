@@ -34,8 +34,9 @@ logging.Logger.trace = trace
 
 class NXOS_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        for e in os.listdir("/"):
-            if re.search(".qcow2$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(NXOS_vm, self).__init__(username, password, disk_image=disk_image)
         self.num_nics = 144

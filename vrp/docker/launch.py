@@ -31,8 +31,9 @@ class simulator_VM(vrnetlab.VM):
     no_paging_command = 'screen-length 0 temporary'
 
     def __init__(self, username, password):
-        for e in os.listdir("/"):
-            if re.search(".qcow2$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and  re.search(".qcow2$", e):
                 disk_image = "/" + e
 
         self.ram = 16384

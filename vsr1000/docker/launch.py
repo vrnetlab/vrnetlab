@@ -31,8 +31,9 @@ logging.Logger.trace = trace
 
 class VSR_vm(vrnetlab.VM):
     def __init__(self, username, password):
-        for e in os.listdir("/"):
-            if re.search(".qco$", e):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qco$", e):
                 disk_image = "/" + e
         super(VSR_vm, self).__init__(username, password, disk_image=disk_image, ram=1024)
 

@@ -1,14 +1,13 @@
 # vrnetlab / Fortinet FortiOS v7
 
-=======================
-Experimental support for the Fortinet FortiOS launched by containerlab.
+Support for the Fortinet Fortigate launched by containerlab.
 
 ## Building the docker image
 
 Add your qcow2 image to the root of this folder.
 Naming format: fortios-vX.Y.Z.qcow2
 
-`make docker-build-fortigate`
+`make`
 
 ## Running the docker image manually
 

@@ -49,6 +49,9 @@ vr-xcon:
 vr-bgp:
   <<: *build-template
 
+topology-machine:
+  extends: .build
+
 csr:
   <<: *build-template
 

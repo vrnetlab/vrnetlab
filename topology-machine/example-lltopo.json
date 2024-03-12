@@ -1,0 +1,990 @@
+{
+    "hubs": {
+        "ams-mgmt": [
+            {
+                "interface": "GigabitEthernet0/0/0/6",
+                "numeric": 7,
+                "router": "ams-core-1"
+            },
+            {
+                "interface": "GigabitEthernet0/0/0/6",
+                "numeric": 7,
+                "router": "ams-core-2"
+            },
+            {
+                "interface": "GigabitEthernet0/0/0/2",
+                "numeric": 3,
+                "router": "ams-edge-1"
+            }
+        ]
+    },
+    "links": [
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/0",
+                "numeric": 1,
+                "router": "ams-edge-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/0",
+                "numeric": 1,
+                "router": "ams-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/1",
+                "numeric": 2,
+                "router": "ams-edge-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/0",
+                "numeric": 1,
+                "router": "ams-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/0",
+                "numeric": 1,
+                "router": "fra-core-2"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/0",
+                "numeric": 1,
+                "router": "sgp-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/1",
+                "numeric": 2,
+                "router": "fra-core-2"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/0",
+                "numeric": 1,
+                "router": "kul-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/0",
+                "numeric": 1,
+                "router": "fra-edge-1"
+            },
+            "right": {
+                "interface": "ge-0/0/0",
+                "numeric": 1,
+                "router": "fra-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/1",
+                "numeric": 2,
+                "router": "fra-edge-1"
+            },
+            "right": {
+                "interface": "ge-0/0/2",
+                "numeric": 3,
+                "router": "fra-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "1/1/1",
+                "numeric": 1,
+                "router": "par-core-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/1",
+                "numeric": 2,
+                "router": "sgp-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "1/1/2",
+                "numeric": 2,
+                "router": "par-core-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/1",
+                "numeric": 2,
+                "router": "kul-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "1/1/1",
+                "numeric": 1,
+                "router": "par-edge-1"
+            },
+            "right": {
+                "interface": "1/1/3",
+                "numeric": 3,
+                "router": "par-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "1/1/2",
+                "numeric": 2,
+                "router": "par-edge-1"
+            },
+            "right": {
+                "interface": "1/1/1",
+                "numeric": 1,
+                "router": "par-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/0",
+                "numeric": 1,
+                "router": "png-edge-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/2",
+                "numeric": 3,
+                "router": "sgp-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/1",
+                "numeric": 2,
+                "router": "png-edge-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/2",
+                "numeric": 3,
+                "router": "kul-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/3",
+                "numeric": 4,
+                "router": "kul-core-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/3",
+                "numeric": 4,
+                "router": "sgp-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/1",
+                "numeric": 2,
+                "router": "ams-core-1"
+            },
+            "right": {
+                "interface": "GigabitEthernet0/0/0/1",
+                "numeric": 2,
+                "router": "ams-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/2",
+                "numeric": 3,
+                "router": "ams-core-1"
+            },
+            "right": {
+                "interface": "ge-0/0/1",
+                "numeric": 2,
+                "router": "fra-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/3",
+                "numeric": 4,
+                "router": "ams-core-1"
+            },
+            "right": {
+                "interface": "ge-0/0/3",
+                "numeric": 4,
+                "router": "fra-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/4",
+                "numeric": 5,
+                "router": "ams-core-1"
+            },
+            "right": {
+                "interface": "1/1/4",
+                "numeric": 4,
+                "router": "par-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/5",
+                "numeric": 6,
+                "router": "ams-core-1"
+            },
+            "right": {
+                "interface": "1/1/2",
+                "numeric": 2,
+                "router": "par-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/2",
+                "numeric": 3,
+                "router": "ams-core-2"
+            },
+            "right": {
+                "interface": "ge-0/0/2",
+                "numeric": 3,
+                "router": "fra-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/3",
+                "numeric": 4,
+                "router": "ams-core-2"
+            },
+            "right": {
+                "interface": "ge-0/0/4",
+                "numeric": 5,
+                "router": "fra-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/4",
+                "numeric": 5,
+                "router": "ams-core-2"
+            },
+            "right": {
+                "interface": "1/1/5",
+                "numeric": 5,
+                "router": "par-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "GigabitEthernet0/0/0/5",
+                "numeric": 6,
+                "router": "ams-core-2"
+            },
+            "right": {
+                "interface": "1/1/3",
+                "numeric": 3,
+                "router": "par-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/3",
+                "numeric": 4,
+                "router": "fra-core-1"
+            },
+            "right": {
+                "interface": "ge-0/0/5",
+                "numeric": 6,
+                "router": "fra-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/4",
+                "numeric": 5,
+                "router": "fra-core-1"
+            },
+            "right": {
+                "interface": "1/1/6",
+                "numeric": 6,
+                "router": "par-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/5",
+                "numeric": 6,
+                "router": "fra-core-1"
+            },
+            "right": {
+                "interface": "1/1/4",
+                "numeric": 4,
+                "router": "par-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/6",
+                "numeric": 7,
+                "router": "fra-core-2"
+            },
+            "right": {
+                "interface": "2/1/1",
+                "numeric": 7,
+                "router": "par-core-1"
+            }
+        },
+        {
+            "left": {
+                "interface": "ge-0/0/7",
+                "numeric": 8,
+                "router": "fra-core-2"
+            },
+            "right": {
+                "interface": "1/1/5",
+                "numeric": 5,
+                "router": "par-core-2"
+            }
+        },
+        {
+            "left": {
+                "interface": "2/1/2",
+                "numeric": 8,
+                "router": "par-core-1"
+            },
+            "right": {
+                "interface": "1/1/6",
+                "numeric": 6,
+                "router": "par-core-2"
+            }
+        }
+    ],
+    "links_by_nodes": {
+        "ams-core-1": {
+            "ams-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "ams-edge-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "GigabitEthernet0/0/0/0",
+                    "their_numeric": 1
+                }
+            ],
+            "fra-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/2",
+                    "our_numeric": 3,
+                    "their_interface": "ge-0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "fra-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/3",
+                    "our_numeric": 4,
+                    "their_interface": "ge-0/0/3",
+                    "their_numeric": 4
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/4",
+                    "our_numeric": 5,
+                    "their_interface": "1/1/4",
+                    "their_numeric": 4
+                }
+            ],
+            "par-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/5",
+                    "our_numeric": 6,
+                    "their_interface": "1/1/2",
+                    "their_numeric": 2
+                }
+            ]
+        },
+        "ams-core-2": {
+            "ams-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "ams-edge-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "GigabitEthernet0/0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "fra-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/2",
+                    "our_numeric": 3,
+                    "their_interface": "ge-0/0/2",
+                    "their_numeric": 3
+                }
+            ],
+            "fra-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/3",
+                    "our_numeric": 4,
+                    "their_interface": "ge-0/0/4",
+                    "their_numeric": 5
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/4",
+                    "our_numeric": 5,
+                    "their_interface": "1/1/5",
+                    "their_numeric": 5
+                }
+            ],
+            "par-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/5",
+                    "our_numeric": 6,
+                    "their_interface": "1/1/3",
+                    "their_numeric": 3
+                }
+            ]
+        },
+        "ams-edge-1": {
+            "ams-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "GigabitEthernet0/0/0/0",
+                    "their_numeric": 1
+                }
+            ],
+            "ams-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/0",
+                    "their_numeric": 1
+                }
+            ]
+        },
+        "fra-core-1": {
+            "ams-core-1": [
+                {
+                    "our_interface": "ge-0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/2",
+                    "their_numeric": 3
+                }
+            ],
+            "ams-core-2": [
+                {
+                    "our_interface": "ge-0/0/2",
+                    "our_numeric": 3,
+                    "their_interface": "GigabitEthernet0/0/0/2",
+                    "their_numeric": 3
+                }
+            ],
+            "fra-core-2": [
+                {
+                    "our_interface": "ge-0/0/3",
+                    "our_numeric": 4,
+                    "their_interface": "ge-0/0/5",
+                    "their_numeric": 6
+                }
+            ],
+            "fra-edge-1": [
+                {
+                    "our_interface": "ge-0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "ge-0/0/0",
+                    "their_numeric": 1
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "ge-0/0/4",
+                    "our_numeric": 5,
+                    "their_interface": "1/1/6",
+                    "their_numeric": 6
+                }
+            ],
+            "par-core-2": [
+                {
+                    "our_interface": "ge-0/0/5",
+                    "our_numeric": 6,
+                    "their_interface": "1/1/4",
+                    "their_numeric": 4
+                }
+            ]
+        },
+        "fra-core-2": {
+            "ams-core-1": [
+                {
+                    "our_interface": "ge-0/0/3",
+                    "our_numeric": 4,
+                    "their_interface": "GigabitEthernet0/0/0/3",
+                    "their_numeric": 4
+                }
+            ],
+            "ams-core-2": [
+                {
+                    "our_interface": "ge-0/0/4",
+                    "our_numeric": 5,
+                    "their_interface": "GigabitEthernet0/0/0/3",
+                    "their_numeric": 4
+                }
+            ],
+            "fra-core-1": [
+                {
+                    "our_interface": "ge-0/0/5",
+                    "our_numeric": 6,
+                    "their_interface": "ge-0/0/3",
+                    "their_numeric": 4
+                }
+            ],
+            "fra-edge-1": [
+                {
+                    "our_interface": "ge-0/0/2",
+                    "our_numeric": 3,
+                    "their_interface": "ge-0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "kul-core-1": [
+                {
+                    "our_interface": "ge-0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/0",
+                    "their_numeric": 1
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "ge-0/0/6",
+                    "our_numeric": 7,
+                    "their_interface": "2/1/1",
+                    "their_numeric": 7
+                }
+            ],
+            "par-core-2": [
+                {
+                    "our_interface": "ge-0/0/7",
+                    "our_numeric": 8,
+                    "their_interface": "1/1/5",
+                    "their_numeric": 5
+                }
+            ],
+            "sgp-core-1": [
+                {
+                    "our_interface": "ge-0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "GigabitEthernet0/0/0/0",
+                    "their_numeric": 1
+                }
+            ]
+        },
+        "fra-edge-1": {
+            "fra-core-1": [
+                {
+                    "our_interface": "ge-0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "ge-0/0/0",
+                    "their_numeric": 1
+                }
+            ],
+            "fra-core-2": [
+                {
+                    "our_interface": "ge-0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "ge-0/0/2",
+                    "their_numeric": 3
+                }
+            ]
+        },
+        "kul-core-1": {
+            "fra-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "ge-0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "1/1/2",
+                    "their_numeric": 2
+                }
+            ],
+            "png-edge-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/2",
+                    "our_numeric": 3,
+                    "their_interface": "GigabitEthernet0/0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "sgp-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/3",
+                    "our_numeric": 4,
+                    "their_interface": "GigabitEthernet0/0/0/3",
+                    "their_numeric": 4
+                }
+            ]
+        },
+        "par-core-1": {
+            "ams-core-1": [
+                {
+                    "our_interface": "1/1/4",
+                    "our_numeric": 4,
+                    "their_interface": "GigabitEthernet0/0/0/4",
+                    "their_numeric": 5
+                }
+            ],
+            "ams-core-2": [
+                {
+                    "our_interface": "1/1/5",
+                    "our_numeric": 5,
+                    "their_interface": "GigabitEthernet0/0/0/4",
+                    "their_numeric": 5
+                }
+            ],
+            "fra-core-1": [
+                {
+                    "our_interface": "1/1/6",
+                    "our_numeric": 6,
+                    "their_interface": "ge-0/0/4",
+                    "their_numeric": 5
+                }
+            ],
+            "fra-core-2": [
+                {
+                    "our_interface": "2/1/1",
+                    "our_numeric": 7,
+                    "their_interface": "ge-0/0/6",
+                    "their_numeric": 7
+                }
+            ],
+            "kul-core-1": [
+                {
+                    "our_interface": "1/1/2",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/1",
+                    "their_numeric": 2
+                }
+            ],
+            "par-core-2": [
+                {
+                    "our_interface": "2/1/2",
+                    "our_numeric": 8,
+                    "their_interface": "1/1/6",
+                    "their_numeric": 6
+                }
+            ],
+            "par-edge-1": [
+                {
+                    "our_interface": "1/1/3",
+                    "our_numeric": 3,
+                    "their_interface": "1/1/1",
+                    "their_numeric": 1
+                }
+            ],
+            "sgp-core-1": [
+                {
+                    "our_interface": "1/1/1",
+                    "our_numeric": 1,
+                    "their_interface": "GigabitEthernet0/0/0/1",
+                    "their_numeric": 2
+                }
+            ]
+        },
+        "par-core-2": {
+            "ams-core-1": [
+                {
+                    "our_interface": "1/1/2",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/5",
+                    "their_numeric": 6
+                }
+            ],
+            "ams-core-2": [
+                {
+                    "our_interface": "1/1/3",
+                    "our_numeric": 3,
+                    "their_interface": "GigabitEthernet0/0/0/5",
+                    "their_numeric": 6
+                }
+            ],
+            "fra-core-1": [
+                {
+                    "our_interface": "1/1/4",
+                    "our_numeric": 4,
+                    "their_interface": "ge-0/0/5",
+                    "their_numeric": 6
+                }
+            ],
+            "fra-core-2": [
+                {
+                    "our_interface": "1/1/5",
+                    "our_numeric": 5,
+                    "their_interface": "ge-0/0/7",
+                    "their_numeric": 8
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "1/1/6",
+                    "our_numeric": 6,
+                    "their_interface": "2/1/2",
+                    "their_numeric": 8
+                }
+            ],
+            "par-edge-1": [
+                {
+                    "our_interface": "1/1/1",
+                    "our_numeric": 1,
+                    "their_interface": "1/1/2",
+                    "their_numeric": 2
+                }
+            ]
+        },
+        "par-edge-1": {
+            "par-core-1": [
+                {
+                    "our_interface": "1/1/1",
+                    "our_numeric": 1,
+                    "their_interface": "1/1/3",
+                    "their_numeric": 3
+                }
+            ],
+            "par-core-2": [
+                {
+                    "our_interface": "1/1/2",
+                    "our_numeric": 2,
+                    "their_interface": "1/1/1",
+                    "their_numeric": 1
+                }
+            ]
+        },
+        "png-edge-1": {
+            "kul-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "GigabitEthernet0/0/0/2",
+                    "their_numeric": 3
+                }
+            ],
+            "sgp-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "GigabitEthernet0/0/0/2",
+                    "their_numeric": 3
+                }
+            ]
+        },
+        "sgp-core-1": {
+            "fra-core-2": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/0",
+                    "our_numeric": 1,
+                    "their_interface": "ge-0/0/0",
+                    "their_numeric": 1
+                }
+            ],
+            "kul-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/3",
+                    "our_numeric": 4,
+                    "their_interface": "GigabitEthernet0/0/0/3",
+                    "their_numeric": 4
+                }
+            ],
+            "par-core-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/1",
+                    "our_numeric": 2,
+                    "their_interface": "1/1/1",
+                    "their_numeric": 1
+                }
+            ],
+            "png-edge-1": [
+                {
+                    "our_interface": "GigabitEthernet0/0/0/2",
+                    "our_numeric": 3,
+                    "their_interface": "GigabitEthernet0/0/0/0",
+                    "their_numeric": 1
+                }
+            ]
+        }
+    },
+    "routers": {
+        "ams-core-1": {
+            "id": 1,
+            "interfaces": {
+                "1": "GigabitEthernet0/0/0/0",
+                "2": "GigabitEthernet0/0/0/1",
+                "3": "GigabitEthernet0/0/0/2",
+                "4": "GigabitEthernet0/0/0/3",
+                "5": "GigabitEthernet0/0/0/4",
+                "6": "GigabitEthernet0/0/0/5",
+                "7": "GigabitEthernet0/0/0/6"
+            },
+            "run_args": "--foo bar 1",
+            "type": "xrv",
+            "version": "5.1.1.54U"
+        },
+        "ams-core-2": {
+            "id": 2,
+            "interfaces": {
+                "1": "GigabitEthernet0/0/0/0",
+                "2": "GigabitEthernet0/0/0/1",
+                "3": "GigabitEthernet0/0/0/2",
+                "4": "GigabitEthernet0/0/0/3",
+                "5": "GigabitEthernet0/0/0/4",
+                "6": "GigabitEthernet0/0/0/5",
+                "7": "GigabitEthernet0/0/0/6"
+            },
+            "run_args": [
+                "--foo",
+                "bar",
+                1
+            ],
+            "type": "xrv",
+            "version": "5.1.1.54U"
+        },
+        "ams-edge-1": {
+            "id": 100,
+            "interfaces": {
+                "1": "GigabitEthernet0/0/0/0",
+                "2": "GigabitEthernet0/0/0/1",
+                "3": "GigabitEthernet0/0/0/2"
+            },
+            "type": "xrv",
+            "version": "5.1.1.54U"
+        },
+        "fra-core-1": {
+            "id": 3,
+            "interfaces": {
+                "1": "ge-0/0/0",
+                "2": "ge-0/0/1",
+                "3": "ge-0/0/2",
+                "4": "ge-0/0/3",
+                "5": "ge-0/0/4",
+                "6": "ge-0/0/5"
+            },
+            "run_args": {
+                "--foo": [
+                    "bar",
+                    1
+                ]
+            },
+            "type": "vmx",
+            "version": "16.1R1.7"
+        },
+        "fra-core-2": {
+            "id": 4,
+            "interfaces": {
+                "1": "ge-0/0/0",
+                "2": "ge-0/0/1",
+                "3": "ge-0/0/2",
+                "4": "ge-0/0/3",
+                "5": "ge-0/0/4",
+                "6": "ge-0/0/5",
+                "7": "ge-0/0/6",
+                "8": "ge-0/0/7"
+            },
+            "type": "vmx",
+            "version": "16.1R1.7"
+        },
+        "fra-edge-1": {
+            "id": 101,
+            "interfaces": {
+                "1": "ge-0/0/0",
+                "2": "ge-0/0/1"
+            },
+            "type": "vmx",
+            "version": "16.1R1.7"
+        },
+        "kul-core-1": {
+            "id": 8,
+            "interfaces": {
+                "1": "GigabitEthernet0/0/0/0",
+                "2": "GigabitEthernet0/0/0/1",
+                "3": "GigabitEthernet0/0/0/2",
+                "4": "GigabitEthernet0/0/0/3"
+            },
+            "type": "xrv",
+            "version": "5.1.1.54U"
+        },
+        "par-core-1": {
+            "id": 5,
+            "interfaces": {
+                "1": "1/1/1",
+                "2": "1/1/2",
+                "3": "1/1/3",
+                "4": "1/1/4",
+                "5": "1/1/5",
+                "6": "1/1/6",
+                "7": "2/1/1",
+                "8": "2/1/2"
+            },
+            "type": "sros",
+            "version": "13.0.B1-4281"
+        },
+        "par-core-2": {
+            "id": 6,
+            "interfaces": {
+                "1": "1/1/1",
+                "2": "1/1/2",
+                "3": "1/1/3",
+                "4": "1/1/4",
+                "5": "1/1/5",
+                "6": "1/1/6"
+            },
+            "type": "sros",
+            "version": "13.0.B1-4281"
+        },
+        "par-edge-1": {
+            "id": 102,
+            "interfaces": {
+                "1": "1/1/1",
+                "2": "1/1/2"
+            },
+            "type": "sros",
+            "version": "13.0.B1-4281"
+        },
+        "png-edge-1": {
+            "id": 103,
+            "interfaces": {
+                "1": "GigabitEthernet0/0/0/0",
+                "2": "GigabitEthernet0/0/0/1"
+            },
+            "type": "xrv",
+            "version": "5.1.1.54U"
+        },
+        "sgp-core-1": {
+            "id": 7,
+            "interfaces": {
+                "1": "GigabitEthernet0/0/0/0",
+                "2": "GigabitEthernet0/0/0/1",
+                "3": "GigabitEthernet0/0/0/2",
+                "4": "GigabitEthernet0/0/0/3"
+            },
+            "type": "xrv",
+            "version": "5.1.1.54U"
+        }
+    }
+}

@@ -53,6 +53,28 @@ jobs:
         if: always()
         run: make -C vr-bgp docker-test-clean
 
+  test-topomachine:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build topomachine
+        run: |
+          make topology-machine
+
+      - name: Test topomachine
+        run: |
+          make topology-machine-test
+
+      - name: Save topomachine logs
+        if: always()
+        run: |
+          make -C topology-machine docker-test-save-logs
+
+      - name: Clean test topomachine containers
+        if: always()
+        run: make -C topology-machine docker-test-clean
+
   test-vr:
     runs-on: ["self-hosted"]
     container:

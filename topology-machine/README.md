@@ -177,16 +177,21 @@ The topomachine docker container can be used to generate the low level topology
 topology (--run), and to generate custom output using a jinja2 template 
 (--template).
 
+The topomachine binary is placed in `/usr/local/bin/topomachine` and is also set
+as an *ENTRYPOINT* for the container. The *WORKDIR* is set to `/data` so you can
+bind mount a host directory to `/data` and use `docker run ...` as a drop-in
+replacement for the topomachine command.
+
 For example:
 
 generate the low level topology:
 ```
-$ docker run -t -v $(pwd):/data topomachine --build /data/example-hltopo.json > example-lltopo.json
+$ docker run -t -v $(pwd):/data topomachine --build example-hltopo.json > example-lltopo.json
 ```
 
 generate the docker run commands:
 ```
-$ docker run -v $(pwd):/data topomachine --run /data/example-lltopo.json --dry-run
+$ docker run -v $(pwd):/data topomachine --run example-lltopo.json --dry-run
 The following commands would be executed:
 docker run --privileged -d --name ams-core-1 vrnetlab/vr-xrv:5.1.1.54U --foo bar 1
 docker run --privileged -d --name ams-core-2 vrnetlab/vr-xrv:5.1.1.54U --foo bar 1
@@ -204,14 +209,15 @@ docker run --rm --privileged -d --name vr-xcon --link ams-core-1:ams-core-1 --li
 docker run --privileged -d --name vr-xcon-hub-ams-mgmt --link ams-core-1:ams-core-1 --link ams-core-2:ams-core-2 --link ams-edge-1:ams-edge-1 --link fra-core-1:fra-core-1 --link fra-core-2:fra-core-2 --link fra-edge-1:fra-edge-1 --link kul-core-1:kul-core-1 --link par-core-1:par-core-1 --link par-core-2:par-core-2 --link par-edge-1:par-edge-1 --link png-edge-1:png-edge-1 --link sgp-core-1:sgp-core-1 vrnetlab/vr-xcon --hub ams-core-1/7 ams-core-2/7 ams-edge-1/3
 ```
 
-start the topology:
+To start the topology, topomachine needs access to the docker socket. Add the
+`-v /var/run/docker.sock:/var/run/docker.sock` option to the `docker run ...`:
 ```
-$ docker run -v $(pwd):/data -v /var/run/docker.sock:/var/run/docker.sock topomachine --run /data/example-lltopo.json
+$ docker run -v $(pwd):/data -v /var/run/docker.sock:/var/run/docker.sock topomachine --run example-lltopo.json
 ```
 
 generate custom output using a jinja2 template:
 ```
-$ docker run -t -v $(pwd):/data topomachine --template /data/example-lltopo.json /data/example.template
+$ docker run -t -v $(pwd):/data topomachine --template example-lltopo.json example.template
 infrastructure {
     base-config fra-edge-1 {
         numeric-id 101;

@@ -5,9 +5,7 @@ IMAGE_GLOB=*.qcow2
 -include ../makefile.include
 IMAGE=$(shell find . -type f -iname *.qcow2 | head -n1 | cut -c3- )
 VERSION=$(shell echo $(IMAGE) | sed 's|^fortios-||' | sed -e 's/\.qcow2//')
-print-all:
-	@echo "$(VERSION)"
-	@echo "$(IMAGE)"
+.DEFAULT_GOAL=docker-build-fortigate
 docker-build-fortigate: 
 	-rm -f docker/$(IMAGE) docker/healthcheck.py docker/vrnetlab.py
 	cp $(IMAGE) docker
@@ -17,4 +15,4 @@ docker-build-fortigate:
 	-rm -f docker/$(IMAGE) docker/healthcheck.py docker/vrnetlab.py
 
 docker-run-fortigate:
-	docker run -it -d --privileged --rm $(REGISTRY)vr-$(VR_NAME):$(VERSION) --trace
+	docker run -it -d --privileged --rm $(REGISTRY)vr-$(VR_NAME):$(VERSION) 

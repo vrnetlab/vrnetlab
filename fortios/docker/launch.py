@@ -73,24 +73,6 @@ class FortiOS_vm(vrnetlab.VM):
             ]
         )
 
-    def gen_nics(self):
-        """Generate qemu args for the normal traffic carrying interface(s)"""
-        res = super(FortiOS_vm, self).gen_nics()
-
-        if res:
-            netdev_list = list(filter(lambda ports: "netdev=" in ports, res))
-
-            port_list = []
-
-            for netdev in netdev_list:
-                port_list.append(int(netdev.split(",")[1][-2:]))
-
-            self.highest_port = max(port_list)
-
-            return res
-
-        else:
-            return res
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work.

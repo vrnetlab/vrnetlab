@@ -14,3 +14,7 @@ Naming format: fortios-vX.Y.Z.qcow2
 If you need to run the image without using containerlab:
 
 `make docker-run-fortigate`
+
+## Tested versions
+
+* Fortigate 7.0.14 KVM

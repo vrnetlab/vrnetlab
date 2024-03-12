@@ -42,31 +42,36 @@ class FortiOS_vm(vrnetlab.VM):
                 disk_image = "./" + e
         # call parents __init__ function here
         super(FortiOS_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=2048
+            username,
+            password,
+            disk_image=disk_image,
+            ram=2048,
+            driveif="virtio",
+            # fortios fails to respond to network requests if the pci bus is setup :D
+            provision_pci_bus=False,
         )
         self.conn_mode = conn_mode
         self.hostname = hostname
-        self.api_key = ""
         self.num_nics = 12
+        self.nic_type = "virtio-net-pci"
         self.highest_port = 0
         self.qemu_args.extend(["-uuid", str(uuid.uuid4())])
+        self.qemu_args.extend(["-smp", "1", "-cpu", "host"])
         self.spins = 0
         self.running = None
 
-    def start(self):
-        # use parent class start() function
-        super(FortiOS_vm, self).start()
+        # set up the extra empty disk image
+        # for fortigate logs
+        vrnetlab.run_command(
+            ["qemu-img", "create", "-f", "qcow2", "empty.qcow2", "30G"]
+        )
 
-    def gen_mgmt(self):
-        """Generate mgmt interface(s)
-
-        We override the default function since we want a virtio NIC to the
-        vFPC
-        """
-        # call parent function to generate first mgmt interface (e1000)
-        res = super(FortiOS_vm, self).gen_mgmt()
-
-        return res
+        self.qemu_args.extend(
+            [
+                "-drive",
+                "if=virtio,format=qcow2,file=empty.qcow2,index=1",
+            ]
+        )
 
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""

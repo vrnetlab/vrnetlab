@@ -19,11 +19,17 @@ RUN apt-get update -qy \
     tcpdump \
     telnet \
     wget \
+    sudo \
  && rm -rf /var/lib/apt/lists/* \
  && wget -O exabgp.tar.gz https://github.com/Exa-Networks/exabgp/archive/3.4.18.tar.gz \
  && tar zxvf exabgp.tar.gz \
  && cd /exabgp* && python setup.py install \
  && cd / && rm -rf exabgp*
+
+# Allow nobody to sudo without password. The nobody user is used by ExaBGP and we have the
+# option to configure a loopback interface for the announced prefixes.
+RUN usermod -aG sudo nobody \
+ && echo "nobody ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 ADD . /
 

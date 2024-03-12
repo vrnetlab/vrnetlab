@@ -50,6 +50,10 @@ different next-hops apart. This normally does not happen for vr-bgp since we
 only have one BGP neighbor per AFI and that neighbor will only announce one
 next-hop per prefix but this might make us incompatible with BGP add-path.
 
+In addition to announcing prefixes, vr-bgp may also configure the container with
+a pingable addresses on loopback for the announced prefixe. This is useful for
+testing reachability of the announced prefixes throughout the network.
+
 API
 ---
 The vr-bgp API is a very simple RESTful API running by default on port 5000, exposing three endpoints:
@@ -129,7 +133,9 @@ list of integers `[2792, 10300]`.
         { "prefix": "21.0.0.0/24" },
         { "prefix": "21.1.0.0/24", "community": ["2792:10300"]},
         { "prefix": "21.2.0.0/24", "as-path": [21, 65000] },
-        { "prefix": "21.3.0.0/24", "med": 100 }
+        { "prefix": "21.3.0.0/24", "med": 100 },
+        { "prefix": "21.4.0.0/24", "pingable-auto": true },
+        { "prefix": "21.5.0.0/24", "pingable-address": "21.5.0.42", "pingable-address-as-source": true }
     ]
 }
 ```
@@ -137,12 +143,26 @@ list of integers `[2792, 10300]`.
 The example shows announcement configuration for four prefixes. By default, all
 prefixes originate in the local AS (21 in this example).
 
-Additional attributes exposed through the API are:
+Additional BGP attributes exposed through the API are:
  * `community`: set any number of communities by providing a list of strings
    `["x:y", "w:z"]`
  * `as-path`: override the default as-path (local-as) by providing a list of
    integers `[21, 65000]`
  * `med`: set multi-exit discriminator (MED) attribute to an integer value
+
+The `pingable-*` fields are not related to BGP attributes, but are used to
+configure the container with a pingable address on loopback. The description of
+the fields is as follows:
+ * `pingable-auto`: automatically assign a pingable address on loopback for the
+   announced prefix by using the first host address from the prefix
+ * `pingable-address`: assign a specific pingable address on loopback for the
+   announced prefix
+ * `pingable-address-as-source`: use the pingable address as source address for
+   the default route
+
+With `pingable-address-as-source` set to `true`, any application running in the
+container will use the pingable address as source address for outgoing traffic
+matching to the default route.
 
 Example
 -------

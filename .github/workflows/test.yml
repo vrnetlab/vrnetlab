@@ -84,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ['csr', 'nxos', 'nxos9kv', 'routeros', 'sros', 'veos', 'vmx', 'vqfx', 'vrp', 'vsr1000', 'xrv', 'xrv9k']
+        platform: ['csr', 'nxos', 'nxos9kv', 'routeros', 'sros', 'ucpe-oneos', 'veos', 'vmx', 'vqfx', 'vrp', 'vsr1000', 'xrv', 'xrv9k']
 
     steps:
       - uses: actions/checkout@v3

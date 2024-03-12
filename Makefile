@@ -1,5 +1,5 @@
 IMAGES_DIR=
-VRS = vr-xcon vr-bgp topology-machine csr nxos nxos9kv routeros sros veos vmx vsr1000 vqfx vrp xrv xrv9k
+VRS = vr-xcon vr-bgp topology-machine csr nxos nxos9kv routeros sros ucpe-oneos veos vmx vsr1000 vqfx vrp xrv xrv9k
 VRS_PUSH = $(VRS:=-push)
 VRS_TEST = $(VRS:=-test)
 

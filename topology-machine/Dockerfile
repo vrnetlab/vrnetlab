@@ -23,7 +23,6 @@ RUN apt-get update -qy \
  && rm -rf /var/lib/apt/lists/*
 
 ADD topomachine /usr/local/bin
-ADD *example* /data/
 
 WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/topomachine"]

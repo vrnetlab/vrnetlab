@@ -1,4 +1,4 @@
-# vrnetlab / Fortinet FortiOS v7
+# Fortinet Fortigate
 
 Support for the Fortinet Fortigate launched by containerlab.
 

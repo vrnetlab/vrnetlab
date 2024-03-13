@@ -254,6 +254,28 @@ SROS_VARIANTS = {
             },
         ],
     },
+    "sr-2se": {
+        "deployment_model": "distributed",
+        "max_nics": 36,
+        "power": {"modules": {"ac/hv": 3, "dc": 4}},
+        "cp": {
+            "min_ram": 4,
+            # The 7750 SR-2se uses an integrated switch fabric module (SFM) design
+            "timos_line": "slot=A chassis=sr-2se sfm=sfm-2se card=cpm-2se",
+        },
+        "lcs": [
+            {
+                "min_ram": 8,
+                "timos_line": "slot=1 chassis=sr-2se sfm=sfm-2se card=xcm-2se mda/1=x2-s36-800g-qsfpdd-18.0t",
+                "card_config": """
+/configure sfm 1 sfm-type sfm-2se
+/configure sfm 2 sfm-type sfm-2se
+/configure card 1 card-type xcm-2se
+/configure card 1 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+""",
+            },
+        ],
+    },
     "sr-7s": {  # defaults to FP5 cards
         "deployment_model": "distributed",
         # control plane (CPM)
@@ -938,7 +960,12 @@ class SROS_integrated(SROS_vm):
 
         if any(
             chassis in self.variant["timos_line"]
-            for chassis in ["chassis=ixr-r6", "chassis=ixr-ec", "chassis=ixr-e2", "chassis=ixr-e2c"]
+            for chassis in [
+                "chassis=ixr-r6",
+                "chassis=ixr-ec",
+                "chassis=ixr-e2",
+                "chassis=ixr-e2c",
+            ]
         ):
             logger.debug(
                 "detected ixr-r6/ixr-ec/ixr-e2/ixr-e2c chassis, creating a dummy network device for SFM connection"

@@ -176,9 +176,7 @@ class VM:
         # setup PCI buses
         if self.provision_pci_bus:
             for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
-                cmd.extend(
-                    ["-device", "pci-bridge,chassis_nr={},id=pci.{}".format(i, i)]
-                )
+                cmd.extend(["-device", f"pci-bridge,chassis_nr={i},id=pci.{i}"])
 
         # generate mgmt NICs
         cmd.extend(self.gen_mgmt())

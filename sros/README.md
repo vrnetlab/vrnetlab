@@ -71,9 +71,9 @@ Custom variants WILL NOT have cards/mda auto-configured, user needs to configure
 
 Refer to containerlab documentation piece on [vrnetlab integration](https://containerlab.srlinux.dev/manual/vrnetlab/) and vr-sros.
 
-## Extracting qcow2 from container image
+## Extracting qcow2 disk image from a container image
 
-It is possible to extract the original qcow2 disk image from an existing container image. This might be useful when you want to rebuild the container image with a different vrnetlab codebase.
+It is possible to extract the original qcow2 disk image from an existing container image. This might be useful when you want to rebuild the container image with a different vrnetlab release.
 
 The following script takes an image name and the qcow2 image name to copy out from the container image:
 

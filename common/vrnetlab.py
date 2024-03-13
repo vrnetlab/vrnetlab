@@ -68,7 +68,14 @@ class VM:
         raise ValueError(f"Could not read image format for {self.image}")
 
     def __init__(
-        self, username, password, disk_image="", num=0, ram=4096, driveif="ide"
+        self,
+        username,
+        password,
+        disk_image="",
+        num=0,
+        ram=4096,
+        driveif="ide",
+        provision_pci_bus=True,
     ):
         self.logger = logging.getLogger()
 
@@ -95,6 +102,8 @@ class VM:
         # to have them allocated sequential from eth1
         self.highest_provisioned_nic_num = 0
 
+        # we setup pci bus by default
+        self.provision_pci_bus = provision_pci_bus
         self.nics_per_pci_bus = 26  # tested to work with XRv
         self.smbios = []
 
@@ -165,8 +174,9 @@ class VM:
             cmd.extend(["-smbios", quoted_smbios])
 
         # setup PCI buses
-        for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
-            cmd.extend(["-device", "pci-bridge,chassis_nr={},id=pci.{}".format(i, i)])
+        if self.provision_pci_bus:
+            for i in range(1, math.ceil(self.num_nics / self.nics_per_pci_bus) + 1):
+                cmd.extend(["-device", f"pci-bridge,chassis_nr={i},id=pci.{i}"])
 
         # generate mgmt NICs
         cmd.extend(self.gen_mgmt())
@@ -519,18 +529,14 @@ class VM:
                 res.extend(
                     [
                         "-device",
-                        "%(nic_type)s,"
-                        "netdev=p%(i)02d,"
-                        "bus=pci.%(pci_bus)s,"
-                        "addr=0x%(addr)x"
-                        % {
-                            "nic_type": self.nic_type,
-                            "i": i,
-                            "pci_bus": pci_bus,
-                            "addr": addr,
-                        },
+                        f"{self.nic_type},netdev=p{i:02d}"
+                        + (
+                            f",bus=pci.{pci_bus},addr=0x{addr:x}"
+                            if self.provision_pci_bus
+                            else ""
+                        ),
                         "-netdev",
-                        "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000},
+                        f"socket,id=p{i:02d},listen=:{i + 10000:02d}",
                     ]
                 )
                 continue
@@ -547,14 +553,12 @@ class VM:
 
             res.append("-device")
             res.append(
-                "%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x"
-                % {
-                    "nic_type": self.nic_type,
-                    "i": i,
-                    "pci_bus": pci_bus,
-                    "addr": addr,
-                    "mac": mac,
-                }
+                f"{self.nic_type},netdev=p{i:02d},mac={mac}"
+                + (
+                    f",bus=pci.{pci_bus},addr=0x{addr:x}"
+                    if self.provision_pci_bus
+                    else ""
+                ),
             )
 
             if self.conn_mode == "tc":

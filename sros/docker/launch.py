@@ -960,7 +960,12 @@ class SROS_integrated(SROS_vm):
 
         if any(
             chassis in self.variant["timos_line"]
-            for chassis in ["chassis=ixr-r6", "chassis=ixr-ec", "chassis=ixr-e2", "chassis=ixr-e2c"]
+            for chassis in [
+                "chassis=ixr-r6",
+                "chassis=ixr-ec",
+                "chassis=ixr-e2",
+                "chassis=ixr-e2c",
+            ]
         ):
             logger.debug(
                 "detected ixr-r6/ixr-ec/ixr-e2/ixr-e2c chassis, creating a dummy network device for SFM connection"

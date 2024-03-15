@@ -492,7 +492,7 @@ SROS_VARIANTS = {
         "max_nics": 48,
         "cp": {
             "min_ram": 4,
-            "timos_line": "slot=A chassis=sr-1x-46s card=cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1",  #CP Card must include CPM/IOM
+            "timos_line": "slot=A chassis=sr-1-46s card=cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1",  #CP Card must include CPM/IOM
         },
         # line card (IOM/XCM)
         "lcs": [

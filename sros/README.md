@@ -42,6 +42,12 @@ By selecting a certain variant (referred by its `name`) the VSIM will start with
 |    ixr-e2c    | integrated  |       cpm-ixr-e2c        |  m12-sfp28+2-qsfp28   |    4     |    34    |
 |    ixr-r6    | integrated  |      cpiom-ixr-r6      |    m6-10g-sfp++1-100g-qsfp28     |    6     |    10    |
 |    ixr-s     | integrated  |       cpm-ixr-s        |        m48-sfp++6-qsfp28         |   3+4    |    54    |
+|    sr-1-46s  | distributed |       cpm-1x           | m40-200g-sfpdd+6-800g-qsfpdd-1   |    4     |    48    |
+|    sr-1-92s  | distributed |       cpm-1x           | m80-200g-sfpdd+12-400g-qsfpdd-1  |    4     |    48    |
+|    sr-1x-92s | distributed |       cpm-1x           | m80-200g-sfpdd+12-800g-qsfpdd-1x |    4     |    48    |
+|    sr-1-24d  | distributed |       cpm-1x           |        m24-800g-qsfpdd-1         |    4     |    48    |
+|    sr-1-48d  | distributed |       cpm-1x           |        m48-400g-qsfpdd-1         |    4     |    48    |
+|   sr-1x-48d  | distributed |       cpm-1x           |        m48-800g-qsfpdd-1x        |    4     |    48    |
 
 The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf70a9a9f2f060a68797a7ec29ce6aea96acb779/sros/docker/launch.py#L58) as a dictionary. If a variant you need is not in the table, use the `custom` variant and define the emulated platform yourself as described below.
 

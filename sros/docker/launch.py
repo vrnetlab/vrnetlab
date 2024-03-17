@@ -484,20 +484,127 @@ SROS_VARIANTS = {
             },
         ],
     },
-    "sr-1x-48d": {
+### SR-1 FP5 models (six variants with sfp-dd or qsfpdd only): 
+    #SR-1 FP5 - CP Card must include CPM/IOM
+    "sr-1-46s": {
         "deployment_model": "distributed",
         # control plane (CPM)
         "max_nics": 48,
         "cp": {
             "min_ram": 4,
-            "timos_line": "slot=A chassis=sr-1x-48D card=cpm-1x",
+            "timos_line": "slot=A chassis=sr-1-46s card=cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1",  #CP Card must include CPM/IOM
         },
         # line card (IOM/XCM)
         "lcs": [
             {
                 "min_ram": 4,
                 **line_card_config(
-                    chassis="sr-1x-48D",
+                    chassis="sr-1-46s",
+                    card="i40-200g-sfpdd+6-800g-qsfpdd-1",
+                    mda="m40-200g-sfpdd+6-800g-qsfpdd-1",
+                ),
+            }
+        ],
+    },
+    #SR-1 FP5 - CP Card must include CPM/IOM
+    "sr-1-92s": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 48,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1-92s card=cpm-1x/i80-200g-sfpdd+12-400g-qsfpdd-1",   #CP Card must include CPM/IOM
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 4,
+                **line_card_config(
+                    chassis="sr-1-92s",
+                    card="i80-200g-sfpdd+12-400g-qsfpdd-1",
+                    mda="m80-200g-sfpdd+12-400g-qsfpdd-1",
+                ),
+            }
+        ],
+    },
+    #SR-1 FP5 - CP Card must include CPM/IOM
+    "sr-1x-92s": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 48,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1x-92s card=cpm-1x/i80-200g-sfpdd+12-800g-qsfpdd-1x",   #CP Card must include CPM/IOM
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 4,
+                **line_card_config(
+                    chassis="sr-1x-92s",
+                    card="i80-200g-sfpdd+12-800g-qsfpdd-1x",
+                    mda="m80-200g-sfpdd+12-800g-qsfpdd-1x",
+                ),
+            }
+        ],
+    },
+    #SR-1 FP5
+    "sr-1-24d": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 48,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1-24d card=cpm-1x",
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 4,
+                **line_card_config(
+                    chassis="sr-1-24d",
+                    card="i24-800g-qsfpdd-1",
+                    mda="m24-800g-qsfpdd-1",
+                ),
+            }
+        ],
+    },
+    #SR-1 FP5
+    "sr-1-48d": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 48,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1-48D card=cpm-1x/i48-400g-qsfpdd-1",   #CP Card must include CPM/IOM
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 4,
+                **line_card_config(
+                    chassis="sr-1-48D",
+                    card="i48-400g-qsfpdd-1",
+                    mda="m48-400g-qsfpdd-1",
+                ),
+            }
+        ],
+    },
+    #SR-1 FP5
+    "sr-1x-48d": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 48,
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=sr-1x-48d card=cpm-1x",
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 4,
+                **line_card_config(
+                    chassis="sr-1x-48d",
                     card="i48-800g-qsfpdd-1x",
                     mda="m48-800g-qsfpdd-1x",
                 ),

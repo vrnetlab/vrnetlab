@@ -1,5 +1,5 @@
 IMAGES_DIR=
-VRS = vr-xcon vr-bgp csr nxos routeros sros veos vjunosswitch vjunosevolved vmx vsr1000 vqfx vrp xrv xrv9k vsrx openbsd ftdv
+VRS = vr-xcon vr-bgp csr nxos routeros sros veos vjunosswitch vjunosevolved vmx vsr1000 vqfx vrp xrv xrv9k vsrx openbsd ftdv freebsd
 VRS_PUSH = $(VRS:=-push)
 
 .PHONY: all $(VRS) $(VRS_PUSH)

@@ -52,6 +52,7 @@ Since the changes we made in this fork are VM specific, we added a few popular r
 * Juniper vJunosEvolved
 * Nokia SR OS
 * OpenBSD
+* FreeBSD
 
 The rest are left untouched and can be contributed back by the community.
 

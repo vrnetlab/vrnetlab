@@ -16,3 +16,4 @@ venv
 !common/vrnetlab.py
 
 .envrc
+.python-version

@@ -7,7 +7,6 @@ import re
 import signal
 import subprocess
 import sys
-import time
 
 import vrnetlab
 
@@ -39,14 +38,13 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 
-class CSR_vm(vrnetlab.VM):
-    def __init__(
-        self, hostname, username, password, nics, conn_mode, install_mode=False
-    ):
-        for e in os.listdir("/"):
-            if re.search(".qcow2$", e):
+class C8000v_vm(vrnetlab.VM):
+    def __init__(self, hostname, username, password, conn_mode, install_mode=False):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
-            if re.search("\.license$", e):
+            if re.search(r"\.license$", e):
                 os.rename("/" + e, "/tftpboot/license.lic")
 
         self.license = False
@@ -54,13 +52,12 @@ class CSR_vm(vrnetlab.VM):
             logger.info("License found")
             self.license = True
 
-        super(CSR_vm, self).__init__(username, password, disk_image=disk_image)
-
+        super(C8000v_vm, self).__init__(username, password, disk_image=disk_image)
+        self.nic_type = "vmxnet3"
         self.install_mode = install_mode
-        self.num_nics = nics
         self.hostname = hostname
         self.conn_mode = conn_mode
-        self.nic_type = "virtio-net-pci"
+        self.num_nics = 9
 
         if self.install_mode:
             logger.trace("install mode")
@@ -72,22 +69,21 @@ class CSR_vm(vrnetlab.VM):
     def create_boot_image(self):
         """Creates a iso image with a bootstrap configuration"""
 
-        cfg_file = open("/iosxe_config.txt", "w")
-        if self.license:
-            cfg_file.write("do clock set 13:33:37 1 Jan 2010\r\n")
-            cfg_file.write("interface GigabitEthernet1\r\n")
-            cfg_file.write("ip address 10.0.0.15 255.255.255.0\r\n")
-            cfg_file.write("no shut\r\n")
-            cfg_file.write("exit\r\n")
-            cfg_file.write("license accept end user agreement\r\n")
-            cfg_file.write("yes\r\n")
-            cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
-
-        cfg_file.write("platform console serial\r\n\r\n")
-        cfg_file.write("do clear platform software vnic-if nvtable\r\n\r\n")
-        cfg_file.write("do wr\r\n")
-        cfg_file.write("do reload\r\n")
-        cfg_file.close()
+        with open("/iosxe_config.txt", "w") as cfg_file:
+            if self.license:
+                cfg_file.write("do clock set 13:33:37 1 Jan 2010\r\n")
+                cfg_file.write("interface GigabitEthernet1\r\n")
+                cfg_file.write("ip address 10.0.0.15 255.255.255.0\r\n")
+                cfg_file.write("no shut\r\n")
+                cfg_file.write("exit\r\n")
+                cfg_file.write("license accept end user agreement\r\n")
+                cfg_file.write("yes\r\n")
+                cfg_file.write("do license install tftp://10.0.0.2/license.lic\r\n\r\n")
+            cfg_file.write("license boot level network-premier addon dna-premier\r\n")
+            cfg_file.write("platform console serial\r\n\r\n")
+            cfg_file.write("do clear platform software vnic-if nvtable\r\n")
+            cfg_file.write("do wr\r\n")
+            cfg_file.write("do reload\r\n")
 
         genisoimage_args = [
             "genisoimage",
@@ -102,37 +98,48 @@ class CSR_vm(vrnetlab.VM):
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
 
-        if self.spins > 600:
+        if self.spins > 300:
             # too many spins with no result ->  give up
             self.stop()
             self.start()
             return
 
-        (ridx, match, res) = self.tn.expect([b"Press RETURN to get started!"], 1)
+        (ridx, match, res) = self.tn.expect(
+            [b"Press RETURN to get started!", b"IOSXEBOOT-4-FACTORY_RESET"], 1
+        )
         if match:  # got a match!
             if ridx == 0:  # login
+                self.logger.debug("matched, Press RETURN to get started.")
                 if self.install_mode:
+                    self.logger.debug("Now we wait for the device to reload")
+                else:
+                    self.wait_write("", wait=None)
+
+                    # run main config!
+                    self.bootstrap_config()
+                    # add startup config if present
+                    self.startup_config()
+                    # close telnet connection
+                    self.tn.close()
+                    # startup time?
+                    startup_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Startup complete in: %s", startup_time)
+                    # mark as running
                     self.running = True
                     return
-
-                self.logger.debug("matched, Press RETURN to get started.")
-                self.wait_write("", wait=None)
-
-                # run main config!
-                self.bootstrap_config()
-                self.startup_config()
-                self.running = True
-                # close telnet connection
-                self.tn.close()
-                # startup time?
-                startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
-                return
+            elif ridx == 1:  # IOSXEBOOT-4-FACTORY_RESET
+                if self.install_mode:
+                    install_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Install complete in: %s", install_time)
+                    self.running = True
+                    return
+                else:
+                    self.log.warning("Unexpected reload while running")
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b"":
-            self.logger.trace("OUTPUT: %s" % res.decode())
+            self.logger.trace("OUTPUT: %s", res.decode())
             # reset spins if we saw some output
             self.spins = 0
 
@@ -148,14 +155,14 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("enable", wait=">")
         self.wait_write("configure terminal", wait=">")
 
-        self.wait_write("hostname %s" % (self.hostname))
+        self.wait_write(f"hostname {self.hostname}")
         self.wait_write(
             "username %s privilege 15 password %s" % (self.username, self.password)
         )
-        if int(self.version.split('.')[0]) >= 16:
-           self.wait_write("ip domain name example.com")
+        if int(self.version.split(".")[0]) >= 16:
+            self.wait_write("ip domain name example.com")
         else:
-           self.wait_write("ip domain-name example.com")
+            self.wait_write("ip domain-name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
 
         self.wait_write("interface GigabitEthernet1")
@@ -164,13 +171,18 @@ class CSR_vm(vrnetlab.VM):
         self.wait_write("exit")
         self.wait_write("restconf")
         self.wait_write("netconf-yang")
+        self.wait_write("netconf max-sessions 16")
+        # I did not find any documentation about this, but is seems like a good idea!?
+        self.wait_write("netconf detailed-error")
+        self.wait_write("ip ssh server algorithm mac hmac-sha2-512")
+        self.wait_write("ip ssh maxstartups 128")
 
         self.wait_write("line vty 0 4")
         self.wait_write("login local")
         self.wait_write("transport input all")
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
-        self.wait_write("\r", None)
+        self.wait_write("\r", "Destination")
 
     def startup_config(self):
         """Load additional config provided by user."""
@@ -194,40 +206,33 @@ class CSR_vm(vrnetlab.VM):
         # End and Save
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
+        self.wait_write("\r", "Destination")
 
 
-class CSR(vrnetlab.VR):
-    def __init__(self, hostname, username, password, nics, conn_mode):
-        super(CSR, self).__init__(username, password)
-        self.vms = [CSR_vm(hostname, username, password, nics, conn_mode)]
+class C8000v(vrnetlab.VR):
+    def __init__(self, hostname, username, password, conn_mode):
+        super(C8000v, self).__init__(username, password)
+        self.vms = [C8000v_vm(hostname, username, password, conn_mode)]
 
 
-class CSR_installer(CSR):
-    """CSR installer
+class C8000v_installer(C8000v):
+    """C8000v installer
 
-    Will start the CSR with a mounted iso to make sure that we get
+    Will start the C8000v with a mounted iso to make sure that we get
     console output on serial, not vga.
     """
 
-    def __init__(self, hostname, username, password, nics, conn_mode):
-        super(CSR, self).__init__(username, password)
+    def __init__(self, hostname, username, password, conn_mode):
+        super(C8000v_installer, self).__init__(hostname, username, password, conn_mode)
         self.vms = [
-            CSR_vm(
-                hostname,
-                username,
-                password,
-                nics,
-                conn_mode,
-                install_mode=True,
-            )
+            C8000v_vm(hostname, username, password, conn_mode, install_mode=True)
         ]
 
     def install(self):
-        self.logger.info("Installing CSR")
+        self.logger.info("Installing C8000v")
         csr = self.vms[0]
         while not csr.running:
             csr.work()
-        time.sleep(30)
         csr.stop()
         self.logger.info("Installation complete")
 
@@ -241,9 +246,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
-    parser.add_argument("--install", action="store_true", help="Install CSR")
-    parser.add_argument("--hostname", default="csr1000v", help="Router Hostname")
-    parser.add_argument("--nics", type=int, default=9, help="Number of NICS")
+    parser.add_argument("--install", action="store_true", help="Install C8000v")
+    parser.add_argument("--hostname", default="c8000v", help="Router hostname")
     parser.add_argument(
         "--connection-mode",
         default="vrxcon",
@@ -260,20 +264,10 @@ if __name__ == "__main__":
         logger.setLevel(1)
 
     if args.install:
-        vr = CSR_installer(
-            args.hostname,
-            args.username,
-            args.password,
-            args.nics,
-            args.connection_mode,
+        vr = C8000v_installer(
+            args.hostname, args.username, args.password, args.connection_mode
         )
         vr.install()
     else:
-        vr = CSR(
-            args.hostname,
-            args.username,
-            args.password,
-            args.nics,
-            args.connection_mode,
-        )
+        vr = C8000v(args.hostname, args.username, args.password, args.connection_mode)
         vr.start()

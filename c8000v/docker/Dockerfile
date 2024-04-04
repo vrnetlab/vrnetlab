@@ -1,8 +1,6 @@
-FROM ubuntu:20.04 
-MAINTAINER Kristian Larsson <kristian@spritelink.net>
-MAINTAINER Denis Pointer <git@dpnet.ca>
+FROM debian:bookworm-slim
 
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qy \
  && apt-get upgrade -qy \
@@ -13,10 +11,10 @@ RUN apt-get update -qy \
     socat \
     qemu-kvm \
     tcpdump \
-    ssh \ 
     inetutils-ping \
-    dnsutils \
+    ssh \
     telnet \
+    procps \
     genisoimage \
  && rm -rf /var/lib/apt/lists/*
 

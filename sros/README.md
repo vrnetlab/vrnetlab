@@ -23,31 +23,32 @@ To give vrnetlab users the flexibility of choice, this fork provides a number of
 
 By selecting a certain variant (referred by its `name`) the VSIM will start with a certain configuration as per the following table:
 
-|     Name     |    mode     |     Control plane      |            Line card             | RAM (GB) | Max NICs |
-| :----------: | :---------: | :--------------------: | :------------------------------: | :------: | :------: |
-|     sr-1     | integrated  |         cpm-1          |        me12-100gb-qsfp28         |    5     |    12    |
-|    sr-1e     | distributed |         cpm-e          |          me40-1gb-csfp           |   4+4    |    40    |
-|  sr-1e-sec   | distributed |         cpm-e          | me12-10/1gb-sfp+ and isa2-tunnel |   4+4    |    12    |
-|    sr-1s     | integrated  |         xcm-1s         |         s36-100gb-qsfp28         |    6     |    36    |
-| sr-1s-macsec | integrated  |         xcm-1s         | ms16-100gb-sfpdd+4-100gb-qsfp28  |    6     |    20    |
-|    sr-2s     | distributed |         cpm-2s         |  ms8-100gb-sfpdd+2-100gb-qsfp28  |   3+4    |    10    |
-|    sr-7s     | distributed |     sfm2-s+xcm2-7s     |     x2-s36-800g-qsfpdd-18.0t     |   4+6    |    36    |
-|  sr-7s-fp4   | distributed |      sfm-s+xcm-7s      |         s36-100gb-qsfp28         |   4+6    |    36    |
-|    sr-14s    | distributed |     sfm-s+xcm-14s      |         s36-100gb-qsfp28         |   4+6    |    36    |
-|    sr-a4     | distributed |         cpm-a          |     maxp10-10/1gb-msec-sfp+      |   4+4    |    10    |
-| ixr-e-small  | distributed | imm14-10g-sfp++4-1g-tx |       m14-10g-sfp++4-1g-tx       |   3+4    |    18    |
-|  ixr-e-big   | distributed |       cpm-ixr-e        |    m24-sfp++8-sfp28+2-qsfp28     |   3+4    |    34    |
-|    ixr-e2    | integrated  |       cpm-ixr-e2        |  m2-qsfpdd+2-qsfp28+24-sfp28   |    4     |    34    |
-|    ixr-ec    | integrated  |       cpm-ixr-ec        |  m4-1g-tx+20-1g-sfp+6-10g-sfp+   |    4     |    34    |
-|    ixr-e2c    | integrated  |       cpm-ixr-e2c        |  m12-sfp28+2-qsfp28   |    4     |    34    |
-|    ixr-r6    | integrated  |      cpiom-ixr-r6      |    m6-10g-sfp++1-100g-qsfp28     |    6     |    10    |
-|    ixr-s     | integrated  |       cpm-ixr-s        |        m48-sfp++6-qsfp28         |   3+4    |    54    |
-|    sr-1-46s  | distributed |       cpm-1x           | m40-200g-sfpdd+6-800g-qsfpdd-1   |    4     |    48    |
-|    sr-1-92s  | distributed |       cpm-1x           | m80-200g-sfpdd+12-400g-qsfpdd-1  |    4     |    48    |
-|    sr-1x-92s | distributed |       cpm-1x           | m80-200g-sfpdd+12-800g-qsfpdd-1x |    4     |    48    |
-|    sr-1-24d  | distributed |       cpm-1x           |        m24-800g-qsfpdd-1         |    4     |    48    |
-|    sr-1-48d  | distributed |       cpm-1x           |        m48-400g-qsfpdd-1         |    4     |    48    |
-|   sr-1x-48d  | distributed |       cpm-1x           |        m48-800g-qsfpdd-1x        |    4     |    48    |
+|     Name     |    mode     |     Control plane      |              Line card               | RAM (GB) | Max NICs |
+| :----------: | :---------: | :--------------------: | :----------------------------------: | :------: | :------: |
+|     sr-1     | integrated  |         cpm-1          |          me12-100gb-qsfp28           |    5     |    12    |
+|    sr-1e     | distributed |         cpm-e          |            me40-1gb-csfp             |   4+4    |    40    |
+|  sr-1e-sec   | distributed |         cpm-e          |   me12-10/1gb-sfp+ and isa2-tunnel   |   4+4    |    12    |
+|    sr-1s     | integrated  |         xcm-1s         |           s36-100gb-qsfp28           |    6     |    36    |
+| sr-1s-macsec | integrated  |         xcm-1s         |   ms16-100gb-sfpdd+4-100gb-qsfp28    |    6     |    20    |
+|    sr-2s     | distributed |         cpm-2s         |    ms8-100gb-sfpdd+2-100gb-qsfp28    |   3+4    |    10    |
+|    sr-7s     | distributed |     sfm2-s+xcm2-7s     |       x2-s36-800g-qsfpdd-18.0t       |   4+6    |    36    |
+|  sr-7s-fp4   | distributed |      sfm-s+xcm-7s      |           s36-100gb-qsfp28           |   4+6    |    36    |
+|    sr-14s    | distributed |     sfm-s+xcm-14s      |           s36-100gb-qsfp28           |   4+6    |    36    |
+|    sr-a4     | distributed |         cpm-a          |       maxp10-10/1gb-msec-sfp+        |   4+4    |    10    |
+| ixr-e-small  | distributed | imm14-10g-sfp++4-1g-tx |         m14-10g-sfp++4-1g-tx         |   3+4    |    18    |
+|  ixr-e-big   | distributed |       cpm-ixr-e        |      m24-sfp++8-sfp28+2-qsfp28       |   3+4    |    34    |
+|    ixr-e2    | integrated  |       cpm-ixr-e2       |     m2-qsfpdd+2-qsfp28+24-sfp28      |    4     |    34    |
+|    ixr-ec    | integrated  |       cpm-ixr-ec       |    m4-1g-tx+20-1g-sfp+6-10g-sfp+     |    4     |    34    |
+|   ixr-e2c    | integrated  |      cpm-ixr-e2c       |          m12-sfp28+2-qsfp28          |    4     |    34    |
+|    ixr-r6    | integrated  |      cpiom-ixr-r6      |      m6-10g-sfp++1-100g-qsfp28       |    6     |    10    |
+|    ixr-s     | integrated  |       cpm-ixr-s        |          m48-sfp++6-qsfp28           |   3+4    |    54    |
+|   sr-1-46s   | distributed |         cpm-1x         |    m40-200g-sfpdd+6-800g-qsfpdd-1    |    4     |    48    |
+|   sr-1-92s   | distributed |         cpm-1x         |   m80-200g-sfpdd+12-400g-qsfpdd-1    |    4     |    48    |
+|  sr-1x-92s   | distributed |         cpm-1x         |   m80-200g-sfpdd+12-800g-qsfpdd-1x   |    4     |    48    |
+|   sr-1-24d   | distributed |         cpm-1x         |          m24-800g-qsfpdd-1           |    4     |    48    |
+|   sr-1-48d   | distributed |         cpm-1x         |          m48-400g-qsfpdd-1           |    4     |    48    |
+|  sr-1x-48d   | distributed |         cpm-1x         |          m48-800g-qsfpdd-1x          |    4     |    48    |
+|    vsr-i     | integrated  |         cpm-v          | iom-v mda/1=m20-v mda/2=isa-tunnel-v |    8     |    20    |
 
 The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf70a9a9f2f060a68797a7ec29ce6aea96acb779/sros/docker/launch.py#L58) as a dictionary. If a variant you need is not in the table, use the `custom` variant and define the emulated platform yourself as described below.
 
@@ -55,13 +56,13 @@ The variants are [defined in the code](https://github.com/hellt/vrnetlab/blob/bf
 
 It is possible to provide a custom variant. For that, the variant argument must be formed in one of the following way, depending on the integrated or distributed platform:
 
-**Integrated**
+#### Integrated
 
 ```bash
 cpu=2 ram=4 max_nics=6 chassis=sr-1 slot=A card=cpm-1 slot=1 mda/1=me6-100gb-qsfp28
 ```
 
-**Distributed**
+#### Distributed
 
 ```bash
 # for distributed chassis CPM and IOM are indicated with markers cp: and lc:
@@ -72,6 +73,29 @@ cp: cpu=2 ram=4 chassis=ixr-e slot=A card=cpm-ixr-e ___ lc: cpu=2 ram=4 max_nics
 ```
 
 Custom variants WILL NOT have cards/mda auto-configured, user needs to configure those manually once the node finishes boot process.
+
+### Additional CFs
+
+Additional Compact Flash disks (CFs) can be added via custom variants using the `cfX=SIZE` parameter, where
+
+* `X` = CF slot id
+* `SIZE` = size of the disk to be created. This value is passed directly to `qemu-img create` command.
+
+```bash
+cp: cpu=2 ram=4 cf1=1G cf2=2G chassis=SR-7 slot=A card=cpm5 ___
+lc: cpu=2 ram=4 max_nics=10 chassis=SR-7 slot=1 card=iom4-e-b mda/1=me10-10gb-sfp+
+```
+
+Disk(s) are created in the by the `<clab-dir>/<node-name>/tftpboot/` path with a filename `cfX_SLOT.qcow2`. If disk file already exists it is reused without any modification.
+
+```
+r01/
+└── tftpboot
+    ├── cf1_A.qcow2
+    ├── cf2_A.qcow2
+    ├── config.txt
+    └── license.txt
+```
 
 ## Usage with containerlab
 

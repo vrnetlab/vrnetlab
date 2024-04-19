@@ -7,9 +7,12 @@ RUN apt-get update -qy \
     dosfstools \
     bridge-utils \
     iproute2 \
-    python3-ipy \
     socat \
+    ssh \
     qemu-kvm \
+    inetutils-ping \
+    dnsutils \
+    telnet \
  && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE

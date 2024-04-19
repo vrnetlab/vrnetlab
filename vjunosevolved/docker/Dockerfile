@@ -3,7 +3,6 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qy \
- && apt-get upgrade -qy \
  && apt-get install -y \
     dosfstools \
     bridge-utils \

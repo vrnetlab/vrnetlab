@@ -2,9 +2,9 @@
 import datetime
 import logging
 import os
-import subprocess
 import re
 import signal
+import subprocess
 import sys
 
 import vrnetlab
@@ -49,7 +49,7 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         # device hostname
         self.hostname = hostname
 
-        # read init.conf configuration file to replace hostname placehodler 
+        # read init.conf configuration file to replace hostname placehodler
         # with given hostname
         with open("init.conf", "r") as file:
             cfg = file.read()
@@ -89,28 +89,28 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         self.nic_type = "virtio-net-pci"
         self.num_nics = 11
         self.smbios = ["type=1,product=VM-VEX"]
-        self.qemu_args.extend(
-            ["-machine", "pc-i440fx-focal,usb=off,dump-guest-core=off,accel=kvm"]
-        )
+        self.qemu_args.extend(["-machine", "pc,usb=off,dump-guest-core=off,accel=kvm"])
         self.qemu_args.extend(
             ["-device", "piix3-usb-uhci,id=usb,bus=pci.0,addr=0x1.0x2"]
         )
         self.conn_mode = conn_mode
 
     def startup_config(self):
-        """Load additional config provided by user and append initial 
+        """Load additional config provided by user and append initial
         configurations set by vrnetlab."""
         # if startup cfg DNE
         if not os.path.exists(STARTUP_CONFIG_FILE):
             self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} is not found")
             # rename init.conf to juniper.conf, this is our startup config
-            os.rename('init.conf', 'juniper.conf')
+            os.rename("init.conf", "juniper.conf")
 
         # if startup cfg file is found
         else:
-            self.logger.trace(f"Startup config file {STARTUP_CONFIG_FILE} found, appending initial configuration")
+            self.logger.trace(
+                f"Startup config file {STARTUP_CONFIG_FILE} found, appending initial configuration"
+            )
             # append startup cfg to inital configuration
-            append_cfg = f'cat init.conf {STARTUP_CONFIG_FILE} >> juniper.conf'
+            append_cfg = f"cat init.conf {STARTUP_CONFIG_FILE} >> juniper.conf"
             subprocess.run(append_cfg, shell=True)
 
         # generate mountable config disk based on juniper.conf file with base vrnetlab configs
@@ -157,6 +157,7 @@ class VJUNOSSWITCH_vm(vrnetlab.VM):
         self.spins += 1
 
         return
+
 
 class VJUNOSSWITCH(vrnetlab.VR):
     def __init__(self, hostname, username, password, conn_mode):

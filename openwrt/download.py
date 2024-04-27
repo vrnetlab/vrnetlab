@@ -2,9 +2,12 @@
 
 import re
 import shutil
+import sys
+import os
+import gzip
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 base_url = "https://downloads.openwrt.org/"
 
@@ -16,19 +19,40 @@ def get_rel(url, version):
     soup = BeautifulSoup(c, "lxml")
     links = soup.find_all("a")
     for l in links:
-        filename = l.string.strip()
-        if not re.search('combined-ext4.img.gz', filename):
+        #print(l)
+        
+        #filename = l.string.strip()
+        filename = l['href']
+        if not (re.search('combined-ext4.img.gz', filename) or re.search('generic-ext4-combined.img.gz', filename)):
             #print("ignoring {}".format(filename))
             continue
         if re.search('^openwrt-x86-', filename):
             local_filename = re.sub('^openwrt-x86-', 'openwrt-{}-x86-'.format(version), filename)
-        else:
-            local_filename = "openwrt-{}-x86-kvm_guest-{}".format(version, filename)
         file_url = "{}{}".format(url, filename)
-        print("Downloading {} -> {}".format(file_url, local_filename))
-        r = requests.get(file_url, stream=True)
-        with open(local_filename, 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
+        if not os.path.exists(filename):
+            print("Downloading {} -> {}".format(file_url, filename))
+            r = requests.get(file_url, stream=True)
+            print(filename)
+            base_name, file_extension = os.path.splitext(filename)
+            if file_extension == ".gz":
+                output_file = base_name
+            print(output_file)
+            with open(filename, 'wb') as f:
+                shutil.copyfileobj(r.raw, f)
+            try:
+                with gzip.open(filename, 'rb') as f_in:
+                    with open(output_file, 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                print(f"The file was successfully unpacked: {output_file}")
+            except gzip.BadGzipFile:
+                if not os.path.exists(output_file):
+                    print(f"Warning: The file '{filename}' is not a valid GZIP file and could not be unpacked.")
+                else:
+                    print(f"gzip: {filename}: decompression OK, trailing garbage ignored. ")
+            except Exception as e:
+                print(f"Error unpacking the file '{filename}': {e}")
+        else:
+            print("File '{}' already exists. Skipping download.".format(filename))
 
 
 def main():
@@ -39,15 +63,18 @@ def main():
     soup = BeautifulSoup(c, "lxml")
     links = soup.find_all("a")
     for l in links:
-        m = re.search('^http(s|):\/\/', l.attrs['href'])
+        m = re.search('\/\/', l.attrs['href'])
         if not m:
-            rel_url = "{}{}x86/kvm_guest/".format(base_url, l.attrs['href'])
+            rel_url = "{}{}x86/64/".format(base_url, l.attrs['href'])
         else:
-            rel_url = "{}x86/kvm_guest/".format(l.attrs['href'])
-        m = re.search('[^0-9]([0-9]{2}\.[0-9]{2})[^0-9]', l.attrs['href'])
+            current_href = l['href']
+            new_href = 'https:' + current_href
+            l['href'] = new_href
+            rel_url = "{}x86/64/".format(l.attrs['href'])
+        m = re.search('[^0-9]([0-9]{2}\.[0-9]{2}[^0-9](?:[0-9]{1,2}))|[^0-9]([0-9]{2}\.[0-9]{2})', l.attrs['href'])
         if not m:
             continue
-        print(l.string.strip(), l.attrs['href'], rel_url)
+        #print(l.string.strip(), l.attrs['href'], rel_url)
         get_rel(rel_url, m.group(1))
 
 

@@ -29,13 +29,17 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 class OpenWRT_vm(vrnetlab.VM):
-    def __init__(self, username, password):
+    def __init__(self, username, password, conn_mode, hostname, lan_ip, lan_netmask):
         for e in os.listdir("/"):
             if re.search(".img$", e):
                 disk_image = "/" + e
         super(OpenWRT_vm, self).__init__(username, password, disk_image=disk_image, ram=128)
         self.nic_type = "virtio-net-pci"
         self.num_nics = 1
+        self.conn_mode=conn_mode
+        self.hostname=hostname
+        self.lan_ip=lan_ip
+        self.lan_netmask=lan_netmask
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
@@ -80,7 +84,7 @@ class OpenWRT_vm(vrnetlab.VM):
         # Get a prompt
         self.wait_write("\r", None)
         # Configure interface
-        self.wait_write("ifconfig br-lan 10.0.0.15 netmask 255.255.255.0", "#")
+        self.wait_write("ifconfig br-lan " + self.lan_ip + " netmask " + self.lan_netmask, "#")
         # Set root password (ssh login prerequisite)
         self.wait_write("passwd", "#")
         self.wait_write(self.password, "New password:")
@@ -96,28 +100,53 @@ class OpenWRT_vm(vrnetlab.VM):
         # Create home dir
         self.wait_write("mkdir -p /home/%s" %(self.username))
         self.wait_write("chown %s /home/%s" %(self.username, self.username))
+        self.wait_write("chown %s /etc/config/ -R" %(self.username))
         self.logger.info("completed bootstrap configuration")
 
 class OpenWRT(vrnetlab.VR):
-    def __init__(self, username, password):
+    def __init__(self, username, password, conn_mode, hostname, lan_ip, lan_netmask):
         super(OpenWRT, self).__init__(username, password)
-        self.vms = [ OpenWRT_vm(username, password) ]
+        self.vms = [ OpenWRT_vm(username, password, conn_mode, hostname, lan_ip, lan_netmask) ]
+
+import click
+@click.command()
+@click.option('--tracing', is_flag=True, help='enable trace level logging')
+@click.option('--username','-u', default='root',   envvar='USERNAME', required=True, help="Username")
+@click.option('--password','-p', default='VR-netlab9', envvar='PASSWORD', required=True, help="Password")
+@click.option('--connection-mode','-c', default='tc', envvar='CONNECTION_MODE', required=True, help="connection mode")
+@click.option('--hostname','-h', default='OpenWRT', envvar='HOSTNAME', required=True, help="Hostname")
+@click.option('--lan-ip','-ip', default='10.0.0.15', envvar='LAN_IP', required=True, help="Lan IP")
+@click.option('--lan-netmask','-mask', default='255.255.255.0', envvar='LAN_NETMASK', required=True, help="Lan netmask")
+
+def args(tracing,username,password,connection_mode,hostname,lan_ip,lan_netmask):
+        LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
+        logging.basicConfig(format=LOG_FORMAT)
+        logger = logging.getLogger()
+
+        logger.setLevel(logging.DEBUG)
+        if tracing:
+            logger.setLevel(1)
+        
+        vr = OpenWRT(username, password, connection_mode, hostname, lan_ip, lan_netmask)
+        vr.start()
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    args = parser.parse_args()
+    args()
+    # import argparse
+    # parser = argparse.ArgumentParser(description='')
+    # parser.add_argument('--trace', action='store_true', help='enable trace level logging')
+    # parser.add_argument('--username', default='vrnetlab', help='Username')
+    # parser.add_argument('--password', default='VR-netlab9', help='Password')
+    # parser.add_argument(
+    #     "--connection-mode",
+    #     default="vrxcon",
+    #     help="Connection mode to use in the datapath",
+    # )
+    # args = parser.parse_args()
+    
 
-    LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"
-    logging.basicConfig(format=LOG_FORMAT)
-    logger = logging.getLogger()
 
-    logger.setLevel(logging.DEBUG)
-    if args.trace:
-        logger.setLevel(1)
+    
 
-    vr = OpenWRT(args.username, args.password)
-    vr.start()
+    
+

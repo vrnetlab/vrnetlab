@@ -1,17 +1,21 @@
-FROM debian:stretch
-MAINTAINER Kristian Larsson <kristian@spritelink.net>
+FROM alpine:3.18
+MAINTAINER Andreas Cymbal takalele@konnex.me
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update -qy \
- && apt-get upgrade -qy \
- && apt-get install -y \
-    bridge-utils \
-    iproute2 \
-    python3-ipy \
+RUN apk add --no-cache bash \
+    qemu-system-x86_64 \
+    qemu-img \
     socat \
-    qemu-kvm \
- && rm -rf /var/lib/apt/lists/*
+    net-tools \
+    iproute2 \
+    bridge-utils \
+    python3 \
+    py3-click \
+    nano \
+    vim \
+    py3-pip && ln -sf python3 /usr/bin/python
+
+RUN pip3 install --no-cache --upgrade pip setuptools
+RUN pip install IPy
 
 ARG IMAGE
 COPY $IMAGE* /

@@ -6,7 +6,6 @@ RUN apt-get update -qy \
  && apt-get install -y \
     bridge-utils \
     iproute2 \
-    python3-ipy \
     socat \
     qemu-kvm \
     tcpdump \

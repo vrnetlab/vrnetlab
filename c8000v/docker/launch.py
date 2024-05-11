@@ -52,12 +52,12 @@ class C8000v_vm(vrnetlab.VM):
             logger.info("License found")
             self.license = True
 
-        super(C8000v_vm, self).__init__(username, password, disk_image=disk_image)
-        self.nic_type = "vmxnet3"
+        super().__init__(username, password, disk_image=disk_image, ram=4096)
         self.install_mode = install_mode
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = 9
+        self.nic_type = "virtio-net-pci"
 
         if self.install_mode:
             logger.trace("install mode")

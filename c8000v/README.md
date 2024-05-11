@@ -42,14 +42,11 @@ it to your repo. The tag is the same as the version of the Catalyst 8000v image,
 so if you have c8000v-universalk9.16.04.01.qcow2 your final docker image will be
 called `vr-c8000v:16.04.01`
 
-Please note that you will always need to specify version when starting your
-router as the "latest" tag is not added to any images since it has no meaning
-in this context.
-
 It's been tested to boot and respond to SSH with:
 
 - 16.03.01a (c8000v-universalk9.16.03.01a.qcow2)
 - 16.04.01 (c8000v-universalk9.16.04.01.qcow2)
+- 17.11.01a (c8000v-universalk9_16G_serial.17.11.01a.qcow2)
 
 ## Usage
 
@@ -104,3 +101,18 @@ only has an expiration date not a start date.
 
 The license unlocks feature and throughput. The default throughput for C8000v is
 20Mbit/s which is perfectly for basic management and testing.
+
+## Known issues
+
+If during the image boot process (not during the install process) you notice messages like:
+
+```
+% Failed to initialize nvram
+% Failed to initialize backup nvram
+```
+
+Then the image will boot, but SSH might not work. You still can use telnet to access the running VM. For instance:
+
+```bash
+telnet <container name> 5000
+```

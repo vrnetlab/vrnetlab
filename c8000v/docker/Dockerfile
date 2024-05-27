@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM public.ecr.aws/docker/library/debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 

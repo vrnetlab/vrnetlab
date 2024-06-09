@@ -44,12 +44,11 @@ class NXOS_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(NXOS_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=4096
+            username, password, disk_image=disk_image, ram=4096, smp="2"
         )
         self.credentials = [["admin", "admin"]]
         self.hostname = hostname
         self.conn_mode = conn_mode
-        self.qemu_args.extend(["-cpu", "host", "-smp", "2"])
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""

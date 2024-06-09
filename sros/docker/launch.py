@@ -38,6 +38,46 @@ def trace(self, message, *args, **kws):
 logging.Logger.trace = trace
 
 
+# getMem returns the RAM size (in Mb) for a given VM mode.
+# RAM can be specified in the variant dict, provided by a user via the custom type definition,
+# or set via env vars.
+# If set via env vars, the getMem will return this value as the most specific one.
+# Otherwise, the ram provided to this function will be converted to Mb and returned.
+def getMem(vmMode: str, ram: int) -> int:
+    if vmMode == "integrated":
+        # Integrated VM can use both MEMORY and CP_MEMORY env vars
+        if "MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("MEMORY"))
+        if "CP_MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("CP_MEMORY"))
+    if vmMode == "cp":
+        if "CP_MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("CP_MEMORY"))
+    if vmMode == "lc":
+        if "LC_MEMORY" in os.environ:
+            return 1024 * get_digits(os.getenv("LC_MEMORY"))
+    return 1024 * int(ram)
+
+# getCpu returns the number of cpu cores for a given VM mode.
+# Cpu can be specified in the variant dict, provided by a user via the custom type definition,
+# or set via env vars.
+# If set via env vars, the function will return this value as the most specific one.
+# Otherwise, the number provided to this function via cpu param returned.
+def getCpu(vsimMode: str, cpu: int) -> int:
+    if vsimMode == "integrated":
+        # Integrated VM can use both MEMORY and CP_MEMORY env vars
+        if "CPU" in os.environ:
+            return int(os.getenv("CPU"))
+        if "CP_CPU" in os.environ:
+            return int(os.getenv("CP_CPU"))
+    if vsimMode == "cp":
+        if "CP_CPU" in os.environ:
+            return int(os.getenv("CP_CPU"))
+    if vsimMode == "lc":
+        if "LC_CPU" in os.environ:
+            return int(os.getenv("LC_CPU"))
+    return cpu
+
 @dataclass
 class SROSVersion:
     """SROSVersion is a dataclass that stores SROS version components
@@ -860,6 +900,10 @@ def gen_bof_config():
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
+
+        if not cpu or cpu == 0 or cpu == "0":
+            cpu = 2
+
         super().__init__(
             username,
             password,
@@ -867,17 +911,15 @@ class SROS_vm(vrnetlab.VM):
             num=num,
             ram=ram,
             driveif="virtio",
+            smp=f"{cpu}"
         )
+
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.power = "dc"  # vSR emulates DC only
         self.read_license()
-        if not cpu or cpu == 0 or cpu == "0":
-            cpu = 2
-        self.cpu = cpu
-        self.qemu_args.extend(["-cpu", "host", "-smp", f"{cpu}"])
-
+        
         # override default wait pattern with hash followed by the space
         self.wait_pattern = "# "
 
@@ -1092,6 +1134,25 @@ class SROS_vm(vrnetlab.VM):
             # logout at the end of execution
             self.wait_write("/logout")
 
+    @property
+    def ram(self):
+        """Ignore environment variables here, since getMem function is used"""
+        return self._ram
+
+    
+    @property
+    def cpu(self):
+        """Ignore environment variables here, since CPU environment variable is used for number of cpus in getCPU function"""
+    
+        return str(self._cpu)
+    
+    @property
+    def smp(self):
+        """Ignore environment variables here, since CPU environment variable is used for number of cpus in getCPU function"""
+
+
+        return str(self._smp)
+
 
 class SROS_integrated(SROS_vm):
     """Integrated VSR-SIM"""
@@ -1099,8 +1160,8 @@ class SROS_integrated(SROS_vm):
     def __init__(
         self, hostname, username, password, mode, num_nics, variant, conn_mode
     ):
-        ram: int = vrnetlab.getMem("integrated", variant.get("min_ram"))
-        cpu: int = vrnetlab.getCpu("integrated", variant.get("cpu"))
+        ram: int = getMem("integrated", variant.get("min_ram"))
+        cpu: int = getCpu("integrated", variant.get("cpu"))
         slot: str = variant.get("slot")
 
         super().__init__(

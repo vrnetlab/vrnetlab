@@ -38,7 +38,14 @@ class VJUNOSEVOLVED_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(VJUNOSEVOLVED_vm, self).__init__(username, password, disk_image=disk_image, ram=8192)
+        super(VJUNOSEVOLVED_vm, self).__init__(
+            username,
+            password,
+            disk_image=disk_image,
+            ram=8192,
+            cpu="IvyBridge,vme=on,ss=on,vmx=on,f16c=on,rdrand=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,arch-capabilities=on,pdpe1gb=on,skip-l1dfl-vmentry=on,pschange-mc-no=on,bmi1=off,avx2=off,bmi2=off,erms=off,invpcid=off,rdseed=off,adx=off,smap=off,xsaveopt=off,abm=off,svm=off",
+            smp="4,sockets=1,cores=4,threads=1"
+        )
 
         # device hostname
         self.hostname = hostname
@@ -63,11 +70,6 @@ class VJUNOSEVOLVED_vm(vrnetlab.VM):
         self.startup_config()
 
         # these QEMU cmd line args are translated from the shipped libvirt XML file
-        self.qemu_args.extend(["-smp", "4,sockets=1,cores=4,threads=1"])
-        # Additional CPU info
-        self.qemu_args.extend([
-            "-cpu", "IvyBridge,vme=on,ss=on,vmx=on,f16c=on,rdrand=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,arch-capabilities=on,pdpe1gb=on,skip-l1dfl-vmentry=on,pschange-mc-no=on,bmi1=off,avx2=off,bmi2=off,erms=off,invpcid=off,rdseed=off,adx=off,smap=off,xsaveopt=off,abm=off,svm=off"
-            ])
         self.qemu_args.extend(["-overcommit", "mem-lock=off"])
         # generate UUID to attach
         self.qemu_args.extend(["-uuid", str(uuid.uuid4())])

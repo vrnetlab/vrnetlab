@@ -56,7 +56,6 @@ class FortiOS_vm(vrnetlab.VM):
         self.nic_type = "virtio-net-pci"
         self.highest_port = 0
         self.qemu_args.extend(["-uuid", str(uuid.uuid4())])
-        self.qemu_args.extend(["-smp", "1", "-cpu", "host"])
         self.spins = 0
         self.running = None
 

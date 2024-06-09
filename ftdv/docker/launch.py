@@ -38,8 +38,10 @@ logging.Logger.trace = trace
 
 
 class FTDV_vm(vrnetlab.VM):
+    
+    # FIPS check fails without exposing cpu (ERROR: FIPS Self-Test failure,  fipsPostGFSboxKat)
     def __init__(
-        self, hostname, username, password, nics, conn_mode, install_mode=False
+        self, hostname, username, password, nics, conn_mode, install_mode=False, smp="4,sockets=1,cores=4,threads=1"
     ):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
@@ -56,8 +58,6 @@ class FTDV_vm(vrnetlab.VM):
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.nic_type = "virtio-net-pci"
-        # FIPS check fails without exposing cpu (ERROR: FIPS Self-Test failure,  fipsPostGFSboxKat)
-        self.qemu_args.extend(["-cpu", "host", "-smp", "4,sockets=1,cores=4,threads=1"])
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
         # boot harddrive first
         self.qemu_args.extend(["-boot", "order=c"])

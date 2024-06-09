@@ -38,7 +38,7 @@ class simulator_VM(vrnetlab.VM):
         self.ram = 16384
         self.vcpu = 6
         self.disk_size = '40G'
-        super(simulator_VM, self).__init__(username, password, disk_image=disk_image, ram=self.ram)
+        super(simulator_VM, self).__init__(username, password, disk_image=disk_image, ram=self.ram, smp=f"{self.vcpu}")
 
         self.num_nics = 14
         self.wait_time = 30
@@ -46,9 +46,7 @@ class simulator_VM(vrnetlab.VM):
 
         vrnetlab.run_command(["qemu-img", "create", "-f", "qcow2", "DataDisk.qcow2", self.disk_size])
 
-        self.qemu_args.extend(["-smp", str(self.vcpu),
-                               "-cpu", "host",
-                               "-drive", "if=virtio,format=qcow2,file=DataDisk.qcow2"])
+        self.qemu_args.extend(["-drive", "if=virtio,format=qcow2,file=DataDisk.qcow2"])
 
         self.qemu_args.extend(["-D", "/var/log/qemu.log"])
 

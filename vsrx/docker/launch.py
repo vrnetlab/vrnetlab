@@ -33,8 +33,7 @@ class VSRX_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(VSRX_vm, self).__init__(username, password, disk_image=disk_image, ram=4096)
-        self.qemu_args.extend(["-smp", "2"])
+        super(VSRX_vm, self).__init__(username, password, disk_image=disk_image, ram=4096, smp="2")
         self.nic_type = "virtio-net-pci"
         self.conn_mode = conn_mode
         self.num_nics = 10

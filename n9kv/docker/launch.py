@@ -48,14 +48,13 @@ class N9KV_vm(vrnetlab.VM):
             logging.getLogger().info("Disk image was not found")
             exit(1)
         super(N9KV_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=8192
+            username, password, disk_image=disk_image, ram=8192, cpu="host,level=9"
         )
         self.hostname = hostname
         self.conn_mode = conn_mode
         # mgmt + 128 that show up in the vm, may as well populate them all in vrnetlab right away
         self.num_nics = 129
         self.nic_type = "e1000"
-        self.qemu_args.extend(["-cpu", "host,level=9"])
 
         # bios for n9kv
         self.qemu_args.extend(["-bios", "/OVMF.fd"])

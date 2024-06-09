@@ -47,14 +47,12 @@ class AOSCX_vm(vrnetlab.VM):
             logging.getLogger().info("Disk image was not found")
             exit(1)
         super(AOSCX_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=4096
+            username, password, disk_image=disk_image, ram=4096, cpu="host,level=9", smp="2"
         )
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = 20
         self.nic_type = "virtio-net-pci"
-        self.qemu_args.extend(["-cpu", "host,level=9"])
-        self.qemu_args.extend(["-smp", "2"])
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""

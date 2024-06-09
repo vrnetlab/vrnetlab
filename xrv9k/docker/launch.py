@@ -45,16 +45,12 @@ class XRV_vm(vrnetlab.VM):
         for e in os.listdir("/"):
             if re.search(".qcow2", e):
                 disk_image = "/" + e
-        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=ram)
+        super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=ram, smp=f"cores={vcpu},threads=1,sockets=1")
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = nics
         self.qemu_args.extend(
             [
-                "-cpu",
-                "host",
-                "-smp",
-                f"cores={vcpu},threads=1,sockets=1",
                 "-machine",
                 "smm=off",
                 "-boot",

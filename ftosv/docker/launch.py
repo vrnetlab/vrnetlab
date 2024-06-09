@@ -47,7 +47,7 @@ class FTOS_vm(vrnetlab.VM):
             logging.getLogger().info("Disk image was not found")
             exit(1)
         super(FTOS_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=4096
+            username, password, disk_image=disk_image, ram=4096, smp="4"
         )
         self.credentials = [["admin", "admin"]]
         self.hostname = hostname
@@ -57,7 +57,6 @@ class FTOS_vm(vrnetlab.VM):
         # available OS10 virtualization platform options: S4000,S4128,S5212,S5224,S5248,S6000,S6010
         self.num_nics = 56
         self.nic_type = "e1000"
-        self.qemu_args.extend(["-cpu", "host", "-smp", "4"])
 
         overlay_disk_image = re.sub(r"(\.[^.]+$)", r"-overlay\1", disk_image)
         # boot harddrive first

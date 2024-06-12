@@ -1229,8 +1229,8 @@ class SROS_cp(SROS_vm):
         # cp - control plane. role is used to create a separate overlay image name
         self.role = "cp"
 
-        ram: int = vrnetlab.getMem(self.role, variant.get("cp").get("min_ram"))
-        cpu: int = vrnetlab.getCpu(self.role, variant.get("cp").get("cpu"))
+        ram: int = getMem(self.role, variant.get("cp").get("min_ram"))
+        cpu: int = getCpu(self.role, variant.get("cp").get("cpu"))
         slot: str = variant.get("cp").get("slot")
 
         super(SROS_cp, self).__init__(
@@ -1303,8 +1303,8 @@ class SROS_lc(SROS_vm):
         # role lc if for a line card. role is used to create a separate overlay image name
         self.role = "lc"
 
-        ram: int = vrnetlab.getMem(self.role, lc_config.get("min_ram"))
-        cpu: int = vrnetlab.getCpu(self.role, lc_config.get("cpu"))
+        ram: int = getMem(self.role, lc_config.get("min_ram"))
+        cpu: int = getCpu(self.role, lc_config.get("cpu"))
 
         super(SROS_lc, self).__init__(
             None,

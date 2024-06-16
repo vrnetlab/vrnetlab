@@ -76,14 +76,18 @@ Custom variants WILL NOT have cards/mda auto-configured, user needs to configure
 
 ### Additional CFs
 
-Additional Compact Flash disks (CFs) can be added via custom variants using the `cfX=SIZE` parameter, where
+Additional Compact Flash disks (CFs) can be added via `CFX=SIZE` ENV VARs, where
 
 * `X` = CF slot id
 * `SIZE` = size of the disk to be created. This value is passed directly to `qemu-img create` command.
 
 ```bash
-cp: cpu=2 ram=4 cf1=1G cf2=2G chassis=SR-7 slot=A card=cpm5 ___
-lc: cpu=2 ram=4 max_nics=10 chassis=SR-7 slot=1 card=iom4-e-b mda/1=me10-10gb-sfp+
+r01:
+      env:
+        CF2: 2G
+        CF1: 2G
+      type: sr-1
+      kind: nokia_sros
 ```
 
 Disk(s) are created in the by the `<clab-dir>/<node-name>/tftpboot/` path with a filename `cfX_SLOT.qcow2`. If disk file already exists it is reused without any modification.
@@ -96,6 +100,7 @@ r01/
     ├── config.txt
     └── license.txt
 ```
+NOTE: If only CF2 is provisioned, node will remap it to CF1.
 
 ## Usage with containerlab
 

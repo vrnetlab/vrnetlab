@@ -766,14 +766,6 @@ def parse_variant_line(cfg, obj, skip_nics=False):
             obj["min_ram"] = elem.split("=")[1]
             continue
 
-        # Optional CF. This indicates the SIZE to be passed directly to qemu-img create (eg: cf1=1G)
-        if "cf1=" in elem:
-            obj["cf1"] = elem.split("=")[1]
-            continue
-        if "cf2=" in elem:
-            obj["cf2"] = elem.split("=")[1]
-            continue
-
         if "slot=" in elem:
             obj["slot"] = elem.split("=")[1]
             # Do not set continue because
@@ -925,6 +917,7 @@ class SROS_vm(vrnetlab.VM):
 
     def attach_cf(self, slot, cfname, size):
         """Attach extra CF. Create if needed."""
+        cfname=cfname.lower()
         path = f"/tftpboot/{cfname}_{slot}.qcow2"
 
         if not os.path.exists(path):
@@ -1162,7 +1155,7 @@ class SROS_integrated(SROS_vm):
     ):
         ram: int = getMem("integrated", variant.get("min_ram"))
         cpu: int = getCpu("integrated", variant.get("cpu"))
-        slot: str = variant.get("slot")
+        slot: str = "A"
 
         super().__init__(
             username,
@@ -1184,10 +1177,11 @@ class SROS_integrated(SROS_vm):
         self.variant = variant
         self.hostname = hostname
 
-        for cf in ["cf1", "cf2"]:
-            size: str = variant.get(cf)
-            if size is not None:
-                self.attach_cf(slot=slot, cfname=cf, size=size)
+        # Optional CFs indicated by environment variable. The value indicate the SIZE to be passed directly to qemu-img create (eg: CF1=1G)
+        for cf in ["CF1", "CF2"]:
+            if cf in os.environ:
+                disk_size = os.getenv(cf)
+                self.attach_cf(slot=slot, cfname=cf, size=disk_size)
 
     def gen_mgmt(self):
         """
@@ -1253,11 +1247,12 @@ class SROS_cp(SROS_vm):
             f"system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
-
-        for cf in ["cf1", "cf2"]:
-            size: str = variant.get("cp").get(cf)
-            if size is not None:
-                self.attach_cf(slot=slot, cfname=cf, size=size)
+        
+        # Optional CFs indicated by environment variable. The value indicate the SIZE to be passed directly to qemu-img create (eg: CF1=1G)
+        for cf in ["CF1", "CF2"]:
+            if cf in os.environ:
+                disk_size = os.getenv(cf)
+                self.attach_cf(slot=slot, cfname=cf, size=disk_size)
 
     def start(self):
         # use parent class start() function
@@ -1376,6 +1371,7 @@ class SROS(vrnetlab.VR):
                     parse_variant_line(lc.get("timos_line", ""), lc)
                     for lc in variant["lcs"]
                 ]
+                variant["cp"] = parse_variant_line(variant["cp"]["timos_line"],variant["cp"])
         else:
             variant = parse_custom_variant(variant_name)
 

@@ -161,7 +161,10 @@ class ROS_vm(vrnetlab.VM):
         self.wait_write(f"/system identity set name={self.hostname}", wait="")
 
         self.wait_write(
-            f"/ip address add interface=ether1 address={ROS_MGMT_ADDR}/{PREFIX_LENGTH}",
+            # Some RouterOS versions didn't detect interfaces quick enough to reliably accept an IP being assigned to ether1.
+            # ROS 6.45.9 was particularly bad for this. So, tell the router to wait for the interface to appear before trying to add the IP.
+            "{ :local ether1count [/interface ethernet find where name=ether1]; :while ([:len $ether1count] < 1)  do={ :set ether1count [/interface ethernet find where name=ether1]; } };"
+            + f"/ip address add interface=ether1 address={ROS_MGMT_ADDR}/{PREFIX_LENGTH}",
             f"[admin@{self.hostname}] > ",
         )
         # Update admin account if username==admin and there is a password set

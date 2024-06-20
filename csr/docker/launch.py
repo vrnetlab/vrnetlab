@@ -50,6 +50,7 @@ class CSR_vm(vrnetlab.VM):
                 os.rename("/" + e, "/tftpboot/license.lic")
 
         self.license = False
+        self._static_mgmt_mac = True
         if os.path.isfile("/tftpboot/license.lic"):
             logger.info("License found")
             self.license = True

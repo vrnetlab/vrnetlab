@@ -56,6 +56,7 @@ class ROS_vm(vrnetlab.VM):
         self.qemu_args.extend(["-boot", "n"])
         self.hostname = hostname
         self.conn_mode = conn_mode
+        self.nic_type = "virtio-net" # "e1000" is default but breaks mtu > 1500 on vlan subinterfaces on RouterOS 6.x.x
         self.num_nics = 31
 
         # set up bridge for management interface to a localhost

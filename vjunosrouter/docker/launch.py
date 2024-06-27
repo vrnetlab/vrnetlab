@@ -6,6 +6,7 @@ import re
 import signal
 import subprocess
 import sys
+import uuid
 
 import vrnetlab
 
@@ -44,7 +45,13 @@ class VJUNOSROUTER_vm(vrnetlab.VM):
             if re.search(".qcow2$", e):
                 disk_image = "/" + e
         super(VJUNOSROUTER_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=5120
+            username,
+            password,
+            disk_image=disk_image,
+            ram=5120,
+            driveif="virtio",
+            cpu="IvyBridge,vme=on,ss=on,vmx=on,f16c=on,rdrand=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,arch-capabilities=on,pdpe1gb=on,skip-l1dfl-vmentry=on,pschange-mc-no=on,bmi1=off,avx2=off,bmi2=off,erms=off,invpcid=off,rdseed=off,adx=off,smap=off,xsaveopt=off,abm=off,svm=on",
+            smp="4,sockets=1,cores=4,threads=1",
         )
         # device hostname
         self.hostname = hostname
@@ -65,34 +72,27 @@ class VJUNOSROUTER_vm(vrnetlab.VM):
         self.startup_config()
 
         # these QEMU cmd line args are translated from the shipped libvirt XML file
-        self.qemu_args.extend(["-smp", "4,sockets=1,cores=4,threads=1"])
-        # Additional CPU info
-        self.qemu_args.extend(
-            [
-                "-cpu",
-                "IvyBridge,vme=on,ss=on,vmx=on,f16c=on,rdrand=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,arch-capabilities=on,pdpe1gb=on,skip-l1dfl-vmentry=on,pschange-mc-no=on,bmi1=off,avx2=off,bmi2=off,erms=off,invpcid=off,rdseed=off,adx=off,smap=off,xsaveopt=off,abm=off,svm=on",
-            ]
-        )
+        self.qemu_args.extend(["-overcommit", "mem-lock=off"])
+        # generate UUID to attach
+        self.qemu_args.extend(["-uuid", str(uuid.uuid4())])
+
+        # extend QEMU args with device USB details, xhci is the most virtualisation-friendly
+        self.qemu_args.extend(["-device", "qemu-xhci,id=usb,bus=pci.0,addr=0x1.0x2"])
+
         # mount config disk with juniper.conf base configs
         self.qemu_args.extend(
             [
                 "-drive",
-                "if=none,id=config_disk,file=/config.img,format=raw",
+                "file=/config.img,format=raw,if=none,id=config_disk",
                 "-device",
-                "virtio-blk-pci,drive=config_disk",
+                "usb-storage,drive=config_disk,id=usb-disk0,removable=off,write-cache=on",
             ]
         )
-        self.qemu_args.extend(["-overcommit", "mem-lock=off"])
-        self.qemu_args.extend(
-            ["-display", "none", "-no-user-config", "-nodefaults", "-boot", "strict=on"]
-        )
+
+        self.qemu_args.extend(["-no-user-config", "-nodefaults", "-boot", "strict=on"])
         self.nic_type = "virtio-net-pci"
         self.num_nics = 11
         self.smbios = ["type=1,product=VM-VMX,family=lab"]
-        self.qemu_args.extend(["-machine", "pc,usb=off,dump-guest-core=off,accel=kvm"])
-        self.qemu_args.extend(
-            ["-device", "piix3-usb-uhci,id=usb,bus=pci.0,addr=0x1.0x2"]
-        )
         self.conn_mode = conn_mode
 
     def startup_config(self):

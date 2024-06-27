@@ -1,15 +1,19 @@
-FROM debian:bookworm-slim
+FROM public.ecr.aws/docker/library/debian:bookworm-slim
+LABEL org.opencontainers.image.authors="roman@dodin.dev,vista@birb.network"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qy \
- && apt-get install -y \
+ && apt-get install --no-install-recommends -y \
     dosfstools \
     bridge-utils \
     iproute2 \
+    python3 \
+    python3-passlib \
     socat \
     ssh \
     qemu-kvm \
+    qemu-utils \
     inetutils-ping \
     dnsutils \
     telnet \

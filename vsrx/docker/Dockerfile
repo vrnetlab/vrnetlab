@@ -7,7 +7,7 @@ RUN apt-get update -qy \
    && apt-get install --no-install-recommends -y \
    bridge-utils \
    iproute2 \
-   python3-ipy \
+   python3 \
    socat \
    qemu-kvm \
    qemu-utils \

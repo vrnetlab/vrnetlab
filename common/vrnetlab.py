@@ -77,7 +77,7 @@ class VM:
         driveif="ide",
         provision_pci_bus=True,
         cpu="host",
-        smp=1,
+        smp="1",
     ):
         self.logger = logging.getLogger()
 
@@ -436,7 +436,11 @@ class VM:
         res = []
         # mgmt interface is special - we use qemu user mode network
         res.append("-device")
-        mac = 'c0:00:01:00:ca:fe' if getattr(self,'_static_mgmt_mac',False) else gen_mac(0)
+        mac = (
+            "c0:00:01:00:ca:fe"
+            if getattr(self, "_static_mgmt_mac", False)
+            else gen_mac(0)
+        )
         res.append(self.nic_type + f",netdev=p00,mac={mac}")
         res.append("-netdev")
         res.append(

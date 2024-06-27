@@ -58,6 +58,7 @@ def getMem(vmMode: str, ram: int) -> int:
             return 1024 * get_digits(os.getenv("LC_MEMORY"))
     return 1024 * int(ram)
 
+
 # getCpu returns the number of cpu cores for a given VM mode.
 # Cpu can be specified in the variant dict, provided by a user via the custom type definition,
 # or set via env vars.
@@ -77,6 +78,7 @@ def getCpu(vsimMode: str, cpu: int) -> int:
         if "LC_CPU" in os.environ:
             return int(os.getenv("LC_CPU"))
     return cpu
+
 
 @dataclass
 class SROSVersion:
@@ -712,6 +714,8 @@ SROS_MD_COMMON_CFG = """
 /configure system security user-params local-user user "admin" access grpc true
 /configure system security snmp community "public" access-permissions r
 /configure system security snmp community "public" version v2c
+/configure system management-interface configuration-save configuration-backups 5
+/configure system management-interface configuration-save incremental-saves false
 """
 
 
@@ -892,7 +896,6 @@ def gen_bof_config():
 
 class SROS_vm(vrnetlab.VM):
     def __init__(self, username, password, ram, conn_mode, cpu=2, num=0):
-
         if not cpu or cpu == 0 or cpu == "0":
             cpu = 2
 
@@ -903,7 +906,7 @@ class SROS_vm(vrnetlab.VM):
             num=num,
             ram=ram,
             driveif="virtio",
-            smp=f"{cpu}"
+            smp=f"{cpu}",
         )
 
         self.nic_type = "virtio-net-pci"
@@ -911,13 +914,13 @@ class SROS_vm(vrnetlab.VM):
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.power = "dc"  # vSR emulates DC only
         self.read_license()
-        
+
         # override default wait pattern with hash followed by the space
         self.wait_pattern = "# "
 
     def attach_cf(self, slot, cfname, size):
         """Attach extra CF. Create if needed."""
-        cfname=cfname.lower()
+        cfname = cfname.lower()
         path = f"/tftpboot/{cfname}_{slot}.qcow2"
 
         if not os.path.exists(path):
@@ -1132,17 +1135,15 @@ class SROS_vm(vrnetlab.VM):
         """Ignore environment variables here, since getMem function is used"""
         return self._ram
 
-    
     @property
     def cpu(self):
         """Ignore environment variables here, since CPU environment variable is used for number of cpus in getCPU function"""
-    
+
         return str(self._cpu)
-    
+
     @property
     def smp(self):
         """Ignore environment variables here, since CPU environment variable is used for number of cpus in getCPU function"""
-
 
         return str(self._smp)
 
@@ -1247,7 +1248,7 @@ class SROS_cp(SROS_vm):
             f"system-base-mac={vrnetlab.gen_mac(0)} {variant['cp']['timos_line']}"
         ]
         self.logger.info("Acting timos line: {}".format(self.smbios))
-        
+
         # Optional CFs indicated by environment variable. The value indicate the SIZE to be passed directly to qemu-img create (eg: CF1=1G)
         for cf in ["CF1", "CF2"]:
             if cf in os.environ:
@@ -1371,7 +1372,9 @@ class SROS(vrnetlab.VR):
                     parse_variant_line(lc.get("timos_line", ""), lc)
                     for lc in variant["lcs"]
                 ]
-                variant["cp"] = parse_variant_line(variant["cp"]["timos_line"],variant["cp"])
+                variant["cp"] = parse_variant_line(
+                    variant["cp"]["timos_line"], variant["cp"]
+                )
         else:
             variant = parse_custom_variant(variant_name)
 

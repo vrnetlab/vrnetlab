@@ -3,7 +3,7 @@ LABEL org.opencontainers.image.authors="roman@dodin.dev"
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
-   && apt-get install -y \
+   && apt-get install -y --no-install-recommends \
    bridge-utils \
    iproute2 \
    socat \
@@ -13,7 +13,6 @@ RUN apt-get update -qy \
    ssh \
    inetutils-ping \
    dnsutils \
-   openvswitch-switch \
    iptables \
    nftables \
    telnet \

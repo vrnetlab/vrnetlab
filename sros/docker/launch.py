@@ -84,11 +84,13 @@ def getCpu(vsimMode: str, cpu: int) -> int:
 class SROSVersion:
     """SROSVersion is a dataclass that stores SROS version components
 
+    magc is a boolean indicating whether or not this is a magc image (and thus, classic cli)
     version is a string repr of a version number, e.g. "22.10.R1"
     major, minor, patch are integers representing the version number components
-    patch version that is typically in the form of R1, R2, etc. will be stripped to integer only
+    patch version that is typically in the form of R1, R2, R2-1, etc.
     """
 
+    magc: bool
     version: str
     major: int
     minor: int
@@ -96,7 +98,7 @@ class SROSVersion:
 
 
 # SROS_VERSION global variable is used to store the SROS version components
-SROS_VERSION = SROSVersion(version="", major=0, minor=0, patch=0)
+SROS_VERSION = SROSVersion(version="", major=0, minor=0, patch=0, magc=False)
 
 
 # line_card_config is a convenience function that generates line card definition strings
@@ -872,7 +874,7 @@ def gen_bof_config():
     """generate bof configuration commands based on env vars and SR OS version"""
     cmds = []
     if "DOCKER_NET_V4_ADDR" in os.environ and os.getenv("DOCKER_NET_V4_ADDR") != "":
-        if SROS_VERSION.major >= 23:
+        if SROS_VERSION.major >= 23 and not SROS_VERSION.magc:
             cmds.append(
                 f'/bof router static-routes route {os.getenv("DOCKER_NET_V4_ADDR")} next-hop {BRIDGE_V4_ADDR}'
             )
@@ -881,7 +883,7 @@ def gen_bof_config():
                 f'/bof static-route {os.getenv("DOCKER_NET_V4_ADDR")} next-hop {BRIDGE_V4_ADDR}'
             )
     if "DOCKER_NET_V6_ADDR" in os.environ and os.getenv("DOCKER_NET_V6_ADDR") != "":
-        if SROS_VERSION.major >= 23:
+        if SROS_VERSION.major >= 23 and not SROS_VERSION.magc:
             cmds.append(
                 f'/bof router static-routes route {os.getenv("DOCKER_NET_V6_ADDR")} next-hop {BRIDGE_V6_ADDR}'
             )
@@ -1020,7 +1022,7 @@ class SROS_vm(vrnetlab.VM):
         # power_path sets the configuration path to access power shelf and module
         # it is different for SR OS version <= 22
         power_path = "chassis router chassis-number 1"
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
             power_path = "system"
 
         for s in range(1, shelves + 1):
@@ -1034,19 +1036,19 @@ class SROS_vm(vrnetlab.VM):
 
     def enterConfig(self):
         """Enter configuration mode. No-op for SR OS version <= 22"""
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
             return
         self.wait_write("edit-config exclusive")
 
     def enterBofConfig(self):
         """Enter bof configuration mode. No-op for SR OS version <= 22"""
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
             return
         self.wait_write("edit-config bof exclusive")
 
     def commitConfig(self):
         """Commit configuration. No-op for SR OS version <= 22"""
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
             return
         self.wait_write("commit")
         self.wait_write("/")
@@ -1054,7 +1056,7 @@ class SROS_vm(vrnetlab.VM):
 
     def commitBofConfig(self):
         """Commit configuration. No-op for SR OS version <= 22"""
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
             return
         self.wait_write("commit")
         self.wait_write("/")
@@ -1075,7 +1077,10 @@ class SROS_vm(vrnetlab.VM):
 
     def persistBofAndConfig(self):
         """ "Persist bof and config"""
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.magc:
+            self.wait_write("/bof save cf3:")
+            self.wait_write("/admin save")
+        elif SROS_VERSION.major <= 22:
             self.wait_write("/bof save")
             self.wait_write("/admin save")
         else:
@@ -1084,7 +1089,7 @@ class SROS_vm(vrnetlab.VM):
 
     def switchConfigEngine(self):
         """Switch configuration engine"""
-        if SROS_VERSION.major <= 22:
+        if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
             # for SR OS version <= 22, we enforce MD-CLI by switching to it
             self.wait_write(
                 f"/configure system management-interface configuration-mode {self.mode}"
@@ -1517,7 +1522,7 @@ class SROS(vrnetlab.VR):
     def extractVersion(self):
         """extractVersion extracts the SR OS version from the qcow2 image name"""
         # https://regex101.com/r/SPefOu/1
-        pattern = r"\S+-((\d{1,3})\.(\d{1,2})\.\w(\d{1,2}))\.qcow2"
+        pattern = r"(magc-)?\S+-((\d{1,3})\.(\d{1,2})\.\w(\d{1,2}(?:-\d{1,2})?))\.qcow2"
         match_found = False
 
         for e in os.listdir("/"):
@@ -1525,11 +1530,11 @@ class SROS(vrnetlab.VR):
             if match:
                 # save original qcow2 image name
                 self.qcow_name = e
-
-                SROS_VERSION.version = str(match.group(1))
-                SROS_VERSION.major = int(match.group(2))
-                SROS_VERSION.minor = int(match.group(3))
-                SROS_VERSION.patch = int(match.group(4))
+                SROS_VERSION.magc = bool(match.group(1))
+                SROS_VERSION.version = str(match.group(2))
+                SROS_VERSION.major = int(match.group(3))
+                SROS_VERSION.minor = int(match.group(4))
+                SROS_VERSION.patch = str(match.group(5))
                 self.logger.info(f"Parsed SR OS version: {SROS_VERSION}")
 
                 match_found = True
@@ -1552,7 +1557,7 @@ def getDefaultConfig() -> str:
     """Returns the default configuration for the system based on the SR OS version.
     SR OS >=23 uses model-driven configuration, while SR OS <=22 uses classic configuration.
     """
-    if SROS_VERSION.major <= 22:
+    if SROS_VERSION.major <= 22 or SROS_VERSION.magc:
         return SROS_CL_COMMON_CFG + get_version_specific_config(SROS_VERSION.major)
 
     return SROS_MD_COMMON_CFG + get_version_specific_config(SROS_VERSION.major)

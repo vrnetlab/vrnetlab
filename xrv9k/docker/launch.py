@@ -40,15 +40,16 @@ logging.Logger.trace = trace
 
 
 class XRV_vm(vrnetlab.VM):
-    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
-        disk_image = ""
-        for e in os.listdir("/"):
-            if re.search(".qcow2", e):
+    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram, install=False):
+        disk_image = None
+        for e in sorted(os.listdir("/")):
+            if not disk_image and re.search(".qcow2", e):
                 disk_image = "/" + e
         super(XRV_vm, self).__init__(username, password, disk_image=disk_image, ram=ram, smp=f"cores={vcpu},threads=1,sockets=1")
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = nics
+        self.install_mode = install
         self.qemu_args.extend(
             [
                 "-machine",
@@ -141,6 +142,10 @@ class XRV_vm(vrnetlab.VM):
                 self.wait_write("", wait=None)
                 self.xr_ready = True
             if ridx == 2:  # initial user config
+                # if we are installing and we reach this point, we are finished and don't need to bootstrap
+                if self.install_mode:
+                    self.running = True
+                    return
                 self.logger.info("Creating initial user")
                 self.wait_write(self.username, wait=None)
                 self.wait_write(self.password, wait="Enter secret:")
@@ -290,6 +295,18 @@ class XRV_vm(vrnetlab.VM):
         return False
 
 
+class XRV_Installer(vrnetlab.VR_Installer):
+    """ XRV installer
+        Will start the XRV and then shut it down. Booting the XRV for the
+        first time requires the XRV itself to install internal packages
+        then it will restart. Subsequent boots will not require this restart.
+        By running this "install" when building the docker image we can
+        decrease the normal startup time of the XRV.
+    """
+    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
+        super().__init__()
+        self.vm = XRV_vm(hostname, username, password, nics, conn_mode, vcpu, ram, install=True)
+
 class XRV(vrnetlab.VR):
     def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
         super(XRV, self).__init__(username, password)
@@ -307,6 +324,7 @@ if __name__ == "__main__":
     parser.add_argument("--username", default="vrnetlab", help="Username")
     parser.add_argument("--password", default="VR-netlab9", help="Password")
     parser.add_argument("--nics", type=int, default=128, help="Number of NICS")
+    parser.add_argument('--install', action="store_true", help="Pre-install image")
     parser.add_argument(
         "--vcpu", type=int, default=2, help="Number of cpu cores to use"
     )
@@ -331,13 +349,25 @@ if __name__ == "__main__":
     logger.debug(f"Environment variables: {os.environ}")
     vrnetlab.boot_delay()
 
-    vr = XRV(
-        args.hostname,
-        args.username,
-        args.password,
-        args.nics,
-        args.connection_mode,
-        args.vcpu,
-        args.ram,
-    )
-    vr.start()
+    if args.install:
+        vr = XRV_Installer(
+            args.hostname,
+            args.username,
+            args.password,
+            args.nics,
+            args.connection_mode,
+            args.vcpu,
+            args.ram,
+        )
+        vr.install()
+    else:
+        vr = XRV(
+            args.hostname,
+            args.username,
+            args.password,
+            args.nics,
+            args.connection_mode,
+            args.vcpu,
+            args.ram,
+        )
+        vr.start()

@@ -9,6 +9,7 @@ RUN apt-get update -qy \
    python3 \
    socat \
    qemu-kvm \
+   qemu-utils \
    tcpdump \
    tftpd-hpa \
    ssh \

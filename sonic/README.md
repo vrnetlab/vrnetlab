@@ -3,7 +3,7 @@
 This is the vrnetlab docker image for SONiC's VM.
 The scripts in this directory are based on FreeBSD and VSRX kinds.
 
-> Available with [containerlab](https://containerlab.dev) as `vr-sonic` kind.
+> Available with [containerlab](https://containerlab.dev) as [`sonic-vm`](https://containerlab.dev/manual/kinds/sonic-vm/) kind.
 
 ## Building the docker image
 
@@ -11,7 +11,8 @@ Download the latest `sonic-vs.img.gz` image using the options documented on the 
 
 Uncompress and place the `.img` file in this directory. Rename the file to `sonic-vs-[version].qcow2` and run `make`.
 
-After typing `make`, a new image will appear called `vrnetlab/vr-sonic` tagged with version.
+After typing `make`, a new image will appear named `vrnetlab/vr-sonic:<version>`.
+
 Run `docker images` to confirm this.
 
 ## System requirements

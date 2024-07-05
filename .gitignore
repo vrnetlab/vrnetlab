@@ -2,6 +2,8 @@
 .idea
 venv
 *.qcow2
+*.gz
+*.xz
 *.vmdk
 *.iso
 

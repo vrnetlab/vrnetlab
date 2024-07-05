@@ -64,7 +64,7 @@ class XRV_vm(vrnetlab.VM):
                 "telnet:0.0.0.0:50%02d,server,nowait" % (self.num + 3),
             ]
         )
-        self.credentials = [["admin", "admin"]]
+        self.credentials = []
 
         self.xr_ready = False
 
@@ -127,10 +127,12 @@ class XRV_vm(vrnetlab.VM):
                 b"Not settable: Success",  # no SYSTEM CONFIGURATION COMPLETE in xrv9k?
                 b"Enter root-system [U|u]sername",
                 b"Username:",
-                b"ios#",
             ],
             1,
         )
+        
+        xr_login = False    # whether we are logged into the shell or not
+
         if match:  # got a match!
             if ridx == 0:  # press return to get started, so we press return!
                 self.logger.debug("got 'press return to get started...'")
@@ -153,18 +155,27 @@ class XRV_vm(vrnetlab.VM):
                 self.credentials.insert(0, [self.username, self.password])
             if ridx == 3:  # matched login prompt, so should login
                 self.logger.debug("matched login prompt")
+                
                 try:
-                    username, password = self.credentials.pop(0)
+                    username, password = self.credentials[0]
                 except IndexError:
-                    self.logger.error("no more credentials to try")
+                    self.logger.error("no credentials populated")
                     return
+
                 self.logger.debug(
                     "trying to log in with %s / %s" % (username, password)
                 )
                 self.wait_write(username, wait=None)
                 self.wait_write(password, wait="Password:")
-                self.logger.debug("logged in with %s / %s" % (username, password))
-            if self.xr_ready is True and ridx == 4:
+                
+                _, match, res = self.tn.expect([b"ios#"], 3)
+                if match:
+                    self.logger.debug("logged in with %s / %s successfully" % (username, password))
+                    xr_login = True
+                else:
+                    self.logger.error("could not login with %s / %s" % (username, password))
+                    
+            if self.xr_ready is True and xr_login is True:
                 # run main config!
                 if not self.bootstrap_config():
                     # main config failed :/
@@ -218,10 +229,6 @@ class XRV_vm(vrnetlab.VM):
 
         # make sure we get our prompt back
         self.wait_write("")
-
-        # wait for Gi0/0/0/0 in config
-        if not self._wait_config("show interfaces description", "Gi0/0/0/0"):
-            return False
 
         # wait for call-home in config
         if not self._wait_config("show running-config call-home", "service active"):

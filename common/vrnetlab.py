@@ -303,7 +303,7 @@ class VM:
             "hostfwd=tcp::2830-10.0.0.15:830,"  # netconf
             "hostfwd=tcp::2080-10.0.0.15:80,"  # http
             "hostfwd=tcp::2443-10.0.0.15:443"  # https
-            "hostfwd=tcp::59339-10.0.0.15:9339"  # iana gnmi/gnoi
+            "hostfwd=tcp::49339-10.0.0.15:9339"  # iana gnmi/gnoi
             "hostfwd=tcp::47400-10.0.0.15:57400"  # nokia gnmi/gnoi
             "hostfwd=tcp::56030-10.0.0.15:6030"  # gnmi/gnoi arista
             "hostfwd=tcp::52767-10.0.0.15:32767"  # gnmi/gnoi juniper
@@ -610,7 +610,7 @@ class VR:
             )
             # IANA gnmi/gnoi
             run_command(
-                ["socat", "TCP-LISTEN:9339,fork", "TCP:127.0.0.1:59339"],
+                ["socat", "TCP-LISTEN:9339,fork", "TCP:127.0.0.1:49339"],
                 background=True,
             )
             # Nokia gnmi/gnoi

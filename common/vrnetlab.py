@@ -302,10 +302,10 @@ class VM:
             "hostfwd=udp::2161-10.0.0.15:161,"  # snmp
             "hostfwd=tcp::2830-10.0.0.15:830,"  # netconf
             "hostfwd=tcp::2080-10.0.0.15:80,"  # http
-            "hostfwd=tcp::2443-10.0.0.15:443"  # https
-            "hostfwd=tcp::49339-10.0.0.15:9339"  # iana gnmi/gnoi
-            "hostfwd=tcp::47400-10.0.0.15:57400"  # nokia gnmi/gnoi
-            "hostfwd=tcp::56030-10.0.0.15:6030"  # gnmi/gnoi arista
+            "hostfwd=tcp::2443-10.0.0.15:443,"  # https
+            "hostfwd=tcp::49339-10.0.0.15:9339,"  # iana gnmi/gnoi
+            "hostfwd=tcp::47400-10.0.0.15:57400,"  # nokia gnmi/gnoi
+            "hostfwd=tcp::56030-10.0.0.15:6030,"  # gnmi/gnoi arista
             "hostfwd=tcp::52767-10.0.0.15:32767"  # gnmi/gnoi juniper
         )
         return res

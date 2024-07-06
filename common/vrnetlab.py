@@ -8,7 +8,6 @@ import os
 import random
 import re
 import subprocess
-import sys
 import telnetlib
 import time
 from pathlib import Path
@@ -51,7 +50,7 @@ def run_command(cmd, cwd=None, background=False, shell=False):
 def boot_delay():
     delay = os.getenv("BOOT_DELAY")
     if delay and (delay != "" or delay != 0):
-        logging.getLogger().info(f"Delaying VM boot of by {delay} seconds")
+        logging.getLogger().info(f"Delaying VM boot by {delay} seconds")
         time.sleep(int(delay))
 
 
@@ -259,117 +258,6 @@ class VM:
         except:
             pass
 
-    def create_bridges(self):
-        """Create a linux bridge for every attached eth interface
-        Returns list of bridge names
-        """
-        # based on https://github.com/plajjan/vrnetlab/pull/188
-        run_command(["mkdir", "-p", "/etc/qemu"])  # This is to whitlist all bridges
-        run_command(["echo 'allow all' > /etc/qemu/bridge.conf"], shell=True)
-
-        bridges = list()
-        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
-        intfs.sort(key=natural_sort_key)
-
-        self.logger.info("Creating bridges for interfaces: %s" % intfs)
-
-        for idx, intf in enumerate(intfs):
-            run_command(
-                ["ip", "link", "add", "name", "br-%s" % idx, "type", "bridge"],
-                background=True,
-            )
-            run_command(["ip", "link", "set", "br-%s" % idx, "up"])
-            run_command(["ip", "link", "set", intf, "mtu", "65000"])
-            run_command(["ip", "link", "set", intf, "master", "br-%s" % idx])
-            run_command(
-                ["echo 16384 > /sys/class/net/br-%s/bridge/group_fwd_mask" % idx],
-                shell=True,
-            )
-            bridges.append("br-%s" % idx)
-        return bridges
-
-    def create_ovs_bridges(self):
-        """Create a OvS bridges for every attached eth interface
-        Returns list of bridge names
-        """
-
-        ifup_script = """#!/bin/sh
-
-        switch="vr-ovs-$1"
-        ip link set $1 up
-        ip link set $1 mtu 65000
-        ovs-vsctl add-port ${switch} $1"""
-
-        with open("/etc/vr-ovs-ifup", "w") as f:
-            f.write(ifup_script)
-        os.chmod("/etc/vr-ovs-ifup", 0o777)
-
-        # start ovs services
-        # system-id doesn't mean anything here
-        run_command(
-            [
-                "/usr/share/openvswitch/scripts/ovs-ctl",
-                f"--system-id={random.randint(1000,50000)}",
-                "start",
-            ]
-        )
-
-        time.sleep(3)
-
-        bridges = list()
-        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
-        intfs.sort(key=natural_sort_key)
-
-        self.logger.info("Creating ovs bridges for interfaces: %s" % intfs)
-
-        for idx, intf in enumerate(intfs):
-            brname = f"vr-ovs-tap{idx+1}"
-            # generate a mac for ovs bridge, since this mac we will need
-            # to create a "drop flow" rule to filter grARP replies we can't have
-            # ref: https://mail.openvswitch.org/pipermail/ovs-discuss/2021-February/050951.html
-            brmac = gen_mac(0)
-            self.logger.debug(f"Creating bridge {brname} with {brmac} hw address")
-            if self.conn_mode == "ovs":
-                run_command(
-                    f"ovs-vsctl add-br {brname} -- set bridge {brname} other-config:hwaddr={brmac}",
-                    shell=True,
-                )
-            if self.conn_mode == "ovs-user":
-                run_command(
-                    f"ovs-vsctl add-br {brname}",
-                    shell=True,
-                )
-                run_command(
-                    f"ovs-vsctl set bridge {brname} datapath_type=netdev",
-                    shell=True,
-                )
-                run_command(
-                    f"ovs-vsctl set bridge {brname} other-config:hwaddr={brmac}",
-                    shell=True,
-                )
-            run_command(["ip", "link", "set", "dev", brname, "mtu", "9000"])
-            run_command(
-                [
-                    "ovs-vsctl",
-                    "set",
-                    "bridge",
-                    brname,
-                    "other-config:forward-bpdu=true",
-                ]
-            )
-            run_command(["ovs-vsctl", "add-port", brname, intf])
-            run_command(["ip", "link", "set", "dev", brname, "up"])
-            run_command(
-                [
-                    "ovs-ofctl",
-                    "add-flow",
-                    brname,
-                    f"table=0,arp,dl_src={brmac} actions=drop",
-                ]
-            )
-            bridges.append(brname)
-        return bridges
-
     def create_tc_tap_ifup(self):
         """Create tap ifup script that is used in tc datapath mode"""
         ifup_script = """#!/bin/bash
@@ -395,42 +283,6 @@ class VM:
             f.write(ifup_script)
         os.chmod("/etc/tc-tap-ifup", 0o777)
 
-    def create_macvtaps(self):
-        """
-        Create Macvtap interfaces for each non dataplane interface
-        """
-        intfs = [x for x in os.listdir("/sys/class/net/") if "eth" in x if x != "eth0"]
-        self.data_ifaces = intfs
-        intfs.sort(key=natural_sort_key)
-
-        for idx, intf in enumerate(intfs):
-            self.logger.debug("Creating macvtap interfaces for link: %s" % intf)
-            run_command(
-                [
-                    "ip",
-                    "link",
-                    "add",
-                    "link",
-                    intf,
-                    "name",
-                    "macvtap{}".format(idx + 1),
-                    "type",
-                    "macvtap",
-                    "mode",
-                    "passthru",
-                ],
-            )
-            run_command(
-                [
-                    "ip",
-                    "link",
-                    "set",
-                    "dev",
-                    "macvtap{}".format(idx + 1),
-                    "up",
-                ],
-            )
-
     def gen_mgmt(self):
         """Generate qemu args for the mgmt interface(s)"""
         res = []
@@ -446,11 +298,15 @@ class VM:
         res.append(
             "user,id=p00,net=10.0.0.0/24,"
             "tftp=/tftpboot,"
-            "hostfwd=tcp::2022-10.0.0.15:22,"
-            "hostfwd=udp::2161-10.0.0.15:161,"
-            "hostfwd=tcp::2830-10.0.0.15:830,"
-            "hostfwd=tcp::2080-10.0.0.15:80,"
-            "hostfwd=tcp::2443-10.0.0.15:443"
+            "hostfwd=tcp::2022-10.0.0.15:22,"  # ssh
+            "hostfwd=udp::2161-10.0.0.15:161,"  # snmp
+            "hostfwd=tcp::2830-10.0.0.15:830,"  # netconf
+            "hostfwd=tcp::2080-10.0.0.15:80,"  # http
+            "hostfwd=tcp::2443-10.0.0.15:443"  # https
+            "hostfwd=tcp::59339-10.0.0.15:9339"  # iana gnmi/gnoi
+            "hostfwd=tcp::47400-10.0.0.15:57400"  # nokia gnmi/gnoi
+            "hostfwd=tcp::56030-10.0.0.15:6030"  # gnmi/gnoi arista
+            "hostfwd=tcp::52676-10.0.0.15:32676"  # gnmi/gnoi juniper
         )
         return res
 
@@ -498,30 +354,9 @@ class VM:
         self.nic_provision_delay()
 
         res = []
-        bridges = []
 
         if self.conn_mode == "tc":
             self.create_tc_tap_ifup()
-        elif self.conn_mode in ["ovs", "ovs-user"]:
-            bridges = self.create_ovs_bridges()
-            if len(bridges) > self.num_nics:
-                self.logger.error(
-                    "Number of dataplane interfaces '{}' exceeds the requested number of links '{}'".format(
-                        len(bridges), self.num_nics
-                    )
-                )
-                sys.exit(1)
-        elif self.conn_mode == "macvtap":
-            self.create_macvtaps()
-        elif self.conn_mode == "bridge":
-            bridges = self.create_bridges()
-            if len(bridges) > self.num_nics:
-                self.logger.error(
-                    "Number of dataplane interfaces '{}' exceeds the requested number of links '{}'".format(
-                        len(bridges), self.num_nics
-                    )
-                )
-                sys.exit(1)
 
         start_eth = self.start_nic_eth_idx
         end_eth = self.start_nic_eth_idx + self.num_nics
@@ -562,15 +397,7 @@ class VM:
                 )
                 continue
 
-            mac = ""
-            if self.conn_mode == "macvtap":
-                # get macvtap interface mac that will be used in qemu nic config
-                if not os.path.exists("/sys/class/net/macvtap{}/address".format(i)):
-                    continue
-                with open("/sys/class/net/macvtap%s/address" % i, "r") as f:
-                    mac = f.readline().strip("\n")
-            else:
-                mac = gen_mac(i)
+            mac = gen_mac(i)
 
             res.append("-device")
             res.append(
@@ -588,50 +415,6 @@ class VM:
                     f"tap,id=p{i:02d},ifname=tap{i},script=/etc/tc-tap-ifup,downscript=no"
                 )
 
-            if self.conn_mode == "macvtap":
-                # if required number of nics exceeds the number of attached interfaces
-                # we skip excessive ones
-                if not os.path.exists("/sys/class/net/macvtap{}/ifindex".format(i)):
-                    continue
-                # init value of macvtap ifindex
-                tapidx = 0
-                with open("/sys/class/net/macvtap%s/ifindex" % i, "r") as f:
-                    tapidx = f.readline().strip("\n")
-
-                fd = 100 + i  # fd start number for tap iface
-                vhfd = 400 + i  # vhost fd start number
-
-                res.append("-netdev")
-                res.append(
-                    "tap,id=p%(i)02d,fd=%(fd)s,vhost=on,vhostfd=%(vhfd)s %(fd)s<>/dev/tap%(tapidx)s %(vhfd)s<>/dev/vhost-net"
-                    % {"i": i, "fd": fd, "vhfd": vhfd, "tapidx": tapidx}
-                )
-
-            elif self.conn_mode == "bridge":
-                if i <= len(bridges):
-                    bridge = bridges[i - 1]  # We're starting from 0
-                    res.append("-netdev")
-                    res.append(
-                        "bridge,id=p%(i)02d,br=%(bridge)s" % {"i": i, "bridge": bridge}
-                    )
-                else:  # We don't create more interfaces than we have bridges
-                    del res[-2:]  # Removing recently added interface
-
-            elif self.conn_mode in ["ovs", "ovs-user"]:
-                if i <= len(bridges):
-                    res.append("-netdev")
-                    res.append(
-                        "tap,id=p%(i)02d,ifname=tap%(i)s,script=/etc/vr-ovs-ifup,downscript=no"
-                        % {"i": i}
-                    )
-                else:  # We don't create more interfaces than we have bridges
-                    del res[-2:]  # Removing recently added interface
-
-            elif self.conn_mode == "vrxcon":
-                res.append("-netdev")
-                res.append(
-                    "socket,id=p%(i)02d,listen=:%(j)02d" % {"i": i, "j": i + 10000}
-                )
         return res
 
     def stop(self):
@@ -825,6 +608,26 @@ class VR:
             run_command(
                 ["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True
             )
+            # IANA gnmi/gnoi
+            run_command(
+                ["socat", "TCP-LISTEN:9339,fork", "TCP:127.0.0.1:59339"],
+                background=True,
+            )
+            # Nokia gnmi/gnoi
+            run_command(
+                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:47400"],
+                background=True,
+            )
+            # Arista gnmi/gnoi
+            run_command(
+                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:47400"],
+                background=True,
+            )
+            # Juniper gnmi/gnoi
+            run_command(
+                ["socat", "TCP-LISTEN:32676,fork", "TCP:127.0.0.1:52676"],
+                background=True,
+            )
 
         started = False
         while True:
@@ -855,6 +658,7 @@ def get_digits(input_str: str) -> int:
 
     non_string_chars = re.findall(r"\d", input_str)
     return int("".join(non_string_chars))
+
 
 class VR_Installer:
     def __init__(self):

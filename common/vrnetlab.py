@@ -306,7 +306,7 @@ class VM:
             "hostfwd=tcp::59339-10.0.0.15:9339"  # iana gnmi/gnoi
             "hostfwd=tcp::47400-10.0.0.15:57400"  # nokia gnmi/gnoi
             "hostfwd=tcp::56030-10.0.0.15:6030"  # gnmi/gnoi arista
-            "hostfwd=tcp::52676-10.0.0.15:32676"  # gnmi/gnoi juniper
+            "hostfwd=tcp::52767-10.0.0.15:32767"  # gnmi/gnoi juniper
         )
         return res
 
@@ -625,7 +625,7 @@ class VR:
             )
             # Juniper gnmi/gnoi
             run_command(
-                ["socat", "TCP-LISTEN:32676,fork", "TCP:127.0.0.1:52676"],
+                ["socat", "TCP-LISTEN:32767,fork", "TCP:127.0.0.1:52767"],
                 background=True,
             )
 

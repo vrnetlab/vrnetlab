@@ -77,6 +77,7 @@ class VM:
         provision_pci_bus=True,
         cpu="host",
         smp="1",
+        min_dp_nics=0,
     ):
         self.logger = logging.getLogger()
 
@@ -106,6 +107,11 @@ class VM:
         # "highest" provisioned nic num -- used for making sure we can allocate nics without needing
         # to have them allocated sequential from eth1
         self.highest_provisioned_nic_num = 0
+        
+        self.insuffucient_nics = False
+        # if an image needs minimum amount of dataplane nics to bootup, specify
+        if min_dp_nics:
+            self.min_nics = min_dp_nics
 
         # we setup pci bus by default
         self.provision_pci_bus = provision_pci_bus
@@ -197,6 +203,9 @@ class VM:
         cmd.extend(self.gen_mgmt())
         # generate normal NICs
         cmd.extend(self.gen_nics())
+        # generate dummy NICs
+        if self.insuffucient_nics:
+            cmd.extend(self.gen_dummy_nics())
 
         self.logger.debug("qemu cmd: {}".format(" ".join(cmd)))
 
@@ -315,8 +324,11 @@ class VM:
             f"number of provisioned data plane interfaces is {self.num_provisioned_nics}"
         )
 
+        # no nics provisioned and/or not running from containerlab so we can bail
         if self.num_provisioned_nics == 0:
-            # no nics provisioned and/or not running from containerlab so we can bail
+            # unless the node has a minimum nic requirement
+            if self.min_nics:
+                self.insuffucient_nics = True
             return
 
         self.logger.debug("waiting for provisioned interfaces to appear...")
@@ -346,8 +358,44 @@ class VM:
                     f"highest allocated interface id determined to be: {self.highest_provisioned_nic_num}..."
                 )
                 self.logger.debug("interfaces provisioned, continuing...")
-                return
+                break
             time.sleep(5)
+        
+        # check if we need to provision any more nics, do this after because they shouldn't interfere with the provisioned nics
+        if self.num_provisioned_nics < self.min_nics:
+            self.insuffucient_nics = True
+
+    # if insuffucient amount of nics are defined in the topology file, generate dummmy nics so cat9kv can boot.
+    def gen_dummy_nics(self):
+        # calculate required num of nics to generate
+        nics = self.min_nics - self.num_provisioned_nics
+        
+        self.logger.debug(f"Insuffucient NICs defined. Generating {nics} dummy nics")
+
+        res=[]
+        
+        pci_bus_ctr = self.num_provisioned_nics
+
+        for i in range(0, nics):
+            # dummy interface naming
+            interface_name = f"dummy{str(i+self.num_provisioned_nics)}"
+            
+            # PCI bus counter is to ensure pci bus index starts from 1
+            # and continuing in sequence regardles the eth index
+            pci_bus_ctr += 1
+
+            pci_bus = math.floor(pci_bus_ctr / self.nics_per_pci_bus) + 1
+            addr = (pci_bus_ctr % self.nics_per_pci_bus) + 1
+            
+            res.extend(
+                [
+                    "-device",
+                    f"{self.nic_type},netdev={interface_name},id={interface_name},mac={gen_mac(i)},bus=pci.{pci_bus},addr=0x{addr}",
+                    "-netdev",
+                    f"tap,ifname={interface_name},id={interface_name},script=no,downscript=no",
+                ]
+            )
+        return res
 
     def gen_nics(self):
         """Generate qemu args for the normal traffic carrying interface(s)"""

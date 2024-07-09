@@ -109,6 +109,7 @@ class VM:
         self.highest_provisioned_nic_num = 0
         
         self.insuffucient_nics = False
+        self.min_nics = 0
         # if an image needs minimum amount of dataplane nics to bootup, specify
         if min_dp_nics:
             self.min_nics = min_dp_nics

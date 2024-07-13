@@ -308,15 +308,16 @@ class VM:
         res.append(
             "user,id=p00,net=10.0.0.0/24,"
             "tftp=/tftpboot,"
-            "hostfwd=tcp::2022-10.0.0.15:22,"  # ssh
-            "hostfwd=udp::2161-10.0.0.15:161,"  # snmp
-            "hostfwd=tcp::2830-10.0.0.15:830,"  # netconf
-            "hostfwd=tcp::2080-10.0.0.15:80,"  # http
-            "hostfwd=tcp::2443-10.0.0.15:443,"  # https
-            "hostfwd=tcp::49339-10.0.0.15:9339,"  # iana gnmi/gnoi
-            "hostfwd=tcp::47400-10.0.0.15:57400,"  # nokia gnmi/gnoi
-            "hostfwd=tcp::56030-10.0.0.15:6030,"  # gnmi/gnoi arista
-            "hostfwd=tcp::52767-10.0.0.15:32767"  # gnmi/gnoi juniper
+            "hostfwd=tcp:0.0.0.0:22-10.0.0.15:22,"  # ssh
+            "hostfwd=udp:0.0.0.0:161-10.0.0.15:161,"  # snmp
+            "hostfwd=tcp:0.0.0.0:830-10.0.0.15:830,"  # netconf
+            "hostfwd=tcp:0.0.0.0:80-10.0.0.15:80,"  # http
+            "hostfwd=tcp:0.0.0.0:443-10.0.0.15:443,"  # https
+            "hostfwd=tcp:0.0.0.0:9339-10.0.0.15:9339,"  # iana gnmi/gnoi
+            "hostfwd=tcp:0.0.0.0:57400-10.0.0.15:57400,"  # nokia gnmi/gnoi
+            "hostfwd=tcp:0.0.0.0:6030-10.0.0.15:6030,"  # gnmi/gnoi arista
+            "hostfwd=tcp:0.0.0.0:32767-10.0.0.15:32767,"  # gnmi/gnoi juniper
+            "hostfwd=tcp:0.0.0.0:8080-10.0.0.15:8080"  # sonic gnmi/gnoi, other http apis
         )
         return res
 
@@ -637,46 +638,10 @@ class VR:
         health_file.write("%d %s" % (exit_status, message))
         health_file.close()
 
-    def start(self, add_fwd_rules=True):
+    def start(self):
         """Start the virtual router"""
         self.logger.debug("Starting vrnetlab %s" % self.__class__.__name__)
         self.logger.debug("VMs: %s" % self.vms)
-        if add_fwd_rules:
-            run_command(
-                ["socat", "TCP-LISTEN:22,fork", "TCP:127.0.0.1:2022"], background=True
-            )
-            run_command(
-                ["socat", "UDP-LISTEN:161,fork", "UDP:127.0.0.1:2161"], background=True
-            )
-            run_command(
-                ["socat", "TCP-LISTEN:830,fork", "TCP:127.0.0.1:2830"], background=True
-            )
-            run_command(
-                ["socat", "TCP-LISTEN:80,fork", "TCP:127.0.0.1:2080"], background=True
-            )
-            run_command(
-                ["socat", "TCP-LISTEN:443,fork", "TCP:127.0.0.1:2443"], background=True
-            )
-            # IANA gnmi/gnoi
-            run_command(
-                ["socat", "TCP-LISTEN:9339,fork", "TCP:127.0.0.1:49339"],
-                background=True,
-            )
-            # Nokia gnmi/gnoi
-            run_command(
-                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:47400"],
-                background=True,
-            )
-            # Arista gnmi/gnoi
-            run_command(
-                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:47400"],
-                background=True,
-            )
-            # Juniper gnmi/gnoi
-            run_command(
-                ["socat", "TCP-LISTEN:32767,fork", "TCP:127.0.0.1:52767"],
-                background=True,
-            )
 
         started = False
         while True:

@@ -56,6 +56,8 @@ class XRV_vm(vrnetlab.VM):
                 "smm=off",
                 "-boot",
                 "order=c",
+                "-cpu",
+                "qemu64,+ssse3,+sse4.1,+sse4.2",
                 "-serial",
                 "telnet:0.0.0.0:50%02d,server,nowait" % (self.num + 1),
                 "-serial",

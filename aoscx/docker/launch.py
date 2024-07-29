@@ -114,6 +114,7 @@ class AOSCX_vm(vrnetlab.VM):
         # configure mgmt interface
         self.wait_write("interface mgmt")
         self.wait_write("ip static 10.0.0.15/24")
+        self.wait_write("default-gateway 10.0.0.2")
         self.wait_write("no shutdown")
         self.wait_write("exit")
         self.wait_write("ssh server vrf mgmt")
@@ -124,6 +125,7 @@ class AOSCX_vm(vrnetlab.VM):
 
         self.wait_write("end")
         self.wait_write("write memory")
+        self.wait_write("")
 
     def startup_config(self):
         """Load additional config provided by user."""

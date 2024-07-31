@@ -52,6 +52,8 @@ class VEOS_vm(vrnetlab.VM):
         self.hostname = hostname
         self.conn_mode = conn_mode
         self.num_nics = 20
+        self.spins = 0
+        self.running = False
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -77,7 +79,7 @@ class VEOS_vm(vrnetlab.VM):
                 self.tn.close()
                 # startup time?
                 startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
+                self.logger.info(f"Startup complete in: {startup_time}")
                 # mark as running
                 self.running = True
                 return
@@ -85,7 +87,7 @@ class VEOS_vm(vrnetlab.VM):
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
         if res != b"":
-            self.logger.trace("OUTPUT: %s" % res.decode())
+            self.logger.trace(f"OUTPUT: {res.decode()}")
             # reset spins if we saw some output
             self.spins = 0
 
@@ -108,6 +110,7 @@ class VEOS_vm(vrnetlab.VM):
         self.wait_write("interface Management 1")
         self.wait_write("ip address 10.0.0.15/24")
         self.wait_write("exit")
+        self.wait_write("ip route 0.0.0.0/0 10.0.0.2")
         self.wait_write("management api http-commands")
         self.wait_write("protocol unix-socket")
         self.wait_write("no shutdown")
@@ -151,30 +154,6 @@ class VEOS_vm(vrnetlab.VM):
         # End and Save
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
-
-
-    def gen_mgmt(self):
-        """
-        Augment base gen_mgmt function to add gnmi and socat forwarding
-        """
-        res = []
-
-        # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it (addr 0x2)
-        res.append("-device")
-        res.append(
-            self.nic_type + f",netdev=p00,mac={vrnetlab.gen_mac(0)},bus=pci.1,addr=0x2"
-        )
-
-        res.append("-netdev")
-        res.append(
-            "user,id=p00,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443,hostfwd=tcp::16030-10.0.0.15:6030"
-        )
-        vrnetlab.run_command(
-            ["socat", "TCP-LISTEN:6030,fork", "TCP:127.0.0.1:16030"],
-            background=True,
-        )
-
-        return res
 
 
 class VEOS(vrnetlab.VR):

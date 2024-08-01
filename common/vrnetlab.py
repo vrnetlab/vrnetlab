@@ -107,7 +107,7 @@ class VM:
         # "highest" provisioned nic num -- used for making sure we can allocate nics without needing
         # to have them allocated sequential from eth1
         self.highest_provisioned_nic_num = 0
-        
+
         self.insuffucient_nics = False
         self.min_nics = 0
         # if an image needs minimum amount of dataplane nics to bootup, specify
@@ -362,7 +362,7 @@ class VM:
                 self.logger.debug("interfaces provisioned, continuing...")
                 break
             time.sleep(5)
-        
+
         # check if we need to provision any more nics, do this after because they shouldn't interfere with the provisioned nics
         if self.num_provisioned_nics < self.min_nics:
             self.insuffucient_nics = True
@@ -371,24 +371,24 @@ class VM:
     def gen_dummy_nics(self):
         # calculate required num of nics to generate
         nics = self.min_nics - self.num_provisioned_nics
-        
+
         self.logger.debug(f"Insuffucient NICs defined. Generating {nics} dummy nics")
 
-        res=[]
-        
+        res = []
+
         pci_bus_ctr = self.num_provisioned_nics
 
         for i in range(0, nics):
             # dummy interface naming
             interface_name = f"dummy{str(i+self.num_provisioned_nics)}"
-            
+
             # PCI bus counter is to ensure pci bus index starts from 1
             # and continuing in sequence regardles the eth index
             pci_bus_ctr += 1
 
             pci_bus = math.floor(pci_bus_ctr / self.nics_per_pci_bus) + 1
             addr = (pci_bus_ctr % self.nics_per_pci_bus) + 1
-            
+
             res.extend(
                 [
                     "-device",

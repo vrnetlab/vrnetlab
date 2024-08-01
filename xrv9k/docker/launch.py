@@ -324,7 +324,13 @@ class XRV_vm(vrnetlab.VM):
         return False
 
 
-class XRV_Installer(vrnetlab.VR_Installer):
+class XRV(vrnetlab.VR):
+    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
+        super(XRV, self).__init__(username, password)
+        self.vms = [XRV_vm(hostname, username, password, nics, conn_mode, vcpu, ram)]
+
+
+class XRV_Installer(XRV):
     """ XRV installer
         Will start the XRV and then shut it down. Booting the XRV for the
         first time requires the XRV itself to install internal packages
@@ -333,13 +339,17 @@ class XRV_Installer(vrnetlab.VR_Installer):
         decrease the normal startup time of the XRV.
     """
     def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
-        super().__init__()
-        self.vm = XRV_vm(hostname, username, password, nics, conn_mode, vcpu, ram, install=True)
-
-class XRV(vrnetlab.VR):
-    def __init__(self, hostname, username, password, nics, conn_mode, vcpu, ram):
         super(XRV, self).__init__(username, password)
-        self.vms = [XRV_vm(hostname, username, password, nics, conn_mode, vcpu, ram)]
+        self.vms = [XRV_vm(hostname, username, password, nics, conn_mode, vcpu, ram, install=True)]
+    
+    def install(self):
+        self.logger.info("Installing XRv9k")
+        xrv = self.vms[0]
+        while not xrv.running:
+            xrv.work()
+        time.sleep(30)
+        xrv.stop()
+        self.logger.info("Installation complete")
 
 
 if __name__ == "__main__":

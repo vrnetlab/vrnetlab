@@ -20,19 +20,36 @@ non-9k see the 'xrv' directory instead.
 
 ## Building the docker image
 
-Obtain the XRv9k release from Cisco. They generally ship an iso for a custom
-install as well as a pre-built qcow2 image. Some releases the pre-built qcow2
-is quite large, so making your own from the iso is recommended. At some point
-we may support creating qcow2 from iso in vrnetlab, but that is currently not
-supported.
+By default the XRv9k build time will take ~20 minutes as the image undergoes a first boot installation phase. This greatly decreases boot times for your labs.
 
-Put the .qcow2 file in this directory and run `make docker-image` and you
-should be good to go. The resulting image is called `vrnetlab/vr-xrv9k`. You can tag it
-with something else if you want, like `my-repo.example.com/vr-xrv` and then
-push it to your repo. The tag is the same as the version of the XRv9k image,
-so if you have xrv9k-fullk9-x.vrr-6.2.1.qcow2 your final docker image will be 
-called vr-xrv9k:6.2.1
+The install procedure introduces some side effects as various values (such as macpool) are baked-in during this installation procedure.
+
+This can cause issues, and for this reason you may want to disable the pre-install procedure. You can do this by issuing:
+
+```
+make docker-image INSTALL=false
+```
+
+> Please note that disabling the install feature will mean the boot time of XRv9k will increase to 20+ minutes.
+
+### Installation steps
+
+1. Obtain the XRv9k image (.qcow2) from Cisco (or CML). A .iso version is also shipped but this is currently unsupported and you must convert the .iso to .qcow2.
+
+2. Place the .qcow2 file in this directory
+
+3. Perform `make docker-image` (or `make docker-image INSTALL=false`)
+
+4. Begin labbing. The image will be listed as `vrnetlab/vr-xrv9k` 
+
+> The tag is the same as the version of the XRv9k image,
+so if you have xrv9k-fullk9-x.vrr-6.2.1.qcow2 your final docker image will be called vr-xrv9k:6.2.1
+
+## Known working versions
 
 It's been tested to boot and respond to SSH with:
 
  * xrv9k-fullk9-x-7.2.1.qcow2
+ * xrv9k-fullk9-x-7.7.1.qcow2
+ * xrv9k-fullk9-x-7.11.1.qcow2
+

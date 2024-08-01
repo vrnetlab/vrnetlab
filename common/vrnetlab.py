@@ -672,18 +672,3 @@ def get_digits(input_str: str) -> int:
 
     non_string_chars = re.findall(r"\d", input_str)
     return int("".join(non_string_chars))
-
-
-class VR_Installer:
-    def __init__(self):
-        self.logger = logging.getLogger()
-        self.vm = None
-
-    def install(self):
-        vm = self.vm
-        while not vm.running:
-            self.logger.trace("%s working", self.__class__.__name__)
-            vm.work()
-        self.logger.debug("%s running, shutting down", self.__class__.__name__)
-        vm.stop()
-        self.logger.info("Installation complete")

@@ -21,3 +21,6 @@ venv
 .python-version
 
 *.xml
+
+# ignore clab- dirs
+clab-*

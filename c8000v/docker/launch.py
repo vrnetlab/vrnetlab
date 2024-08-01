@@ -164,8 +164,17 @@ class C8000v_vm(vrnetlab.VM):
         else:
             self.wait_write("ip domain-name example.com")
         self.wait_write("crypto key generate rsa modulus 2048")
+        
+        self.wait_write("vrf definition clab-mgmt")
+        self.wait_write("address-family ipv4")
+        self.wait_write("exit")
+        self.wait_write("description Containerlab management VRF (DO NOT DELETE)")
+        self.wait_write("exit")
+
+        self.wait_write("ip route vrf clab-mgmt 0.0.0.0 0.0.0.0 10.0.0.2")
 
         self.wait_write("interface GigabitEthernet1")
+        self.wait_write("vrf forwarding clab-mgmt")
         self.wait_write("ip address 10.0.0.15 255.255.255.0")
         self.wait_write("no shut")
         self.wait_write("exit")

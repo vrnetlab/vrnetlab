@@ -78,21 +78,6 @@ class N9KV_vm(vrnetlab.VM):
             ]
         )
 
-    def gen_mgmt(self):
-        """
-        Augment the parent class function to add gRPC port forwarding
-        """
-        # call parent function to generate the mgmt interface
-        res = super(N9KV_vm, self).gen_mgmt()
-
-        # append gRPC forwarding if it was not added by common lib
-        if "hostfwd=tcp::50051-10.0.0.15:50051" not in res[-1]:
-            res[-1] = res[-1] + ",hostfwd=tcp::17051-10.0.0.15:50051"
-            vrnetlab.run_command(
-                ["socat", "TCP-LISTEN:50051,fork", "TCP:127.0.0.1:17051"],
-                background=True,
-            )
-        return res
 
     def bootstrap_spin(self):
         """This function should be called periodically to do work."""
@@ -153,6 +138,11 @@ class N9KV_vm(vrnetlab.VM):
         self.wait_write(
             f"username {self.username} password 0 {self.password} role network-admin"
         )
+        
+        # configure management vrf
+        self.wait_write("vrf context management")
+        self.wait_write("ip route 0.0.0.0/0 10.0.0.2")
+        self.wait_write("exit")
 
         # configure mgmt interface
         self.wait_write("interface mgmt0")

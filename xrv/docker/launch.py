@@ -166,20 +166,42 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("show interface description")
         self.wait_write("configure")
         self.wait_write("hostname {}".format(self.hostname))
-        # configure netconf
+        
+        # configure management vrf
+        self.wait_write("vrf clab-mgmt")
+        self.wait_write("description Containerlab management VRF (DO NOT DELETE)")
+        self.wait_write("address-family ipv4 unicast")
+        self.wait_write("exit")
+        self.wait_write("exit")
+        
+        # add static route for management
+        self.wait_write("router static")
+        self.wait_write("vrf clab-mgmt")
+        self.wait_write("address-family ipv4 unicast")
+        self.wait_write("0.0.0.0/0 10.0.0.2")
+        self.wait_write("exit")
+        self.wait_write("exit")
+        self.wait_write("exit")
+      
+        # configure ssh & netconf w/ vrf
         self.wait_write("ssh server v2")
+        self.wait_write("ssh server vrf clab-mgmt")
         self.wait_write("ssh server netconf port 830")  # for 5.1.1
-        self.wait_write("ssh server netconf vrf default")  # for 5.3.3
+        self.wait_write("ssh server netconf vrf clab-mgmt")  # for 5.3.3
         self.wait_write("netconf agent ssh")  # for 5.1.1
         self.wait_write("netconf-yang agent ssh")  # for 5.3.3
+        
         # configure gNMI
         self.wait_write("grpc port 57400")
+        self.wait_write("grpc vrf clab-mgmt")
         self.wait_write("grpc no-tls")
+        
         # configure xml agent
         self.wait_write("xml agent tty")
-
+        
         # configure mgmt interface
         self.wait_write("interface MgmtEth 0/0/CPU0/0")
+        self.wait_write("vrf clab-mgmt")
         self.wait_write("no shutdown")
         self.wait_write("ipv4 address 10.0.0.15/24")
         self.wait_write("exit")
@@ -208,23 +230,6 @@ class XRV_vm(vrnetlab.VM):
         # Commit and GTFO
         self.wait_write("commit")
         self.wait_write("exit")
-
-
-    def gen_mgmt(self):
-        """
-        Augment the parent class function to add gNMI port forwarding
-        """
-        # call parent function to generate first mgmt interface (e1000)
-        res = super(XRV_vm, self).gen_mgmt()
-
-        # append gNMI forwarding if it was not added by common lib
-        if "hostfwd=tcp::57400-10.0.0.15:57400" not in res[-1]:
-            res[-1] = res[-1] + ",hostfwd=tcp::17400-10.0.0.15:57400"
-            vrnetlab.run_command(
-                ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
-                background=True,
-            )
-        return res
 
 
 class XRV(vrnetlab.VR):

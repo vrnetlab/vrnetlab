@@ -80,7 +80,12 @@ class XRV_vm(vrnetlab.VM):
         res.extend(
             [
                 "-netdev",
-                "user,id=mgmt,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::17400-10.0.0.15:57400",
+                "user,id=mgmt,net=10.0.0.0/24,"
+                "tftp=/tftpboot,"
+                "hostfwd=tcp:0.0.0.0:22-10.0.0.15:22,"
+                "hostfwd=udp:0.0.0.0:161-10.0.0.15:161,"
+                "hostfwd=tcp:0.0.0.0:830-10.0.0.15:830,"
+                "hostfwd=tcp:0.0.0.0:57400-10.0.0.15:57400"
             ]
         )
         # dummy interface for xrv9k ctrl interface
@@ -102,11 +107,6 @@ class XRV_vm(vrnetlab.VM):
                 "-netdev",
                 "tap,ifname=dev-dummy,id=dev-dummy,script=no,downscript=no",
             ]
-        )
-        # add socat for gNMI port we added on L76, since it's not part of vrnetlab core lib
-        vrnetlab.run_command(
-            ["socat", "TCP-LISTEN:57400,fork", "TCP:127.0.0.1:17400"],
-            background=True,
         )
 
         return res
@@ -238,21 +238,41 @@ class XRV_vm(vrnetlab.VM):
 
         self.wait_write("configure")
         self.wait_write(f"hostname {self.hostname}")
-        # configure netconf
+        
+        # configure management vrf
+        self.wait_write("vrf clab-mgmt")
+        self.wait_write("description Containerlab management VRF (DO NOT DELETE)")
+        self.wait_write("address-family ipv4 unicast")
+        self.wait_write("exit")
+        self.wait_write("exit")
+        
+        # add static route for management
+        self.wait_write("router static")
+        self.wait_write("vrf clab-mgmt")
+        self.wait_write("address-family ipv4 unicast")
+        self.wait_write("0.0.0.0/0 10.0.0.2")
+        self.wait_write("exit")
+        self.wait_write("exit")
+        self.wait_write("exit")
+            
+        # configure ssh & netconf w/ vrf
         self.wait_write("ssh server v2")
+        self.wait_write("ssh server vrf clab-mgmt")
         self.wait_write("ssh server netconf port 830")  # for 5.1.1
-        self.wait_write("ssh server netconf vrf default")  # for 5.3.3
+        self.wait_write("ssh server netconf vrf clab-mgmt")  # for 5.3.3
         self.wait_write("netconf agent ssh")  # for 5.1.1
         self.wait_write("netconf-yang agent ssh")  # for 5.3.3
         # configure gNMI
         self.wait_write("grpc port 57400")
+        self.wait_write("grpc vrf clab-mgmt")
         self.wait_write("grpc no-tls")
 
         # configure xml agent
         self.wait_write("xml agent tty")
-
+        
         # configure mgmt interface
-        self.wait_write("interface MgmtEth 0/RP0/CPU0/0")
+        self.wait_write("interface MgmtEth0/RP0/CPU0/0")
+        self.wait_write("vrf clab-mgmt")
         self.wait_write("no shutdown")
         self.wait_write("ipv4 address 10.0.0.15/24")
         self.wait_write("exit")

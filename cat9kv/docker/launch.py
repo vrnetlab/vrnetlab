@@ -174,6 +174,9 @@ class cat9kv_vm(vrnetlab.VM):
 
         self.wait_write("no ip domain lookup")
 
+        # add mgmt vrf static route
+        self.wait_write("ip route vrf Mgmt-vrf 0.0.0.0 0.0.0.0 10.0.0.2")
+
         self.wait_write("interface GigabitEthernet0/0")
         self.wait_write("ip address 10.0.0.15 255.255.255.0")
         self.wait_write("no shut")

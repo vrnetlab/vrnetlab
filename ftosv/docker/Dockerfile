@@ -1,26 +1,24 @@
-FROM ubuntu:20.04
+FROM public.ecr.aws/docker/library/debian:bookworm-slim
 LABEL maintainer="Kristian Larsson <kristian@spritelink.net>"
 LABEL maintainer="Roman Dodin <dodin.roman@gmail.com>"
+LABEL maintainer="Stefano Sasso <stesasso@gmail.com>"
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
-   && apt-get upgrade -qy \
-   && apt-get install -y \
-   bridge-utils \
-   iproute2 \
-   python3-ipy \
-   socat \
-   qemu-kvm \
-   tcpdump \
-   tftpd-hpa \
-   ssh \
-   inetutils-ping \
-   dnsutils \
-   openvswitch-switch \
-   iptables \
-   nftables \
-   telnet \
-   && rm -rf /var/lib/apt/lists/*
+ && apt-get install --no-install-recommends -y \
+    dosfstools \
+    bridge-utils \
+    iproute2 \
+    python3 \
+    socat \
+    ssh \
+    tcpdump \
+    qemu-kvm \
+    qemu-utils \
+    inetutils-ping \
+    dnsutils \
+    telnet \
+ && rm -rf /var/lib/apt/lists/*
 
 ARG IMAGE
 COPY $IMAGE* /

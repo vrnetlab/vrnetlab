@@ -234,3 +234,13 @@ NOTE:
 * RAM: 4GB
 * Disk: <10GB
 
+## Caveats / Working vs Non-Working images
+
+Currently, the readiness check is performed by checking for the `OS10#` prompt after the login.
+
+Before version *10.5.6.1*, Dell OS10 allows you to login even if the system is still loading, displaying a `System is loading...` text, and showing the prompt only after the loading is completed.
+
+Apparently, starting from *10.5.6.1*, now you still can login even if the system is still loading, but you are presented a prompt in the format `loading-OS10#` - which, unfortunately, matches `OS10#`. If you launch any command on the *loading* prompt, you get an error.
+
+However, this **seems** to be solved again on *10.5.6.4*.
+

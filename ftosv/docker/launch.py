@@ -144,7 +144,6 @@ class FTOS_vm(vrnetlab.VM):
         """Do the actual bootstrap config"""
         self.logger.info("applying bootstrap configuration once system is ready")
         self.wait_write("", None)
-
         self.wait_write("configure", wait="OS10#")
         self.wait_write(f"hostname {self.hostname}")
         self.wait_write("service simple-password")
@@ -157,8 +156,10 @@ class FTOS_vm(vrnetlab.VM):
         self.wait_write("no ip address dhcp")
         self.wait_write("ip address 10.0.0.15/24")
         self.wait_write("exit")
+        self.wait_write("management route 0.0.0.0/0 10.0.0.2")
         self.wait_write("exit")
         self.wait_write("copy running-configuration startup-configuration")
+        self.wait_write("")
 
     def startup_config(self):
         """Load additional config provided by user."""
@@ -182,6 +183,7 @@ class FTOS_vm(vrnetlab.VM):
         # End and Save
         self.wait_write("end")
         self.wait_write("copy running-config startup-config")
+        self.wait_write("")
 
 
 class FTOS(vrnetlab.VR):

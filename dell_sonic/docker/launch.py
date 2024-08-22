@@ -121,10 +121,14 @@ class Dell_Sonic_VM(vrnetlab.VM):
         """Load additional config provided by user."""
 
         if not os.path.exists(CONFIG_FILE):
-            self.logger.trace(f"Backup file {CONFIG_FILE} not found")
+            self.logger.trace(
+                f"Startup config file {CONFIG_FILE} is not provided, nothing to do"
+            )
             return
 
-        self.logger.trace(f"Backup file {CONFIG_FILE} exists")
+        self.logger.trace(
+            f"Startup config file {CONFIG_FILE} found, copying it to the VM"
+        )
 
         subprocess.run(
             f"/backup.sh -u {self.username} -p {self.password} restore",

@@ -41,7 +41,7 @@ class FTDV_vm(vrnetlab.VM):
     
     # FIPS check fails without exposing cpu (ERROR: FIPS Self-Test failure,  fipsPostGFSboxKat)
     def __init__(
-        self, hostname, username, password, nics, conn_mode, install_mode=False, smp="4,sockets=1,cores=4,threads=1"
+        self, hostname, username, password, nics, conn_mode, install_mode=False,
     ):
         for e in os.listdir("/"):
             if re.search(".qcow2$", e):
@@ -50,8 +50,11 @@ class FTDV_vm(vrnetlab.VM):
         self.license = False
 
         super(FTDV_vm, self).__init__(
-            username, password, disk_image=disk_image, ram=8192
+            username, password, disk_image=disk_image, ram=8192, smp="4,sockets=1,cores=4,threads=1"
         )
+        
+        self.login_ready = False
+        
 
         self.install_mode = install_mode
         self.num_nics = nics
@@ -132,46 +135,51 @@ class FTDV_vm(vrnetlab.VM):
             self.stop()
             self.start()
             return
-
-        (ridx, match, res) = self.tn.expect([b"login:"], 1)
-        if match:  # got a match!
-            if ridx == 0:  # login
-                if self.install_mode:
-                    # we need to login to trigger the firstboot initial configuration
-                    self.wait_write("", None)
-                    self.wait_write(self.username, "login:")
-                    self.wait_write(self.password, "Password:")
-                    self.wait_write(
-                        "\r",
-                        "Successfully performed firstboot initial configuration steps for Firepower Device Manager for Firepower Threat Defense.",
-                    )
-                    # shutdown gracefully
-                    self.wait_write("shutdown", ">")
-                    self.wait_write("YES", "Please enter 'YES' or 'NO':")
-                    self.wait_write("", "Unmounting local filesystems...")
-                    # wait for filesystems to unmount
-                    time.sleep(10)
-                    self.running = True
-                    return
-
-                self.logger.debug("matched, login:")
-                self.wait_write("", wait=None)
-
-                self.bootstrap_config()
-                self.running = True
-                # close telnet connection
-                self.tn.close()
-                # startup time?
-                startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info(f"Startup complete in: {startup_time}")
-                return
-
+        
+        (_, l_match, l_res) = self.tn.expect([b"INFO: Power-On Self-Test"], 1)
+        if l_match:
+            self.logger.debug("LOGIN READY")
+            self.login_ready = True
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
-        if res != b"":
-            self.logger.trace("OUTPUT: %s" % res.decode())
+        elif l_res != b"":
+            self.logger.trace("OUTPUT: %s" % l_res.decode())
             # reset spins if we saw some output
             self.spins = 0
+        
+        if self.login_ready or not self.install_mode:
+            (ridx, match, res) = self.tn.expect([b"login:"], 1)
+            if match:  # got a match!
+                if ridx == 0:  # login
+                    if self.install_mode:
+                        # we need to login to trigger the firstboot initial configuration
+                        self.wait_write("", None)
+                        self.wait_write(self.username, "login:")
+                        time.sleep(1)
+                        self.wait_write(self.password, None)
+                        time.sleep(1)
+                        self.wait_write("", None)
+
+                        # shutdown gracefully
+                        self.wait_write("shutdown", ">")
+                        self.wait_write("YES", "Please enter 'YES' or 'NO':")
+                        self.wait_write("", "Unmounting local filesystems...")
+                        # wait for filesystems to unmount
+                        time.sleep(20)
+                        self.running = True
+                        return
+
+                    self.logger.debug("matched, login:")
+                    self.wait_write("", wait=None)
+
+                    self.bootstrap_config()
+                    self.running = True
+                    # close telnet connection
+                    self.tn.close()
+                    # startup time?
+                    startup_time = datetime.datetime.now() - self.start_time
+                    self.logger.info(f"Startup complete in: {startup_time}")
+                    return
 
         self.spins += 1
 
@@ -229,7 +237,7 @@ class FTDV_vm(vrnetlab.VM):
         self.wait_write("", None)
         self.wait_write(self.username, "login:")
         self.wait_write(self.password, "Password:")
-        self.wait_write("\r", "Failed logins since the last login:")
+        # self.wait_write("\r", "Failed logins since the last login:")
         self.wait_write(f"configure network hostname {self.hostname}", ">")
         self.wait_write("exit", ">")
 

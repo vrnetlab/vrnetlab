@@ -27,6 +27,7 @@ RUN apt-get update -qy \
  && apt-get install -y \
     bridge-utils \
     iproute2 \
+    iputils-ping \
     python3-ipy \
     tcpdump \
     telnet \

@@ -7,7 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qy \
  && apt-get upgrade -qy \
  && apt-get install -y \
-    iputils-ping \
     iputils-tracepath \
     git \
     golang \

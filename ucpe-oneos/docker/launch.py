@@ -38,7 +38,7 @@ class UCPE_vm(vrnetlab.VM):
         for e in sorted(os.listdir("/")):
             if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(UCPE_vm, self).__init__(username, password, disk_image=disk_image, ram=8192)
+        super(UCPE_vm, self).__init__(username, password, disk_image=disk_image, ram=9216)
         self.num_nics = 20
         self.nic_type = "virtio-net-pci"
         self.uuid = uuid

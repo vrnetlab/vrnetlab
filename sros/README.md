@@ -35,6 +35,7 @@ By selecting a certain variant (referred by its `name`) the VSIM will start with
 |  sr-7s-fp4   | distributed |      sfm-s+xcm-7s      |           s36-100gb-qsfp28           |   4+6    |    36    |
 |    sr-14s    | distributed |     sfm-s+xcm-14s      |           s36-100gb-qsfp28           |   4+6    |    36    |
 |    sr-a4     | distributed |         cpm-a          |       maxp10-10/1gb-msec-sfp+        |   4+4    |    10    |
+|  sr-7-secgw  | distributed |          cpm5          |  me12-10/1gb-sfp+ and isa2-tunnel    |   4+6    |    16    |
 | ixr-e-small  | distributed | imm14-10g-sfp++4-1g-tx |         m14-10g-sfp++4-1g-tx         |   3+4    |    18    |
 |  ixr-e-big   | distributed |       cpm-ixr-e        |      m24-sfp++8-sfp28+2-qsfp28       |   3+4    |    34    |
 |    ixr-e2    | integrated  |       cpm-ixr-e2       |     m2-qsfpdd+2-qsfp28+24-sfp28      |    4     |    34    |

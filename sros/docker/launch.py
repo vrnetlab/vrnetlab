@@ -430,6 +430,29 @@ SROS_VARIANTS = {
             }
         ],
     },
+    "sr-7-secgw": {
+        "deployment_model": "distributed",
+        # control plane (CPM)
+        "max_nics": 16,
+        "power": {"modules": 10, "shelves": 2},
+        "cp": {
+            "min_ram": 4,
+            "timos_line": "slot=A chassis=SR-7 sfm=m-sfm6-7/12 card=cpm5",
+        },
+        # line card (IOM/XCM)
+        "lcs": [
+            {
+                "min_ram": 6,
+                "timos_line": "slot=1 chassis=SR-7 sfm=m-sfm6-7/12 card=iom4-e mda/1=me12-10/1gb-sfp+ mda/2=isa2-tunnel",
+                "card_config": """
+                /configure sfm 1 sfm-type m-sfm6-7/12
+                /configure card 1 card-type iom4-e
+                /configure card 1 mda 1 mda-type me12-10/1gb-sfp+
+                /configure card 1 mda 2 mda-type isa2-tunnel
+                """,
+            }
+        ],
+    },
     "sr-14s": {
         "deployment_model": "distributed",
         # control plane (CPM)

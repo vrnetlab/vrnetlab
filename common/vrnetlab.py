@@ -184,13 +184,8 @@ class VM:
         res = []
         # mgmt interface is special - we use qemu user mode network
         res.append("-device")
-        # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it
-        if 'vEOS-lab' in self.image:
-            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s,bus=pci.1,addr=0x2"
-                       % { 'i': 0, 'mac': gen_mac(0) })
-        else:
-            res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
-                       % { 'i': 0, 'mac': gen_mac(0) })
+        res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s"
+                    % { 'i': 0, 'mac': gen_mac(0) })
         res.append("-netdev")
         res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,%(hostfwd)s" % { 'i': 0, 'hostfwd': self.gen_host_forwards() })
 
@@ -201,12 +196,7 @@ class VM:
         """ Generate qemu args for the normal traffic carrying interface(s)
         """
         res = []
-        # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
-        if 'vEOS-lab' in self.image:
-            range_start = 2
-        else:
-            range_start = 1
-        for i in range(range_start, self.num_nics+1):
+        for i in range(1, self.num_nics+1):
             # calc which PCI bus we are on and the local add on that PCI bus
             pci_bus = math.floor(i/self.nics_per_pci_bus) + 1
             addr = (i % self.nics_per_pci_bus) + 1

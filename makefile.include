@@ -1,6 +1,7 @@
 VR_NAME=$(shell basename $$(pwd))
 IMAGES=$(shell ls $(IMAGE_GLOB) 2>/dev/null)
 NUM_IMAGES=$(shell ls $(IMAGES) | wc -l)
+VRNETLAB_VERION=$$(git log -1 --format=format:"Commit: %H from %aD")
 
 ifeq ($(NUM_IMAGES), 0)
 docker-image: no-image usage
@@ -27,7 +28,7 @@ docker-build-common: docker-clean-build docker-pre-build
 	cp ../common/* docker/
 	@[ -f ./vswitch.xml ] && cp vswitch.xml docker/ || true
 	$(MAKE) IMAGE=$$IMAGE docker-build-image-copy
-	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg https_proxy=$(https_proxy) --build-arg HTTPS_PROXY=$(HTTPS_PROXY) --build-arg IMAGE=$(IMAGE) --build-arg VERSION=$(VERSION) -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
+	(cd docker; docker build --build-arg http_proxy=$(http_proxy) --build-arg HTTP_PROXY=$(HTTP_PROXY) --build-arg https_proxy=$(https_proxy) --build-arg HTTPS_PROXY=$(HTTPS_PROXY) --build-arg IMAGE=$(IMAGE) --build-arg VERSION=$(VERSION) --label "vrnetlab-version=$(VRNETLAB_VERION)" -t $(REGISTRY)vr-$(VR_NAME):$(VERSION) .)
 
 docker-build: docker-build-common
 

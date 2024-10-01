@@ -52,7 +52,7 @@ and the image will be built and tagged. You can view the image by executing `doc
 ```
 containerlab@containerlab:~$ docker images
 REPOSITORY                      TAG         IMAGE ID       CREATED             SIZE
-vrnetlab/vr-iol-l2              17.12.01    0e5ee8ee8746   9 minutes ago       644MB
+vrnetlab/cisco_iol-l2           17.12.01    0e5ee8ee8746   9 minutes ago       644MB
 ```
 
 ## Usage
@@ -66,5 +66,5 @@ topology:
   nodes:
     iol:
       kind: cisco_iol
-      image: vrnetlab/vr-iol-l2:<tag>
+      image: vrnetlab/cisco_iol-l2:<tag>
 ```

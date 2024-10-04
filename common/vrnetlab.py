@@ -50,6 +50,21 @@ def run_command(cmd, cwd=None, background=False):
     return res
 
 
+def bool_from_env(env_var: str, default: bool=False):
+    """Convert environment variable to boolean
+
+    For example, 'True', 'true', '1' and 'yes' are all considered True.
+    """
+    return os.getenv(env_var, str(default)).lower() in ['true', '1', 'yes']
+
+
+def list_from_env(env_var: str, default: list=[]):
+    """Convert environment variable to list
+
+    The environment variable should be a space separate list of values.
+    """
+    return os.getenv(env_var, ' '.join(default)).split()
+
 
 class VM:
     def __str__(self):

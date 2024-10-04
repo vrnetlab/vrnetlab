@@ -378,11 +378,11 @@ class SROS(vrnetlab.VR):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--num-nics', default=5, help='Number of NICs')
-    parser.add_argument('--mode', choices=['cli', 'mixed', 'model-driven'], help='configuration mode of the system', default='cli')
+    parser.add_argument('--trace', default=vrnetlab.bool_from_env('TRACE'), action='store_true', help='enable trace level logging')
+    parser.add_argument('--username', default=os.getenv('USERNAME', 'vrnetlab'), help='Username')
+    parser.add_argument('--password', default=os.getenv('PASSWORD', 'VR-netlab9'), help='Password')
+    parser.add_argument('--num-nics', default=os.getenv('NUM_NICS', 5), help='Number of NICs')
+    parser.add_argument('--mode', default=os.getenv('MODE', 'cli'), choices=['cli', 'mixed', 'model-driven'], help='configuration mode of the system')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

@@ -165,10 +165,10 @@ class simulator(vrnetlab.VR):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--num-nics', default=14, type=int, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
+    parser.add_argument('--trace', default=vrnetlab.bool_from_env('TRACE'), action='store_true', help='enable trace level logging')
+    parser.add_argument('--username', default=os.getenv('USERNAME', 'vrnetlab'), help='Username')
+    parser.add_argument('--password', default=os.getenv('PASSWORD', 'VR-netlab9'), help='Password')
+    parser.add_argument('--num-nics', default=int(os.getenv('NUM_NICS', 14)), type=int, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
 
     args = parser.parse_args()
 

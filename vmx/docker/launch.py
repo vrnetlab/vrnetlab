@@ -375,13 +375,13 @@ class VMX_installer(VMX):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--install', action='store_true', help='Install vMX')
-    parser.add_argument('--dual-re', action='store_true', help='Boot dual Routing Engines')
-    parser.add_argument('--num-nics', type=int, default=96, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
-    parser.add_argument('--license-file', nargs='+', help='License filename(s)')
+    parser.add_argument('--trace', default=vrnetlab.bool_from_env('TRACE'), action='store_true', help='enable trace level logging')
+    parser.add_argument('--username', default=os.getenv('USERNAME', 'vrnetlab'), help='Username')
+    parser.add_argument('--password', default=os.getenv('PASSWORD', 'VR-netlab9'), help='Password')
+    parser.add_argument('--install', default=vrnetlab.bool_from_env('INSTALL'), action='store_true', help='Install vMX')
+    parser.add_argument('--dual-re', default=vrnetlab.bool_from_env('DUAL_RE'), action='store_true', help='Boot dual Routing Engines')
+    parser.add_argument('--num-nics', default=int(os.getenv('NUM_NICS', 96)), type=int, help='Number of NICs, this parameter is IGNORED, only added to be compatible with other platforms')
+    parser.add_argument('--license-file', default=vrnetlab.list_from_env('LICENSE_FILE'), nargs='+', help='License filename(s)')
     args = parser.parse_args()
 
     LOG_FORMAT = "%(asctime)s: %(module)-10s %(levelname)-8s %(message)s"

@@ -124,12 +124,12 @@ class UCPE(vrnetlab.VR):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--uuid', help='Set UUID to a static value (for applying license)')
-    parser.add_argument('--license-key', nargs='*', help='One or more license keys to apply at bootstrap')
-    parser.add_argument('--license-activate', nargs='+', help='One or more licensed features to activate at bootstrap')
+    parser.add_argument('--trace', default=vrnetlab.bool_from_env('TRACE'), action='store_true', help='enable trace level logging')
+    parser.add_argument('--username', default=os.getenv('USERNAME', 'vrnetlab'), help='Username')
+    parser.add_argument('--password', default=os.getenv('PASSWORD', 'VR-netlab9'), help='Password')
+    parser.add_argument('--uuid', default=os.getenv('UUID'), help='Set UUID to a static value (for applying license)')
+    parser.add_argument('--license-key', nargs='*', default=vrnetlab.list_from_env('LICENSE_KEY'), help='One or more license keys to apply at bootstrap')
+    parser.add_argument('--license-activate', nargs='+', default=vrnetlab.list_from_env('LICENSE_ACTIVATE'), help='One or more licensed features to activate at bootstrap')
     args = parser.parse_args()
 
     if args.license_key and not args.license_activate:

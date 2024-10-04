@@ -141,11 +141,11 @@ class NXOS9K(vrnetlab.VR):
 def main():
     """Main method"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--trace', action='store_true', help='enable trace level logging')
-    parser.add_argument('--username', default='vrnetlab', help='Username')
-    parser.add_argument('--password', default='VR-netlab9', help='Password')
-    parser.add_argument('--bios', default='OVMF-pure-efi.fd', help='EFI bios image')
-    parser.add_argument('--num-nics', type=int, default=24, help='Number of NICs')
+    parser.add_argument('--trace', default=vrnetlab.bool_from_env('TRACE'), action='store_true', help='enable trace level logging')
+    parser.add_argument('--username', default=os.getenv('USERNAME', 'vrnetlab'), help='Username')
+    parser.add_argument('--password', default=os.getenv('PASSWORD', 'VR-netlab9'), help='Password')
+    parser.add_argument('--bios', default=os.getenv('BIOS', 'OVMF-pure-efi.fd'), help='EFI bios image')
+    parser.add_argument('--num-nics', type=int, default=int(os.getenv('NUM_NICS', 24)), help='Number of NICs')
     args = parser.parse_args()
 
     # check if the bios file exists

@@ -15,7 +15,7 @@ jobs:
   test-vr-xcon-and-vr-bgp:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build vr-xcon
         run: |
@@ -56,7 +56,7 @@ jobs:
   test-topomachine:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build topomachine
         run: |
@@ -87,12 +87,12 @@ jobs:
         platform: ['csr', 'c8000v', 'nxos', 'nxos9kv', 'routeros', 'sros', 'ucpe-oneos', 'veos', 'vmx', 'vqfx', 'vrp', 'vsr1000', 'xrv', 'xrv9k']
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Fixup dubious ownership
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
       - name: Use git to check if the source files (platform or shared) have changed
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         id: source_changes
         with:
           filters: |
@@ -107,7 +107,7 @@ jobs:
 
       - name: Cache image hashes
         id: cache-hash
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: cache-hash-${{ matrix.platform }}.txt
           key: hash-${{ matrix.platform }}
@@ -140,7 +140,7 @@ jobs:
         run: |
           make -C ${{ matrix.platform }} docker-test-save-logs
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ always() && (steps.source_changes.outputs.platform == 'true' || steps.image_changes.outputs.platform == 'true') }}
         with:
           name: vr-logs

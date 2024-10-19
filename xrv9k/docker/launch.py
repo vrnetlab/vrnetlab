@@ -169,15 +169,18 @@ class XRV_vm(vrnetlab.VM):
         if not self.wait_config("show interfaces description", "Gi0/0/0/0"):
             return False
 
-        # wait for call-home in config
-        if not self.wait_config("show running-config call-home", "service active"):
-            return False
+        # Do not wait for call-home in 7.1.x and later, takes too long
+        version =  self.version.split(".")
+        if int(version[0]) < 7 or int(version[0]) == 7 and int(version[1]) < 1:
+            if not self.wait_config("show running-config call-home", "service active"):
+                return False
 
         self.wait_write("configure")
         # configure netconf
         self.wait_write("ssh server v2")
         self.wait_write("ssh server netconf port 830") # for 5.1.1
         self.wait_write("ssh server netconf vrf default") # for 5.3.3
+        self.wait_write("ssh server rate-limit 600")
         self.wait_write("netconf agent ssh") # for 5.1.1
         self.wait_write("netconf-yang agent ssh") # for 5.3.3
 

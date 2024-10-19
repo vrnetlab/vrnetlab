@@ -13,6 +13,8 @@ RUN apt-get update -qy \
     qemu-kvm \
  && rm -rf /var/lib/apt/lists/*
 
+ARG VERSION
+ENV VERSION=${VERSION}
 ARG IMAGE
 COPY $IMAGE* /
 COPY *.py /

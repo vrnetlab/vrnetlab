@@ -148,6 +148,7 @@ class XRV_vm(vrnetlab.VM):
         self.wait_write("ssh server v2")
         self.wait_write("ssh server netconf port 830") # for 5.1.1
         self.wait_write("ssh server netconf vrf default") # for 5.3.3
+        self.wait_write("ssh server rate-limit 600")
         self.wait_write("netconf agent ssh") # for 5.1.1
         self.wait_write("netconf-yang agent ssh") # for 5.3.3
 

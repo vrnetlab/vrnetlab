@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - master
+  workflow_dispatch:
 
 env:
   PNS: ci-${GITHUB_RUN_ID}

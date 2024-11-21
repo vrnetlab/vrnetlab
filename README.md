@@ -464,3 +464,53 @@ into LFS timeouts, try setting:
 ```
 git config lfs.dialtimeout 60
 ```
+
+Building with GitHub Actions
+----------------------------
+
+vrnetlab ships with a .github/workflows/test.yml config file which is primarily
+used in the public upstream repository: https://github.com/vrnetlab/vrnetlab.
+
+The GitHub Actions runner must support running VMs (has KVM) and allows the
+execution of sibling docker containers. The first requirement is not met by the
+free GitHub Actions runners, so we use a self-hosted runner for the VM test
+(thanks [GleSYS](https://glesys.com/) for sponsoring the runner ❤️).
+
+This also solves the issue where to the public nature of the repository we
+cannot include the actual virtual router images in public repository via Git
+LFS. Instead, the images are provided to the build container via a local bind
+volume mount. This means the router images must be available on the host machine
+where the build is running. The images are mounted into the build container at
+`/vrnetlab-images`.
+
+The self-hosted GitHub Actions runner was set up on a machine using the
+instructions here:
+https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners
+We then create a script that reads in the `VRNETLAB_IMAGES` environment variable
+(set up as a repository variable) and creates a named docker volume
+*vrnetlab-images* that bind mounts the host path provided in the variable:
+
+```
+$ cat create-vrnetlab-images-volume.sh
+docker volume create --opt o=bind --opt type=none --opt device=${VRNETLAB_IMAGES} vrnetlab-images
+docker volume inspect vrnetlab-images
+```
+
+Then in the runners `.env` file, we instruct the runner to run a script on job
+startup to create the volume:
+
+```
+ACTIONS_RUNNER_HOOK_JOB_STARTED=/path/to/runner/create-vrnetlab-images-volume.sh
+```
+
+The job container can then mount this volume and access the images in
+`/vrnetlab-images` regardless of the host path.:
+
+```yaml
+  test-vr:
+    runs-on: ["self-hosted"]
+    container:
+      image: vrnetlab/ci-builder
+      volumes:
+        - vrnetlab-images:/vrnetlab-images
+```

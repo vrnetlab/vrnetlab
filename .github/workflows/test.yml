@@ -80,7 +80,7 @@ jobs:
     container:
       image: vrnetlab/ci-builder
       volumes:
-        - /data/gh-runner/vrnetlab-images:/vrnetlab-images
+        - vrnetlab-images:/vrnetlab-images
     strategy:
       fail-fast: false
       matrix:

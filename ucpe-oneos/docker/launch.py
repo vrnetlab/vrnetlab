@@ -38,7 +38,7 @@ class UCPE_vm(vrnetlab.VM):
         for e in sorted(os.listdir("/")):
             if not disk_image and re.search(".qcow2$", e):
                 disk_image = "/" + e
-        super(UCPE_vm, self).__init__(username, password, disk_image=disk_image, ram=8192)
+        super(UCPE_vm, self).__init__(username, password, disk_image=disk_image, ram=9216)
         self.num_nics = 20
         self.nic_type = "virtio-net-pci"
         self.uuid = uuid
@@ -66,7 +66,11 @@ class UCPE_vm(vrnetlab.VM):
                 self.wait_write("admin", wait="Password:")
 
                 # run main config!
-                self.bootstrap_config()
+                startup_config = os.getenv('STARTUP_CONFIG')
+                if startup_config:
+                    self.insert_startup_config(startup_config)
+                else:
+                    self.bootstrap_config()
                 # close telnet connection
                 self.tn.close()
                 # startup time?
@@ -114,11 +118,28 @@ class UCPE_vm(vrnetlab.VM):
         self.wait_write("")
         self.wait_write("")
 
+    def insert_startup_config(self, startup_config):
+        self.logger.debug('startup_config = ' + startup_config)
+        self.wait_write("config terminal")
+        for line in startup_config.split('\n'):
+            self.wait_write(line)
+        self.wait_write("commit and-quit")
+        self.wait_write("")
+        self.wait_write("")
+
 
 class UCPE(vrnetlab.VR):
     def __init__(self, username, password, uuid, license_key, license_activate):
         super(UCPE, self).__init__(username, password)
         self.vms = [ UCPE_vm(username, password, uuid, license_key, license_activate) ]
+
+
+def _warn_startup_override(args, logger):
+    if os.getenv("STARTUP_CONFIG"):
+        for arg in ("username", "password", "license-key", "license-activate"):
+            val = getattr(args, arg.replace("-", "_"))
+            if val:
+                logger.warning(f"When STARTUP_CONFIG is provided the bootstrap script does not use the '{arg}' argument. Please ensure the desired value {arg}='{val}' is part of STARTUP_CONFIG")
 
 
 if __name__ == '__main__':
@@ -144,6 +165,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     if args.trace:
         logger.setLevel(1)
+    _warn_startup_override(args, logger)
 
     vr = UCPE(args.username, args.password, args.uuid, args.license_key, license_activate)
     vr.start()

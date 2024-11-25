@@ -30,6 +30,16 @@ Usage
 docker run -d --privileged --name my-ucpe vrnetlab/vr-ucpe-oneos:3.7.5
 ```
 
+You can provide startup configuration to be used instead of bootstrap config defined
+in the launch script. Pass the complete configuration file in the correct
+format in the `STARTUP_CONFIG` environment variable to the container.
+Assuming you have the configuration stored in a file `startup-config.conf`, to
+read it into an environment variable use this:
+
+```
+docker run --privileged -it --name ucpe-oneos --env STARTUP_CONFIG="`cat extra-config.conf`" vrnetlab/vr-ucpe-oneos:3.9.1 --trace
+```
+
 System requirements
 -------------------
 CPU: 2 core

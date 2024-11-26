@@ -41,9 +41,23 @@ class VEOS_vm(vrnetlab.VM):
         for e in sorted(os.listdir("/")):
             if re.search(".iso$", e):
                 boot_iso = "/" + e
+
+
+        self.zerotouch_disabled = False
+        self.requires_zerotouch_disable = False
+
+        # list of images that require us to disable zerotouch for proper function
+        zerotouch_disabled_images = ['vEOS-lab-4.27.0F.vmdk']
+
+
+        if disk_image[1:] in zerotouch_disabled_images:
+            self.requires_zerotouch_disable = True
+
         super(VEOS_vm, self).__init__(username, password, disk_image=disk_image, ram=2048)
         self.num_nics = 20
         self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
+
+
 
 
     def bootstrap_spin(self):
@@ -64,16 +78,19 @@ class VEOS_vm(vrnetlab.VM):
                 self.logger.debug("trying to log in with 'admin'")
                 self.wait_write("admin", wait=None)
 
-                # run main config!
-                self.bootstrap_config()
-                # close telnet connection
-                self.tn.close()
-                # startup time?
-                startup_time = datetime.datetime.now() - self.start_time
-                self.logger.info("Startup complete in: %s" % startup_time)
-                # mark as running
-                self.running = True
-                return
+                if self.requires_zerotouch_disable and not self.zerotouch_disabled:
+                    self.disable_zerotouch()
+                else:
+                    # run main config!
+                    self.bootstrap_config()
+                    # close telnet connection
+                    self.tn.close()
+                    # startup time?
+                    startup_time = datetime.datetime.now() - self.start_time
+                    self.logger.info("Startup complete in: %s" % startup_time)
+                    # mark as running
+                    self.running = True
+                    return
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time
@@ -85,6 +102,17 @@ class VEOS_vm(vrnetlab.VM):
         self.spins += 1
 
         return
+
+
+    def disable_zerotouch(self):
+        """ Disable zerotouch and reload the router
+        """
+
+        self.logger.info("disabling zerotouch")
+        self.wait_write("", None)
+        self.wait_write("enable", ">")
+        self.wait_write("zerotouch disable")
+        self.zerotouch_disabled = True
 
 
 

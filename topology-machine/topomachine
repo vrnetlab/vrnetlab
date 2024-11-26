@@ -44,9 +44,12 @@ class VrTopo:
                 for router in maybe_sorted(config['p2p']):
                     neighbors = config['p2p'][router]
                     for neighbor in neighbors:
-                        name, numeric = instance.router_name_interface(neighbor)
-                        links.append({ 'left': { 'router': router }, 'right': {
-                            'router': name, 'numeric': numeric }})
+                        name, numeric, vlan = instance.router_link(neighbor)
+                        link = { 'left': { 'router': router }, 'right': {
+                            'router': name, 'numeric': numeric }}
+                        if vlan:
+                            link['right']['vlan'] = vlan
+                        links.append(link)
 
         # expand fullmesh into links
         def fullmesh():
@@ -76,6 +79,8 @@ class VrTopo:
                         'their_interface': link[b]['interface'],
                         'our_numeric': link[a]['numeric'],
                         'their_numeric': link[b]['numeric']}
+                if 'vlan' in link[b]:
+                    spec['vlan'] = link[b]['vlan']
                 if link[b]['router'] not in self.links_by_nodes[link[a]['router']]:
                     self.links_by_nodes[link[a]['router']][link[b]['router']] = []
                 self.links_by_nodes[link[a]['router']][link[b]['router']].append(spec)
@@ -84,12 +89,14 @@ class VrTopo:
             for hub in sorted(config['hubs']):
                 self.hubs[hub] = []
                 for router in config['hubs'][hub]:
-                    name, interface = self.router_name_interface(router)
+                    name, interface, vlan = self.router_link(router)
                     ep = {
                         'router': name,
                         'numeric': self.get_interface(name, interface)
                     }
                     ep['interface'] = self.intf_num_to_name(router, ep['numeric'])
+                    if vlan:
+                        ep['vlan'] = vlan
                     self.hubs[hub].append(ep)
 
         for router in sorted(self.routers):
@@ -99,12 +106,11 @@ class VrTopo:
                     val['interfaces'][num_id] = self.intf_num_to_name(router, num_id)
 
     @staticmethod
-    def router_name_interface(router: str) -> Tuple[str, Optional[int]]:
-        if ':' in router:
-            s = router.split(':')
-            return s[0], int(s[1])
-        else:
-            return router, None
+    def router_link(router: str|dict) -> Tuple[str, Optional[int], Optional[int]]:
+        if isinstance(router, str):
+            return router, None, None
+
+        return router['router'], router.get('numeric', None), router.get('vlan', None)
 
     @staticmethod
     def expand_fullmesh(routers):
@@ -243,7 +249,6 @@ def run_topology(config, dry_run, with_trace=False, xcon_ng=False):
     if 'routers' not in config:
         print("No routers in config")
         sys.exit(1)
-
     trace = ''
     if with_trace:
         trace = '--trace'
@@ -312,11 +317,15 @@ def run_topology(config, dry_run, with_trace=False, xcon_ng=False):
                 cmd.extend(["--link", "%s%s:%s%s" % (args.prefix, vr, args.prefix, vr)])
         cmd.append(docker_registry + "vr-xcon")
         cmd.append("--p2p")
-        cmd.extend(["%s%s/%s--%s%s/%s" % (args.prefix, link["left"]["router"],
-                                           link["left"]["numeric"],
-                                           args.prefix,
-                                           link["right"]["router"],
-                                           link["right"]["numeric"]) for link in config['links']])
+        for link in config["links"]:
+            vlan = ""
+            if "vlan" in link["right"]:
+                vlan = ":%s" % link["right"]["vlan"]
+            cmd.extend(["%s%s/%s--%s%s/%s%s" % (args.prefix, link["left"]["router"],
+                                                           link["left"]["numeric"],
+                                                           args.prefix,
+                                                           link["right"]["router"],
+                                                           link["right"]["numeric"], vlan)])
         output,_ = run_command(["docker", "inspect", "--format", "{{.State.Running}}", name])
         if not dry_run and output.strip() == "true":
             output,_ = run_command(["docker", "inspect", "--format", "{{.State.Health.Status}}", name])

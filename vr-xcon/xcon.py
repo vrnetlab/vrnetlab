@@ -11,6 +11,7 @@ import struct
 import subprocess
 import sys
 import time
+from scapy.all import Ether, Dot1Q
 
 
 def handle_SIGCHLD(signal, frame):
@@ -220,9 +221,14 @@ class TcpBridge:
     def __init__(self):
         self.logger = logging.getLogger()
         self.sockets = []
+        self.buffers = {}
         self.socket2remote = {}
         self.socket2hostintf = {}
 
+        self.tcp_states = {}
+        self.tcp_remainings = {}
+
+        self.vlans = {}
 
     def hostintf2addr(self, hostintf):
         hostname, interface = hostintf.split("/")
@@ -237,9 +243,20 @@ class TcpBridge:
 
     def add_p2p(self, p2p):
         source, destination = p2p.split("--")
+        # --p2p A/1--B/1:123 means that for packets going 
+        # A->B: discard packets without vlan 123, remove tag 123 and forward the rest
+        # B->A: add vlan tag 123
+        if ':' in source and ':' in destination:
+            self.logger.error("Vlan tagging/stripping supported for single vlan only, stopping...")
+            sys.exit(1)
+        elif ':' in source:
+            source, vlan = source.split(':')
+            self.vlans[destination] = vlan
+        elif ':' in destination:
+            destination, vlan = destination.split(':')
+            self.vlans[source] = vlan
         src_router, src_interface = source.split("/")
         dst_router, dst_interface = destination.split("/")
-
         src = self.hostintf2addr(source)
         dst = self.hostintf2addr(destination)
 
@@ -249,6 +266,14 @@ class TcpBridge:
         # dict to map back to hostname & interface
         self.socket2hostintf[left] = "%s/%s" % (src_router, src_interface)
         self.socket2hostintf[right] = "%s/%s" % (dst_router, dst_interface)
+
+        # each socket needs  separate buffer and tcp vars
+        self.buffers[left] = b''
+        self.buffers[right] = b''
+        self.tcp_states[left] = 0
+        self.tcp_states[right] = 0
+        self.tcp_remainings[left] = 0
+        self.tcp_remainings[right] = 0
 
         try:
             left.connect(src)
@@ -267,7 +292,24 @@ class TcpBridge:
         self.socket2remote[left] = right
         self.socket2remote[right] = left
 
+    def tag_packet(self, packet, vlan_id):
+        layer = packet.getlayer(Ether)
+        # adjust ether type
+        layer.type = 0x8100
+        # add 802.1q layer between Ether and IP
+        dot1q = Dot1Q(vlan=int(vlan_id))
+        dot1q.add_payload(layer.payload)
+        layer.remove_payload()
+        layer.add_payload(dot1q)
+        return packet
 
+    def untag_packet(self, packet):
+        dot1q_payload = packet[Dot1Q].payload
+        packet[Ether].remove_payload()
+        packet[Ether].add_payload(dot1q_payload)
+        # delete type so it is regenerated scapy
+        del packet[Ether].type
+        return packet
 
     def work(self):
         while True:
@@ -298,18 +340,77 @@ class TcpBridge:
                     continue
 
                 if len(buf) == 0:
+                    # track current state of TCP side tunnel. 0 = reading size, 1 = reading packet
+                    self.tcp_states[i] = 0
+                    self.buffers[i] = b''
+                    self.tcp_remainings[i] = 0
                     return
-                self.logger.debug("%05d bytes %s -> %s " % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
-                try:
-                    remote.send(buf)
-                except BrokenPipeError:
-                    self.logger.warning("unable to send packet %05d bytes %s -> %s due to remote being down, trying reconnect" % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
-                    try:
-                        remote.connect(self.hostintf2addr(self.socket2hostintf[remote]))
-                        self.logger.debug("connect to %s successful" % self.socket2hostintf[remote])
-                    except Exception as exc:
-                        self.logger.warning("connect failed %s" % str(exc))
-                    continue
+                self.buffers[i] += buf
+                self.logger.debug("%s: read %d bytes from tcp, buffer length %d" % (self.socket2hostintf[i], len(buf), len(self.buffers[i])))
+                while True:
+                    if self.tcp_states[i] == 0:
+                        # we want to read the size, which is 4 bytes, if we
+                        # don't have enough bytes wait for the next spin
+                        if not len(self.buffers[i]) > 4:
+                            self.logger.debug("%s: reading size - less than 4 bytes available in buf; waiting for next spin" % self.socket2hostintf[i])
+                            break
+                        size = socket.ntohl(struct.unpack("I", self.buffers[i][:4])[0]) # first 4 bytes is size of packet
+                        self.buffers[i] = self.buffers[i][4:] # remove first 4 bytes of buf
+                        self.tcp_remainings[i] = size
+                        self.tcp_states[i] = 1
+                        self.logger.debug("%s: reading size - pkt size: %d" % (self.socket2hostintf[i], self.tcp_remainings[i]))
+
+                    if self.tcp_states[i] == 1: # read packet data
+                        # we want to read the whole packet, which is specified
+                        # by tcp_remainings[i], if we don't have enough bytes we
+                        # wait for the next spin
+                        if len(self.buffers[i]) < self.tcp_remainings[i]:
+                            self.logger.debug("%s: reading packet - less than remaining bytes; waiting for next spin" % self.socket2hostintf[i])
+                            break
+                        self.logger.debug("%s: reading packet - reading %d bytes" % (self.socket2hostintf[i], self.tcp_remainings[i]))
+                        payload = self.buffers[i][:self.tcp_remainings[i]]
+                        self.buffers[i] = self.buffers[i][self.tcp_remainings[i]:]
+                        self.tcp_remainings[i] = 0
+                        self.tcp_states[i] = 0
+
+                        # if vlan exists for remote we need to look into the packet if vlan tag exists
+                        # if yes we need to strip tag before sending it to remote
+                        # if no then we need to discard this packet
+                        if self.socket2hostintf[remote] in self.vlans:
+                            s_packet = Ether(payload)
+                            if s_packet.haslayer(Dot1Q):
+                                self.logger.debug('%s: VlanID %s' %  (self.socket2hostintf[i], str(s_packet[Dot1Q].vlan)))
+                                if int(s_packet[Dot1Q].vlan) != int(self.vlans[self.socket2hostintf[remote]]):
+                                    self.logger.debug("%s: discarding packet with different vlan %s" % (self.socket2hostintf[i], s_packet.summary()))
+                                    continue
+                                s_packet = self.untag_packet(s_packet)
+                                # regenerate packet so fields are recomputed
+                                s_packet = Ether(bytes(s_packet))
+                                payload = bytes(s_packet)
+                            else:
+                                self.logger.debug("%s: discarding untagged packet %s" % (self.socket2hostintf[i], s_packet.summary()))
+                                continue
+                        # if vlan exists for source we need to tag traffic with corresponding vlan id before sending
+                        elif self.socket2hostintf[i] in self.vlans:
+                            vlan_id = self.vlans[self.socket2hostintf[i]]
+                            s_packet = Ether(payload)
+                            self.logger.debug('%s Tagging packet with VlanID %s' % (self.socket2hostintf[i], vlan_id))
+                            s_packet = self.tag_packet(s_packet, vlan_id)
+                            # regenerate packet so fields are recomputed
+                            s_packet = Ether(bytes(s_packet))
+                            payload = bytes(s_packet)
+                        self.logger.debug("%05d bytes %s -> %s " % (len(payload), self.socket2hostintf[i], self.socket2hostintf[remote]))
+                        try:
+                            buf = struct.pack("I", socket.htonl(len(payload))) + payload
+                            remote.send(buf)
+                        except BrokenPipeError:
+                            self.logger.warning("unable to send packet %05d bytes %s -> %s due to remote being down, trying reconnect" % (len(buf), self.socket2hostintf[i], self.socket2hostintf[remote]))
+                            try:
+                                remote.connect(self.hostintf2addr(self.socket2hostintf[remote]))
+                                self.logger.debug("connect to %s successful" % self.socket2hostintf[remote])
+                            except Exception as exc:
+                                self.logger.warning("connect failed %s" % str(exc))
+                            continue
 
 
 class TcpHub:

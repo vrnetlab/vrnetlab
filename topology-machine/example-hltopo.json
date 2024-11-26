@@ -19,7 +19,7 @@
 		"ams-edge-1": [ "ams-core-1", "ams-core-2" ],
 		"fra-edge-1": [ "fra-core-1", "fra-core-2" ],
 		"par-edge-1": [ "par-core-1", "par-core-2" ],
-		"png-edge-1": [ "sgp-core-1", "kul-core-1:42" ]
+		"png-edge-1": [ "sgp-core-1", {"router": "kul-core-1", "numeric": 42, "vlan": 1337} ]
 	},
 	"fullmeshes": {
 		"europe": [ "ams-core-1", "ams-core-2", "fra-core-1", "fra-core-2", "par-core-1", "par-core-2" ],

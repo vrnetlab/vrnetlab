@@ -78,7 +78,7 @@ jobs:
   test-vr:
     runs-on: ["self-hosted"]
     container:
-      image: vrnetlab/ci-builder
+      image: vrnetlab/ci-builder:trixie
       volumes:
         - vrnetlab-images:/vrnetlab-images
     strategy:

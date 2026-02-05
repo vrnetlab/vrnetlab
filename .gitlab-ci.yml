@@ -1,4 +1,4 @@
-image: vrnetlab/ci-builder
+image: vrnetlab/ci-builder:trixie
 
 variables:
   PNS: ci-${CI_PIPELINE_ID}

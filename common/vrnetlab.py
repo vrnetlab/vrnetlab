@@ -11,7 +11,7 @@ import subprocess
 import telnetlib
 import time
 
-MAX_RETRIES=60
+MAX_RETRIES=60  # Maximum number of retries for connecting to QEMU monitor/console
 
 # Global list of ports that we want to set up forwarding from container IP ->
 # mgmt IP of router (usually 10.0.0.15). Each entry consists of the protocol,
@@ -37,7 +37,14 @@ def gen_mac(last_octet=None):
 
 
 
+
 def run_command(cmd, cwd=None, background=False):
+    """
+    Run a shell command using subprocess.
+    If background=True, starts the process and returns immediately.
+    If background=False, waits for the command to finish and returns its output.
+    Returns None if an exception occurs.
+    """
     res = None
     try:
         if background:
@@ -50,29 +57,41 @@ def run_command(cmd, cwd=None, background=False):
     return res
 
 
-def bool_from_env(env_var: str, default: bool=False):
-    """Convert environment variable to boolean
 
-    For example, 'True', 'true', '1' and 'yes' are all considered True.
+def bool_from_env(env_var: str, default: bool=False):
+    """
+    Convert environment variable to boolean.
+    Accepts 'True', 'true', '1', 'yes' as True values.
+    Returns the default if the variable is not set.
     """
     return os.getenv(env_var, str(default)).lower() in ['true', '1', 'yes']
 
 
-def list_from_env(env_var: str, default: list=[]):
-    """Convert environment variable to list
 
-    The environment variable should be a space separate list of values.
+def list_from_env(env_var: str, default: list=[]):
+    """
+    Convert environment variable to a list of values.
+    The environment variable should be a space-separated list.
+    Returns the default list if not set.
     """
     return os.getenv(env_var, ' '.join(default)).split()
 
 
 class VM:
+    """
+    Base class representing a virtual machine instance managed by vrnetlab.
+    Handles QEMU process management, NIC configuration, overlays, and lifecycle.
+    """
     def __str__(self):
         # TODO: use this in the logger?!
         return f"{self.__class__.__name__}[{self.num}]"
 
 
     def __init__(self, username, password, disk_image=None, num=0, ram=4096):
+        """
+        Initialize VM instance with credentials, disk image, instance number, and RAM size.
+        Sets up QEMU arguments and prepares overlay image.
+        """
         self.logger = logging.getLogger()
         self.start_time = datetime.datetime.now()
 
@@ -110,6 +129,11 @@ class VM:
 
 
     def start(self):
+        """
+        Start the QEMU VM process, connect to its monitor and serial console.
+        Runs any pre-start commands (e.g., overlay creation).
+        Handles connection retries and logs output.
+        """
         self.logger.info("Starting %s" % self)
 
         cmd = list(self.qemu_args)
@@ -181,6 +205,10 @@ class VM:
             pass
 
     def gen_host_forwards(self, mgmt_ip='10.0.0.15', offset=2000):
+        """
+        Generate QEMU host forwarding arguments for management ports.
+        Maps container ports to VM ports using socat and QEMU user networking.
+        """
         """Generate the host forward argument for qemu
         HOST_FWDS contain the ports we want to forward and allows mapping a
         container (source) port to a different destination port on the VR/VM.
@@ -194,6 +222,10 @@ class VM:
 
 
     def gen_mgmt(self):
+        """
+        Generate QEMU arguments for the management interface(s).
+        Uses QEMU user-mode networking and sets up MAC addresses.
+        """
         """ Generate qemu args for the mgmt interface(s)
         """
         res = []
@@ -213,6 +245,10 @@ class VM:
 
 
     def gen_nics(self):
+        """
+        Generate QEMU arguments for normal traffic-carrying interfaces.
+        Handles PCI bus assignment and MAC address generation for each NIC.
+        """
         """ Generate qemu args for the normal traffic carrying interface(s)
         """
         res = []
@@ -241,6 +277,10 @@ class VM:
 
     @property
     def overlay_disk_image(self) -> str:
+        """
+        Generate the overlay disk image name for this VM instance.
+        Ensures each VM gets a unique overlay based on its instance number.
+        """
         """Generate the overlay disk image name for VM instance
 
         The overlay image name is derived from the base image name and the num
@@ -251,6 +291,10 @@ class VM:
         return re.sub(r'(\.[^.]+$)', fr'-{self.num}-overlay\1', self.image)
 
     def _overlay_disk_image_format(self) -> str:
+        """
+        Get the format of the base disk image using qemu-img info.
+        Returns the format string (e.g., 'qcow2').
+        """
         res = run_command(["qemu-img", "info", "--output", "json", self.image])
         if res is not None:
             image_info = json.loads(res[0])
@@ -259,6 +303,11 @@ class VM:
         raise ValueError(f"Could not read image format for {self.image}")
 
     def create_overlay_image(self):
+        """
+        Create an overlay disk image for the VM instance.
+        Returns pre-start commands and QEMU drive arguments.
+        Raises exception if overlay already exists.
+        """
         """Creates an overlay disk image
 
         *Always* create the overlay image. Return a tuple of pre-start-cmds and
@@ -274,6 +323,10 @@ class VM:
         return [pre_start_cmds], ["-drive", "if=ide,file=%s" % self.overlay_disk_image]
 
     def stop(self):
+        """
+        Stop the VM process and clean up resources.
+        Attempts to terminate, kill, or wait for the process as needed.
+        """
         """ Stop this VM
         """
         self.running = False
@@ -299,6 +352,9 @@ class VM:
                 self.p.wait(timeout=10)
 
     def restart(self):
+        """
+        Restart the VM, removing the overlay disk image to reset state.
+        """
         """ Restart this VM
 
         Also removes the overlay disk image, effectively restoring the state of
@@ -311,6 +367,10 @@ class VM:
 
 
     def wait_write(self, cmd, wait='#', con=None):
+        """
+        Wait for a prompt on the serial port or telnet connection, then send a command.
+        Used for interacting with the VM console or monitor.
+        """
         """ Wait for something on the serial port and then send command
 
             Defaults to using self.tn as connection but this can be overridden
@@ -334,6 +394,10 @@ class VM:
 
 
     def work(self):
+        """
+        Main VM work loop. Checks QEMU health and runs bootstrap if not running.
+        Restarts VM if telnet session is disconnected.
+        """
         self.check_qemu()
         if not self.running:
             try:
@@ -343,9 +407,16 @@ class VM:
                 self.restart()
 
     def bootstrap_spin(self):
+        """
+        Abstract method for VM-specific bootstrap logic. Must be implemented by subclasses.
+        """
         raise NotImplementedError()
 
     def check_qemu(self):
+        """
+        Check QEMU process health by inspecting output.
+        Restarts VM if errors are detected on stderr.
+        """
         """ Check health of qemu. This is mostly just seeing if there's error
             output on STDOUT from qemu which means we restart it.
         """
@@ -367,6 +438,10 @@ class VM:
             self.start()
 
     def wait_config(self, show_cmd, expect, spins=90):
+        """
+        Wait for a specific configuration to appear in device output.
+        Used to ensure device is ready before proceeding.
+        """
         """ Some configuration takes some time to "show up".
             To make sure the device is really ready, wait here.
         """
@@ -394,6 +469,10 @@ class VM:
 
     @property
     def version(self):
+        """
+        Read version number from VERSION environment variable.
+        Raises ValueError if not set.
+        """
         """Read version number from VERSION environment variable
 
         The VERSION environment variable is set at build time using the value
@@ -406,6 +485,10 @@ class VM:
 
 
 class VR:
+    """
+    Class representing a virtual router composed of one or more VMs.
+    Manages health status, socat port forwarding, and VM lifecycle.
+    """
     def __init__(self, username, password):
         self.logger = logging.getLogger()
         self.vms = []
@@ -416,11 +499,19 @@ class VR:
             pass
 
     def update_health(self, exit_status, message):
+        """
+        Update health status by writing to /health file.
+        Used for container health checks.
+        """
         health_file = open("/health", "w")
         health_file.write("%d %s" % (exit_status, message))
         health_file.close()
 
     def start_socat(self, src_offset=0, dst_offset=2000):
+        """
+        Start socat processes for port forwarding between host and VM.
+        Sets up listeners for each protocol and port in HOST_FWDS.
+        """
         for proto, src_port, dst_port in HOST_FWDS:
             # TCP6-LISTEN and UDP6-LISTEN are actually dual-stack and will work
             # for an IPv4 only host too
@@ -429,6 +520,10 @@ class VR:
                          background=True)
 
     def start(self):
+        """
+        Start the virtual router and its VMs.
+        Monitors VM health and updates container health status.
+        """
         """ Start the virtual router
         """
         self.logger.debug("Starting vrnetlab %s", self)
@@ -453,11 +548,19 @@ class VR:
                     self.update_health(1, "starting")
 
 class VR_Installer:
+    """
+    Class for handling installation routines for a VM.
+    Waits for VM to finish installation and then shuts it down.
+    """
     def __init__(self):
         self.logger = logging.getLogger()
         self.vm = None
 
     def install(self):
+        """
+        Run installation process for the VM, waiting until it is running.
+        Shuts down VM after installation is complete.
+        """
         vm =  self.vm
         while not vm.running:
             self.logger.trace("%s working", self)
@@ -467,5 +570,6 @@ class VR_Installer:
         self.logger.info("Installation complete")
 
 class QemuBroken(Exception):
-    """ Our Qemu instance is somehow broken
+    """
+    Exception raised when QEMU instance is broken or unreachable.
     """

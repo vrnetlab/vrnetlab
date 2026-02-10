@@ -70,7 +70,7 @@ then
   # Test SSH connection using sshpass. We run the "exit" command, but since not
   # all platforms support it, we instead check whether an interactive session
   # was started by checking the output for the string "Entering interactive session"
-  sshpass -v -p "$ssh_password" ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$ssh_user@$container_ip" exit 2>&1 | rg --passthru "Entering interactive session"
+  sshpass -v -p "$ssh_password" ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o HostKeyAlgorithms=+ssh-rsa "$ssh_user@$container_ip" exit 2>&1 | rg --passthru "Entering interactive session"
 
   if [ $? -eq 0 ]; then
     echo "SSH connection test passed."

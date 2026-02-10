@@ -73,7 +73,7 @@ docker-test-image:
 # We attach the hosts docker socket to allow creating new containers, but cannot
 # bind mount the working directory from a sibling container ..
 	-docker rm -f $(CNT_PREFIX)
-	docker create -t --name $(CNT_PREFIX) -v /var/run/docker.sock:/var/run/docker.sock vrnetlab/ci-builder /test-image -t $(TEST_TIMEOUT) $(TAG_NAME) $(CONTAINER_NAME) $(TEST_PARAMS)
+	docker create -t --name $(CNT_PREFIX) -v /var/run/docker.sock:/var/run/docker.sock vrnetlab/ci-builder:trixie /test-image -t $(TEST_TIMEOUT) $(TAG_NAME) $(CONTAINER_NAME) $(TEST_PARAMS)
 	docker cp $(CURDIR)/../test/test-image $(CNT_PREFIX):/
 	docker start --attach $(CNT_PREFIX)
 

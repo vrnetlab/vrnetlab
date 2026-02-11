@@ -354,9 +354,15 @@ class SROS(vrnetlab.VR):
         self.logger.info("Number of NICS: " + str(num_nics))
         self.logger.info("Mode: " + str(mode))
         # if we have more than 5 NICs or version is 19 or higher we use distributed VSR-SIM
-        if num_nics > 5 or major_release >= 19:
+        max_non_licensed_nics = 5
+        min_non_licensed_major_release = 19
+        if num_nics > max_non_licensed_nics or major_release >= min_non_licensed_major_release:
             if not self.license:
-                self.logger.error("More than 5 NICs require distributed VSR which requires a license but no license is found")
+                self.logger.error("More than {} ({} configured) NICs or a major version greater than {} ({} detected)".format(max_non_licensed_nics,
+                                                                                                                        num_nics,
+                                                                                                                        min_non_licensed_major_release,
+                                                                                                                        major_release) +\
+                                  " require distributed VSR which requires a license but no license is found")
                 sys.exit(1)
 
             num_lc = math.ceil(num_nics / 6)

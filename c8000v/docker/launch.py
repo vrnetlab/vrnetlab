@@ -121,7 +121,7 @@ class C8000v_vm(vrnetlab.VM):
                     self.running = True
                     return
                 else:
-                    self.log.warning("Unexpected reload while running")
+                    self.logger.warning("Unexpected reload while running")
 
         # no match, if we saw some output from the router it's probably
         # booting, so let's give it some more time

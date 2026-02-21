@@ -51,6 +51,24 @@ docker run -d --privileged --name vr-xcon --link vr1 --link vr2 --link vr3 vr-xc
 ```
 Note how --p2p is not repeated and the arguments to it are simply appended.
 
+Tcp2Bridge mode also supports tagging/stripping VLANs from packets. Lets say vr1 
+sends packets tagged with vlan-id 123, but you would like to forward them to vr2
+untagged (to simplify test environment for example) you can do this with:
+
+```
+docker run -d --privileged --name vr-xcon --link vr1 --link vr2 --p2p vr1/1--vr2/1:123
+```
+
+Packets from vr1  to vr2 without vlan-id 123 will be discarded, while traffic going from vr2
+towards vr1 will be tagged with vlan-id 123. It is possible to specify vlan-id also on 
+the other side of the link:
+
+```
+docker run -d --privileged --name vr-xcon --link vr1 --link vr2 --p2p vr1/1:123--vr2/1
+```
+
+Note that having vlan tag on both sides (changing vlan-id) is not supported. 
+
 It's possible to use the `--debug` option to have a debug written out for every
 packet.
 

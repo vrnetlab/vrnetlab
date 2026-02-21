@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import math
 import os
 import random
 import re
@@ -45,6 +46,46 @@ class VEOS_vm(vrnetlab.VM):
         self.num_nics = 20
         self.qemu_args.extend(["-cdrom", boot_iso, "-boot", "d"])
 
+
+    def gen_mgmt(self):
+        """ Generate qemu args for the mgmt interface(s)
+        """
+        res = []
+        # mgmt interface is special - we use qemu user mode network
+        res.append("-device")
+        # vEOS-lab requires its Ma1 interface to be the first in the bus, so let's hardcode it
+        res.append(self.nic_type + ",netdev=p%(i)02d,mac=%(mac)s,bus=pci.1,addr=0x2"
+                    % { 'i': 0, 'mac': vrnetlab.gen_mac(0) })
+        res.append("-netdev")
+        res.append("user,id=p%(i)02d,net=10.0.0.0/24,tftp=/tftpboot,hostfwd=tcp::2022-10.0.0.15:22,hostfwd=udp::2161-10.0.0.15:161,hostfwd=tcp::2830-10.0.0.15:830,hostfwd=tcp::2080-10.0.0.15:80,hostfwd=tcp::2443-10.0.0.15:443" % { 'i': 0 })
+
+        return res
+
+
+    def gen_nics(self):
+        """ Generate qemu args for the normal traffic carrying interface(s)
+        """
+        res = []
+        # vEOS-lab requires its Ma1 interface to be the first in the bus, so start normal nics at 2
+        for i in range(2, self.num_nics+1):
+            # calc which PCI bus we are on and the local add on that PCI bus
+            pci_bus = math.floor(i/self.nics_per_pci_bus) + 1
+            addr = (i % self.nics_per_pci_bus) + 1
+
+            # decrement i to make interfaces line up
+            i = i-1
+            res.append("-device")
+            res.append("%(nic_type)s,netdev=p%(i)02d,mac=%(mac)s,bus=pci.%(pci_bus)s,addr=0x%(addr)x" % {
+                       'nic_type': self.nic_type,
+                       'i': i,
+                       'pci_bus': pci_bus,
+                       'addr': addr,
+                       'mac': vrnetlab.gen_mac(i)
+                    })
+            res.append("-netdev")
+            res.append("socket,id=p%(i)02d,listen=:%(j)02d"
+                       % { 'i': i, 'j': i + 10000 })
+        return res
 
     def bootstrap_spin(self):
         """ This function should be called periodically to do work.
